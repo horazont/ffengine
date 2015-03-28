@@ -3,9 +3,10 @@
 
 #include <cstdint>
 
-#include <vector>
 #include <memory>
+#include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 #include <GL/glew.h>
 
@@ -65,5 +66,52 @@ public:
 };
 
 typedef VBO::allocation_t VBOAllocation;
+
+template <typename item_t, typename element_t = float>
+class VBOSlice
+{
+public:
+    VBOSlice(const VBOAllocation &base,
+             const unsigned int nattr):
+        m_base_ptr(base.get()),
+        m_block_length(base.elements_per_block()),
+        m_offset_in_block(static_cast<VBO*>(base.buffer())->attrs().at(nattr).offset / sizeof(element_t)),
+        m_items(base.length())
+    {
+
+    }
+
+private:
+    element_t *const m_base_ptr;
+    const unsigned int m_block_length;
+    const unsigned int m_offset_in_block;
+    const unsigned int m_items;
+
+    inline item_t *get(const unsigned int n)
+    {
+        element_t *const start_element = m_base_ptr +
+                m_block_length*n +
+                m_offset_in_block;
+        return reinterpret_cast<item_t*>(start_element);
+    }
+
+public:
+    inline item_t &at(const unsigned int i)
+    {
+        if (i < 0 || i >= m_items)
+        {
+            throw std::out_of_range(std::string("index out of bounds: ")+std::to_string(i));
+        }
+
+        return (*this)[i];
+    }
+
+    inline item_t &operator[](const unsigned int i)
+    {
+        return *get(i);
+    }
+
+};
+
 
 #endif
