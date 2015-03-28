@@ -13,4 +13,6 @@ public:
 
 };
 
+typedef IBO::allocation_t IBOAllocation;
+
 #endif
