@@ -28,6 +28,7 @@ protected:
 
 public:
     virtual void bind() = 0;
+    virtual void bound();
     virtual void unbind() = 0;
 
 };

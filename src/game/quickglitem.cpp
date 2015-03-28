@@ -40,16 +40,6 @@ QuickGLScene::QuickGLScene(QObject *parent):
     m_test_vbo.unbind();
     raise_last_gl_error();
 
-    {
-        auto ibo_allocation = m_test_ibo.allocate(4);
-        uint32_t *dest = ibo_allocation.get();
-        *dest++ = 0;
-        *dest++ = 1;
-        *dest++ = 2;
-        *dest++ = 3;
-        ibo_allocation.mark_dirty();
-    }
-
     raise_last_gl_error();
     m_test_ibo.bind();
     raise_last_gl_error();
@@ -92,6 +82,16 @@ QuickGLScene::QuickGLScene(QObject *parent):
 
     m_test_vao = decl.make_vao(m_test_shader);
     raise_last_gl_error();
+
+    {
+        auto ibo_allocation = m_test_ibo.allocate(4);
+        uint32_t *dest = ibo_allocation.get();
+        *dest++ = 0;
+        *dest++ = 1;
+        *dest++ = 2;
+        *dest++ = 3;
+        ibo_allocation.mark_dirty();
+    }
 }
 
 QuickGLScene::~QuickGLScene()

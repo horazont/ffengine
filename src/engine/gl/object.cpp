@@ -40,6 +40,11 @@ void _GLObjectBase::delete_globject()
     m_glid = 0;
 }
 
+void _GLObjectBase::bound()
+{
+
+}
+
 
 void raise_last_gl_error()
 {

@@ -1,8 +1,11 @@
 #include "vao.h"
 
-VAO::VAO(IBO *ibo_hint):
+#include <algorithm>
+
+VAO::VAO():
     GLObject<GL_VERTEX_ARRAY_BINDING>(),
-    m_ibo_hint(ibo_hint)
+    m_ibo_hint(nullptr),
+    m_vbo_hints()
 {
     glGenVertexArrays(1, &m_glid);
 }
@@ -10,6 +13,16 @@ VAO::VAO(IBO *ibo_hint):
 void VAO::delete_globject()
 {
     glDeleteVertexArrays(1, &m_glid);
+}
+
+void VAO::add_vbo_hint(VBO *vbo_hint)
+{
+    if (std::find(m_vbo_hints.begin(), m_vbo_hints.end(), vbo_hint) !=
+            m_vbo_hints.end())
+    {
+        return;
+    }
+    m_vbo_hints.push_back(vbo_hint);
 }
 
 void VAO::set_ibo_hint(IBO *ibo_hint)
@@ -20,6 +33,17 @@ void VAO::set_ibo_hint(IBO *ibo_hint)
 void VAO::bind()
 {
     glBindVertexArray(m_glid);
+    bound();
+}
+
+void VAO::bound()
+{
+    if (m_ibo_hint) {
+        m_ibo_hint->bound();
+    }
+    for (auto &vbo: m_vbo_hints) {
+        vbo->bind();
+    }
 }
 
 void VAO::unbind()
@@ -55,7 +79,8 @@ void ArrayDeclaration::declare_attribute(const std::string &name,
 }
 
 std::unique_ptr<VAO> ArrayDeclaration::make_vao(
-        const ShaderProgram &for_shader)
+        const ShaderProgram &for_shader,
+        bool add_vbo_hints)
 {
     std::unique_ptr<VAO> result = std::unique_ptr<VAO>(new VAO());
     result->bind();
@@ -83,6 +108,10 @@ std::unique_ptr<VAO> ArrayDeclaration::make_vao(
                         (decl.second.normalized ? GL_TRUE : GL_FALSE),
                         decl.second.vbo.vertex_size(),
                         reinterpret_cast<GLvoid*>(attr.offset));
+
+            if (add_vbo_hints) {
+                result->add_vbo_hint(&decl.second.vbo);
+            }
         }
 
     } catch (...) {
@@ -92,6 +121,7 @@ std::unique_ptr<VAO> ArrayDeclaration::make_vao(
         throw;
     }
 
+    result->unbind();
     return result;
 }
 

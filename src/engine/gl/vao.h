@@ -9,19 +9,22 @@
 class VAO: public GLObject<GL_VERTEX_ARRAY_BINDING>
 {
 public:
-    VAO(IBO *ibo_hint = nullptr);
+    VAO();
 
 private:
     IBO *m_ibo_hint;
+    std::vector<VBO*> m_vbo_hints;
 
 protected:
     void delete_globject() override;
 
 public:
+    void add_vbo_hint(VBO *vbo_hint);
     void set_ibo_hint(IBO *ibo_hint);
 
 public:
     void bind() override;
+    void bound() override;
     void unbind() override;
 
 };
@@ -53,7 +56,8 @@ public:
         return m_ibo;
     }
 
-    std::unique_ptr<VAO> make_vao(const ShaderProgram &for_shader);
+    std::unique_ptr<VAO> make_vao(const ShaderProgram &for_shader,
+                                  bool add_vbo_hints=false);
 
     void set_ibo(IBO *ibo);
 
