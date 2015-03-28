@@ -30,14 +30,18 @@ private:
     ShaderProgram m_test_shader;
     VBO m_test_vbo;
     IBO m_test_ibo;
-    VBOAllocation m_test_allocation;
+    VBOAllocation m_test_valloc;
+    IBOAllocation m_test_ialloc;
     std::unique_ptr<VAO> m_test_vao;
     hrclock::time_point m_t;
     unsigned int m_nframes;
-
+    QSize m_viewport_size;
 
 public slots:
     void paint();
+
+public:
+    void set_viewport_size(const QSize &size);
 
 };
 

@@ -8,6 +8,8 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLFunctions_3_2_Core>
 
+#include "../math/matrix.h"
+
 
 QuickGLScene::QuickGLScene(QObject *parent):
     QObject(parent),
@@ -18,48 +20,46 @@ QuickGLScene::QuickGLScene(QObject *parent):
                       VBOAttribute(2)
                   })
         ),
-    m_test_allocation(m_test_vbo.allocate(4)),
+    m_test_valloc(m_test_vbo.allocate(4)),
+    m_test_ialloc(m_test_ibo.allocate(4)),
     m_t(hrclock::now()),
     m_nframes(0)
 {
     std::array<float, 8> data({
-                              -1, -1,
-                              -1,  1,
-                               1,  1,
-                               1, -1
+                              0, 0,
+                              0, 100,
+                              100, 100,
+                              100, 0
                 });
 
     {
-        float *dest = m_test_allocation.get();
-        for (auto &value: data) {
-            *dest++ = value;
-        }
-        m_test_allocation.mark_dirty();
+        auto slice = VBOSlice<Vector2f>(m_test_valloc, 0);
+        slice[0] = Vector2f(0, 0);
+        slice[1] = Vector2f(0, 100);
+        slice[2] = Vector2f(100, 100);
+        slice[3] = Vector2f(100, 0);
+        m_test_valloc.mark_dirty();
     }
-    raise_last_gl_error();
-    m_test_vbo.bind();
-    raise_last_gl_error();
-    m_test_vbo.dump_remote_raw();
-    m_test_vbo.unbind();
-    raise_last_gl_error();
 
-    raise_last_gl_error();
-    m_test_ibo.bind();
-    raise_last_gl_error();
-    m_test_ibo.dump_remote_raw();
-    m_test_ibo.unbind();
-    raise_last_gl_error();
+    {
+        uint32_t *dest = m_test_ialloc.get();
+        *dest++ = 1;
+        *dest++ = 0;
+        *dest++ = 2;
+        *dest++ = 3;
+        m_test_ialloc.mark_dirty();
+    }
 
     std::cout << m_test_shader.attach(
                 GL_VERTEX_SHADER,
                 "#version 330\n"
+                "uniform mat4 proj;"
                 "in vec2 vertex;"
                 "out vec2 coords;"
                 "void main() {"
-                "    gl_Position = vec4(vertex, 0f, 1.0f);"
+                "    gl_Position = proj * vec4(vertex, 0f, 1.0f);"
                 "    coords = vertex.xy;"
                 "}") << std::endl;
-    raise_last_gl_error();
 
     std::cout << m_test_shader.attach(
                 GL_FRAGMENT_SHADER,
@@ -69,32 +69,15 @@ QuickGLScene::QuickGLScene(QObject *parent):
                 "void main() {"
                 "    color = vec4(coords, 0.5f, 1.0f);"
                 "}") << std::endl;
-    raise_last_gl_error();
 
     std::cout << m_test_shader.link() << std::endl;
-
-    raise_last_gl_error();
-    m_test_shader.bind();
-    raise_last_gl_error();
-    m_test_shader.unbind();
-    raise_last_gl_error();
 
     ArrayDeclaration decl;
     decl.declare_attribute("vertex", m_test_vbo, 0);
     decl.set_ibo(&m_test_ibo);
 
     m_test_vao = decl.make_vao(m_test_shader);
-    raise_last_gl_error();
 
-    {
-        auto ibo_allocation = m_test_ibo.allocate(4);
-        uint32_t *dest = ibo_allocation.get();
-        *dest++ = 0;
-        *dest++ = 1;
-        *dest++ = 2;
-        *dest++ = 3;
-        ibo_allocation.mark_dirty();
-    }
 }
 
 QuickGLScene::~QuickGLScene()
@@ -111,17 +94,21 @@ void QuickGLScene::paint()
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
     m_test_vao->bind();
-    raise_last_gl_error();
     m_test_shader.bind();
-    raise_last_gl_error();
+    Matrix4f proj = proj_ortho(0, 0,
+                               m_viewport_size.width(), m_viewport_size.height(),
+                               -2, 2);
+    glUniformMatrix4fvARB(
+                    m_test_shader.uniform_location("proj"),
+                    1,
+                    GL_TRUE,
+                    &proj.coeff[0]
+                    );
 
-    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, nullptr);
-    raise_last_gl_error();
+    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 
     m_test_shader.unbind();
-    raise_last_gl_error();
     m_test_vao->unbind();
-    raise_last_gl_error();
 
     hrclock::time_point t1 = hrclock::now();
     const unsigned int msecs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - m_t).count();
@@ -132,6 +119,11 @@ void QuickGLScene::paint()
         m_t = t1;
     }
     m_nframes += 1;
+}
+
+void QuickGLScene::set_viewport_size(const QSize &size)
+{
+    m_viewport_size = size;
 }
 
 
@@ -210,6 +202,7 @@ void QuickGLItem::sync()
                 m_renderer.get(), SLOT(paint()),
                 Qt::DirectConnection);
     }
+    m_renderer->set_viewport_size(window()->size() * window()->devicePixelRatio());
 }
 
 void QuickGLItem::cleanup()
