@@ -78,33 +78,33 @@ private:
     unsigned int m_nblocks;
 
 public:
-    inline buffer_t *buffer()
+    inline buffer_t *buffer() const
     {
         return m_buffer;
     }
 
-    inline unsigned int elements_per_block()
+    inline unsigned int elements_per_block() const
     {
-        return m_elements_per_block();
+        return m_elements_per_block;
     }
 
-    inline unsigned int length()
+    inline unsigned int length() const
     {
         return m_nblocks;
     }
 
 public:
-    void mark_dirty()
+    void mark_dirty() const
     {
         m_buffer->region_mark_dirty(m_region_id);
     }
 
-    element_t *get()
+    element_t *get() const
     {
         return m_buffer->region_get_ptr(m_region_id);
     }
 
-    operator bool()
+    operator bool() const
     {
         return bool(m_buffer);
     }
