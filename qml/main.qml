@@ -11,11 +11,8 @@ ApplicationWindow {
     height: 480
     visible: true
 
-    MyFoo {
-        SequentialAnimation {
-            loops: Animation.Infinite
-            running: true
-        }
+    GLScene {
+
     }
 
     MainForm {

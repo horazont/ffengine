@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "GL/glew.h"
+
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
@@ -12,7 +14,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    qmlRegisterType<MyFooItem>("SCC", 1, 0, "MyFoo");
+    qmlRegisterType<QuickGLItem>("SCC", 1, 0, "GLScene");
 
     QQmlEngine engine;
     QQmlComponent component(&engine, QUrl("qrc:/qml/main.qml"));
