@@ -308,7 +308,7 @@ protected:
 
     void upload_dirty()
     {
-        std::cout << "upload dirty (glid=" << this->m_glid << ", local_size=" << m_local_buffer.size() << ")" << std::endl;
+        // std::cout << "upload dirty (glid=" << this->m_glid << ", local_size=" << m_local_buffer.size() << ")" << std::endl;
         if (reserve_remote())
         {
             // reallocation took place, this uploads all data
@@ -320,7 +320,7 @@ protected:
         }
 
         if (!m_any_dirty) {
-            std::cout << "nothing to upload (m_any_dirty=false)" << std::endl;
+            // std::cout << "nothing to upload (m_any_dirty=false)" << std::endl;
             return;
         }
 
@@ -350,10 +350,10 @@ protected:
         if (right_block > 0) {
             const unsigned int offset = left_block * block_size();
             const unsigned int size = (left_block - right_block) * block_size();
-            std::cout << "uploading " << size << " bytes to " << offset << std::endl;
+            // std::cout << "uploading " << size << " bytes to " << offset << std::endl;
             glBufferSubData(gl_target, offset, size, m_local_buffer.data() + offset*m_block_length);
         } else {
-            std::cout << "nothing to upload (right_block=0)" << std::endl;
+            // std::cout << "nothing to upload (right_block=0)" << std::endl;
         }
 
         m_any_dirty = false;
