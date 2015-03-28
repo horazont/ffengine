@@ -134,6 +134,10 @@ public:
         m_region_id_ctr()
     {
         glGenBuffers(1, &this->m_glid);
+        glBindBuffer(gl_target, this->m_glid);
+        glBufferData(gl_target, 0, nullptr, GL_STATIC_DRAW);
+        raise_last_gl_error();
+        glBindBuffer(gl_target, 0);
     }
 
 protected:
