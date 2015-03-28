@@ -8,6 +8,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLFunctions_3_2_Core>
 
+
 QuickGLScene::QuickGLScene(QObject *parent):
     QObject(parent),
     m_initialized(false),
@@ -17,7 +18,9 @@ QuickGLScene::QuickGLScene(QObject *parent):
                       VBOAttribute(2)
                   })
         ),
-    m_test_allocation(m_test_vbo.allocate(4))
+    m_test_allocation(m_test_vbo.allocate(4)),
+    m_t(hrclock::now()),
+    m_nframes(0)
 {
     std::array<float, 8> data({
                               -1, -1,
@@ -119,6 +122,16 @@ void QuickGLScene::paint()
     raise_last_gl_error();
     m_test_vao->unbind();
     raise_last_gl_error();
+
+    hrclock::time_point t1 = hrclock::now();
+    const unsigned int msecs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - m_t).count();
+    if (msecs > 1000)
+    {
+        std::cout << "fps: " << (double)m_nframes / (double)msecs * 1000.0d << std::endl;
+        m_nframes = 0;
+        m_t = t1;
+    }
+    m_nframes += 1;
 }
 
 

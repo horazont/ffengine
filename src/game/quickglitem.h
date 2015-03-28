@@ -3,6 +3,7 @@
 
 #include "GL/glew.h"
 
+#include <chrono>
 #include <memory>
 
 #include <QObject>
@@ -13,6 +14,9 @@
 #include "../engine/gl/shader.h"
 #include "../engine/gl/ibo.h"
 #include "../engine/gl/vao.h"
+
+typedef std::chrono::high_resolution_clock hrclock;
+
 
 class QuickGLScene: public QObject
 {
@@ -28,6 +32,9 @@ private:
     IBO m_test_ibo;
     VBOAllocation m_test_allocation;
     std::unique_ptr<VAO> m_test_vao;
+    hrclock::time_point m_t;
+    unsigned int m_nframes;
+
 
 public slots:
     void paint();
