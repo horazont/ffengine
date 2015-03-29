@@ -12,16 +12,11 @@ Item {
 
     Rectangle {
         id: rectangle1
-        x: 220
-        y: 80
-        width: 200
-        height: 320
         color: "#ccffffff"
         radius: 8
+        anchors.fill: parent
         border.color: "#40000000"
         border.width: 4
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
 
         Column {
             id: column1

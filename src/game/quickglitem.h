@@ -18,6 +18,7 @@
 #include "../engine/gl/ubo.h"
 
 typedef std::chrono::high_resolution_clock hrclock;
+typedef std::chrono::steady_clock monoclock;
 
 
 class QuickGLScene: public QObject
@@ -38,13 +39,16 @@ private:
     UBO<Matrix4f, Matrix4f> m_test_ubo;
     std::unique_ptr<VAO> m_test_vao;
     hrclock::time_point m_t;
+    monoclock::time_point m_t0;
     unsigned int m_nframes;
     QSize m_viewport_size;
+    Vector2f m_pos;
 
 public slots:
     void paint();
 
 public:
+    void set_pos(const QPoint &pos);
     void set_viewport_size(const QSize &size);
 
 };
@@ -58,8 +62,12 @@ public:
 
 private:
     std::unique_ptr<QuickGLScene> m_renderer;
+    QPoint m_hover_pos;
 
 protected:
+    void hoverMoveEvent(QHoverEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
     virtual QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *);
 
 public slots:

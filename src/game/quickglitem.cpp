@@ -25,6 +25,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
     m_test_ialloc(m_test_ibo.allocate(4)),
     m_test_texture(GL_RGBA, 256, 256),
     m_t(hrclock::now()),
+    m_t0(monoclock::now()),
     m_nframes(0)
 {
     std::array<float, 8> data({
@@ -33,9 +34,6 @@ QuickGLScene::QuickGLScene(QObject *parent):
                               100, 100,
                               100, 0
                 });
-
-    m_test_ubo.set<0>(translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.5));
-    m_test_ubo.dump_local_as_floats();
 
     {
         std::basic_string<unsigned char> texbuffer(256*256*4, 0);
@@ -51,9 +49,14 @@ QuickGLScene::QuickGLScene(QObject *parent):
         }
 
         m_test_texture.bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+        raise_last_gl_error();
+        GLEW_GET_FUN(__glewGenerateMipmap)(GL_TEXTURE_2D);
+        raise_last_gl_error();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         raise_last_gl_error();
         m_test_texture.unbind();
     }
@@ -137,6 +140,11 @@ void QuickGLScene::paint()
     if (!m_initialized) {
         m_initialized = true;
     }
+
+    const float alpha = std::chrono::duration_cast<
+            std::chrono::duration<float, std::ratio<1>>
+            >(monoclock::now() - m_t0).count() * M_PI / 5.;
+
     glClearColor(0.4, 0.3, 0.2, 1.0);
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
@@ -148,6 +156,7 @@ void QuickGLScene::paint()
                                      m_viewport_size.width(), m_viewport_size.height(),
                                      -2, 2);
     m_test_ubo.bind();
+    m_test_ubo.set<0>(translation4(Vector3(m_pos.as_array[0], m_pos.as_array[1], 0.0)) * rotation4(eZ, alpha));
     m_test_ubo.set<1>(proj);
     m_test_ubo.update_bound();
     m_test_ubo.unbind();
@@ -171,6 +180,11 @@ void QuickGLScene::paint()
     m_nframes += 1;
 }
 
+void QuickGLScene::set_pos(const QPoint &pos)
+{
+    m_pos = Vector2f(pos.x(), pos.y());
+}
+
 void QuickGLScene::set_viewport_size(const QSize &size)
 {
     m_viewport_size = size;
@@ -182,8 +196,28 @@ QuickGLItem::QuickGLItem(QQuickItem *parent):
     m_renderer(nullptr)
 {
     setFlags(QQuickItem::ItemHasContents);
+    setAcceptHoverEvents(false);
+    setAcceptedMouseButtons(Qt::AllButtons);
     connect(this, SIGNAL(windowChanged(QQuickWindow*)),
             this, SLOT(handle_window_changed(QQuickWindow*)));
+}
+
+void QuickGLItem::hoverMoveEvent(QHoverEvent *event)
+{
+    std::cout << "hover" << std::endl;
+    m_hover_pos = event->pos();
+}
+
+void QuickGLItem::mouseMoveEvent(QMouseEvent *event)
+{
+    std::cout << "move" << std::endl;
+    m_hover_pos = event->pos();
+}
+
+void QuickGLItem::mousePressEvent(QMouseEvent *event)
+{
+    std::cout << "press" << std::endl;
+    m_hover_pos = event->pos();
 }
 
 QSGNode *QuickGLItem::updatePaintNode(
@@ -253,6 +287,7 @@ void QuickGLItem::sync()
                 Qt::DirectConnection);
     }
     m_renderer->set_viewport_size(window()->size() * window()->devicePixelRatio());
+    m_renderer->set_pos(m_hover_pos);
 }
 
 void QuickGLItem::cleanup()
