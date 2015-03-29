@@ -11,6 +11,7 @@
 #include <GL/glew.h>
 
 #include "object.h"
+#include "util.h"
 
 typedef unsigned int GLArrayRegionID;
 

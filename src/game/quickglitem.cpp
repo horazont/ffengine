@@ -17,11 +17,13 @@ QuickGLScene::QuickGLScene(QObject *parent):
     m_test_shader(),
     m_test_vbo(
         VBOFormat({
+                      VBOAttribute(2),
                       VBOAttribute(2)
                   })
         ),
     m_test_valloc(m_test_vbo.allocate(4)),
     m_test_ialloc(m_test_ibo.allocate(4)),
+    m_test_texture(GL_RGBA, 256, 256),
     m_t(hrclock::now()),
     m_nframes(0)
 {
@@ -33,13 +35,42 @@ QuickGLScene::QuickGLScene(QObject *parent):
                 });
 
     {
-        auto slice = VBOSlice<Vector2f>(m_test_valloc, 0);
-        slice[0] = Vector2f(0, 0);
-        slice[1] = Vector2f(0, 100);
-        slice[2] = Vector2f(100, 100);
-        slice[3] = Vector2f(100, 0);
-        m_test_valloc.mark_dirty();
+        std::basic_string<unsigned char> texbuffer(256*256*4, 0);
+        unsigned char *ptr = &texbuffer.front();
+        for (unsigned int row = 0; row < 256; row++) {
+            for (unsigned int col = 0; col < 256; col++) {
+                unsigned char *const pixel = &ptr[(row*256+col)*4];
+                pixel[0] = col;
+                pixel[1] = row;
+                pixel[2] = (row+col) / 2;
+                pixel[3] = 1.0;
+            }
+        }
+
+        m_test_texture.bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+        raise_last_gl_error();
+        m_test_texture.unbind();
     }
+
+    {
+        auto slice = VBOSlice<Vector2f>(m_test_valloc, 0);
+        slice[0] = Vector2f(-100, -100);
+        slice[1] = Vector2f(-100, 100);
+        slice[2] = Vector2f(100, 100);
+        slice[3] = Vector2f(100, -100);
+    }
+
+    {
+        auto slice = VBOSlice<Vector2f>(m_test_valloc, 1);
+        slice[0] = Vector2f(0, 0);
+        slice[1] = Vector2f(0, 1);
+        slice[2] = Vector2f(1, 1);
+        slice[3] = Vector2f(1, 0);
+    }
+    m_test_valloc.mark_dirty();
 
     {
         uint32_t *dest = m_test_ialloc.get();
@@ -53,30 +84,41 @@ QuickGLScene::QuickGLScene(QObject *parent):
     std::cout << m_test_shader.attach(
                 GL_VERTEX_SHADER,
                 "#version 330\n"
-                "uniform mat4 proj;"
+                "uniform mat4 mat;"
                 "in vec2 vertex;"
-                "out vec2 coords;"
+                "in vec2 texcoord0;"
+                "out vec2 tc;"
                 "void main() {"
-                "    gl_Position = proj * vec4(vertex, 0f, 1.0f);"
-                "    coords = vertex.xy;"
+                "    gl_Position = mat * vec4(vertex, 0f, 1.0f);"
+                "    tc = texcoord0;"
                 "}") << std::endl;
 
     std::cout << m_test_shader.attach(
                 GL_FRAGMENT_SHADER,
                 "#version 330\n"
-                "in vec2 coords;"
+                "uniform sampler2D tex;"
+                "in vec2 tc;"
                 "out vec4 color;"
                 "void main() {"
-                "    color = vec4(coords, 0.5f, 1.0f);"
+                "    color = texture2D(tex, tc);"
                 "}") << std::endl;
 
     std::cout << m_test_shader.link() << std::endl;
 
     ArrayDeclaration decl;
     decl.declare_attribute("vertex", m_test_vbo, 0);
+    decl.declare_attribute("texcoord0", m_test_vbo, 1);
     decl.set_ibo(&m_test_ibo);
 
     m_test_vao = decl.make_vao(m_test_shader);
+
+    m_test_shader.bind();
+
+    glUniform1ui(
+                m_test_shader.uniform_location("tex"),
+                0
+            );
+    m_test_shader.unbind();
 
 }
 
@@ -93,20 +135,24 @@ void QuickGLScene::paint()
     glClearColor(0.4, 0.3, 0.2, 1.0);
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+    GLEW_GET_FUN(__glewActiveTexture)(GL_TEXTURE0);
     m_test_vao->bind();
     m_test_shader.bind();
+    m_test_texture.bind();
     Matrix4f proj = proj_ortho(0, 0,
                                m_viewport_size.width(), m_viewport_size.height(),
                                -2, 2);
+    Matrix4f total = proj * translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.5);
     glUniformMatrix4fvARB(
-                    m_test_shader.uniform_location("proj"),
+                    m_test_shader.uniform_location("mat"),
                     1,
                     GL_TRUE,
-                    &proj.coeff[0]
+                    &total.coeff[0]
                     );
 
     glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 
+    m_test_texture.unbind();
     m_test_shader.unbind();
     m_test_vao->unbind();
 

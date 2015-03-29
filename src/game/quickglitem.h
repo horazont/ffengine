@@ -14,6 +14,7 @@
 #include "../engine/gl/shader.h"
 #include "../engine/gl/ibo.h"
 #include "../engine/gl/vao.h"
+#include "../engine/gl/texture.h"
 
 typedef std::chrono::high_resolution_clock hrclock;
 
@@ -32,6 +33,7 @@ private:
     IBO m_test_ibo;
     VBOAllocation m_test_valloc;
     IBOAllocation m_test_ialloc;
+    Texture2D m_test_texture;
     std::unique_ptr<VAO> m_test_vao;
     hrclock::time_point m_t;
     unsigned int m_nframes;

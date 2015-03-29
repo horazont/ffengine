@@ -92,7 +92,7 @@ struct Matrix
             // j: column of new matrix
             // k: product index
             for (unsigned int j = 0; j < other_columns; j++) {
-                float_t &comp = result.component(i,j);
+                out_float_t &comp = result.component(i,j);
                 comp = 0;
                 for (unsigned int k = 0; k < columns; k++) {
                     comp += component(i,k) * mat.component(k,j);

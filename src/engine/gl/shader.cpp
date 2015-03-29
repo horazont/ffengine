@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "util.h"
+
 
 ShaderProgram::ShaderProgram():
     GLObject<GL_CURRENT_PROGRAM>()

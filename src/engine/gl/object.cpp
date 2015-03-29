@@ -2,10 +2,8 @@
 
 #include "GL/glu.h"
 
-#include <string>
-#include <stdexcept>
-
 #include <cassert>
+
 
 _GLObjectBase::_GLObjectBase():
     m_glid(0)
@@ -45,13 +43,3 @@ void _GLObjectBase::bound()
 
 }
 
-
-void raise_last_gl_error()
-{
-    const GLenum err = glGetError();
-    if (err != GL_NO_ERROR)
-    {
-        throw std::runtime_error("OpenGL error: " +
-                                 std::string((const char*)gluErrorString(err)));
-    }
-}

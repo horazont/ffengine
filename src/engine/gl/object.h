@@ -3,6 +3,10 @@
 
 #include <GL/glew.h>
 
+#include <functional>
+#include <iostream>
+
+
 class _GLObjectBase
 {
 protected:
@@ -48,7 +52,5 @@ public:
     }
 
 };
-
-void raise_last_gl_error();
 
 #endif

@@ -15,7 +15,11 @@ SOURCES += \
     src/engine/gl/vao.cpp \
     src/engine/gl/ibo.cpp \
     src/math/matrix.cpp \
-    src/math/vector.cpp
+    src/math/vector.cpp \
+    src/engine/gl/fbo.cpp \
+    src/engine/gl/texture.cpp \
+    src/engine/gl/2darray.cpp \
+    src/engine/gl/util.cpp
 
 RESOURCES += qml.qrc
 
@@ -34,6 +38,10 @@ HEADERS += \
     src/engine/gl/vao.h \
     src/engine/gl/ibo.h \
     src/math/matrix.h \
-    src/math/vector.h
+    src/math/vector.h \
+    src/engine/gl/fbo.h \
+    src/engine/gl/texture.h \
+    src/engine/gl/2darray.h \
+    src/engine/gl/util.h
 
 DISTFILES +=
