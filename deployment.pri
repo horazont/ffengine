@@ -25,3 +25,5 @@ android-no-sdk {
 }
 
 export(INSTALLS)
+
+HEADERS +=

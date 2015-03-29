@@ -15,6 +15,7 @@
 #include "../engine/gl/ibo.h"
 #include "../engine/gl/vao.h"
 #include "../engine/gl/texture.h"
+#include "../engine/gl/ubo.h"
 
 typedef std::chrono::high_resolution_clock hrclock;
 
@@ -34,6 +35,7 @@ private:
     VBOAllocation m_test_valloc;
     IBOAllocation m_test_ialloc;
     Texture2D m_test_texture;
+    UBO<Matrix4f, Matrix4f> m_test_ubo;
     std::unique_ptr<VAO> m_test_vao;
     hrclock::time_point m_t;
     unsigned int m_nframes;
@@ -58,8 +60,7 @@ private:
     std::unique_ptr<QuickGLScene> m_renderer;
 
 protected:
-    virtual QSGNode *updatePaintNode(QSGNode *oldNode,
-                                     UpdatePaintNodeData *updatePaintNodeData);
+    virtual QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *);
 
 public slots:
     void cleanup();

@@ -34,6 +34,9 @@ QuickGLScene::QuickGLScene(QObject *parent):
                               100, 0
                 });
 
+    m_test_ubo.set<0>(translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.5));
+    m_test_ubo.dump_local_as_floats();
+
     {
         std::basic_string<unsigned char> texbuffer(256*256*4, 0);
         unsigned char *ptr = &texbuffer.front();
@@ -84,12 +87,15 @@ QuickGLScene::QuickGLScene(QObject *parent):
     std::cout << m_test_shader.attach(
                 GL_VERTEX_SHADER,
                 "#version 330\n"
-                "uniform mat4 mat;"
+                "layout(std140) uniform MatrixBlock {"
+                "  layout(row_major) mat4 modelview;"
+                "  layout(row_major) mat4 proj;"
+                "} matrices;"
                 "in vec2 vertex;"
                 "in vec2 texcoord0;"
                 "out vec2 tc;"
                 "void main() {"
-                "    gl_Position = mat * vec4(vertex, 0f, 1.0f);"
+                "    gl_Position = matrices.proj * matrices.modelview * vec4(vertex, 0f, 1.0f);"
                 "    tc = texcoord0;"
                 "}") << std::endl;
 
@@ -118,8 +124,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
                 m_test_shader.uniform_location("tex"),
                 0
             );
-    m_test_shader.unbind();
-
+    m_test_shader.bind_uniform_block("MatrixBlock", 0);
 }
 
 QuickGLScene::~QuickGLScene()
@@ -139,16 +144,15 @@ void QuickGLScene::paint()
     m_test_vao->bind();
     m_test_shader.bind();
     m_test_texture.bind();
-    Matrix4f proj = proj_ortho(0, 0,
-                               m_viewport_size.width(), m_viewport_size.height(),
-                               -2, 2);
-    Matrix4f total = proj * translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.5);
-    glUniformMatrix4fvARB(
-                    m_test_shader.uniform_location("mat"),
-                    1,
-                    GL_TRUE,
-                    &total.coeff[0]
-                    );
+    const Matrix4f proj = proj_ortho(0, 0,
+                                     m_viewport_size.width(), m_viewport_size.height(),
+                                     -2, 2);
+    m_test_ubo.bind();
+    m_test_ubo.set<1>(proj);
+    m_test_ubo.update_bound();
+    m_test_ubo.unbind();
+
+    m_test_ubo.bind_at(0);
 
     glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 
@@ -184,7 +188,7 @@ QuickGLItem::QuickGLItem(QQuickItem *parent):
 
 QSGNode *QuickGLItem::updatePaintNode(
         QSGNode *oldNode,
-        UpdatePaintNodeData *updatePaintNodeData)
+        UpdatePaintNodeData *)
 {
     update();
     if (!oldNode) {

@@ -72,6 +72,17 @@ GLint ShaderProgram::attrib_location(const std::string &name) const
     return loc;
 }
 
+void ShaderProgram::bind_uniform_block(const std::string &name,
+                                       const GLuint index)
+{
+    const GLint loc = uniform_block_location(name);
+    if (loc < 0) {
+        throw std::runtime_error("no such uniform block: " + name);
+    }
+
+    glUniformBlockBinding(m_glid, index, loc);
+}
+
 bool ShaderProgram::link()
 {
     glLinkProgram(m_glid);
@@ -109,6 +120,24 @@ GLint ShaderProgram::uniform_location(const std::string &name) const
     }
 
     m_uniform_locs.emplace(name, loc);
+    return loc;
+}
+
+GLint ShaderProgram::uniform_block_location(const std::string &name) const
+{
+    {
+        auto iter = m_uniform_block_locs.find(name);
+        if (iter != m_uniform_block_locs.end()) {
+            return iter->second;
+        }
+    }
+
+    GLint loc = glGetUniformBlockIndex(m_glid, name.data());
+    if (loc < 0) {
+        return loc;
+    }
+
+    m_uniform_block_locs.emplace(name, loc);
     return loc;
 }
 
