@@ -12,6 +12,8 @@
 #include "texture.h"
 
 
+namespace engine {
+
 class Renderbuffer: public GLObject<GL_RENDERBUFFER_BINDING>,
                     public GL2DArray
 {
@@ -110,5 +112,7 @@ public:
     void unbind(Usage usage = Usage::BOTH);
 
 };
+
+}
 
 #endif

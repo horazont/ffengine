@@ -7,6 +7,8 @@
 #include "2darray.h"
 
 
+namespace engine {
+
 class Texture2D: public GLObject<GL_TEXTURE_BINDING_2D>,
                  public GL2DArray
 {
@@ -24,5 +26,7 @@ public:
     void attach_to_fbo(const GLenum target, const GLenum attachment) override;
 
 };
+
+}
 
 #endif

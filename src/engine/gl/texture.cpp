@@ -3,6 +3,8 @@
 #include "util.h"
 
 
+namespace engine {
+
 GLint get_suitable_format_for_null(const GLenum internal_format)
 {
     switch (internal_format)
@@ -66,3 +68,4 @@ void Texture2D::attach_to_fbo(const GLenum target, const GLenum attachment)
     glFramebufferTexture2D(target, attachment, GL_TEXTURE_2D, m_glid, 0);
 }
 
+}

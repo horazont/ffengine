@@ -50,19 +50,19 @@ QuickGLScene::QuickGLScene(QObject *parent):
 
         m_test_texture.bind();
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
-        raise_last_gl_error();
+        engine::raise_last_gl_error();
         GLEW_GET_FUN(__glewGenerateMipmap)(GL_TEXTURE_2D);
-        raise_last_gl_error();
+        engine::raise_last_gl_error();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        raise_last_gl_error();
+        engine::raise_last_gl_error();
         m_test_texture.unbind();
     }
 
     {
-        auto slice = VBOSlice<Vector2f>(m_test_valloc, 0);
+        auto slice = engine::VBOSlice<Vector2f>(m_test_valloc, 0);
         slice[0] = Vector2f(-100, -100);
         slice[1] = Vector2f(-100, 100);
         slice[2] = Vector2f(100, 100);
@@ -70,7 +70,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
     }
 
     {
-        auto slice = VBOSlice<Vector2f>(m_test_valloc, 1);
+        auto slice = engine::VBOSlice<Vector2f>(m_test_valloc, 1);
         slice[0] = Vector2f(0, 0);
         slice[1] = Vector2f(0, 1);
         slice[2] = Vector2f(1, 1);
@@ -114,7 +114,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
 
     std::cout << m_test_shader.link() << std::endl;
 
-    ArrayDeclaration decl;
+    engine::ArrayDeclaration decl;
     decl.declare_attribute("vertex", m_test_vbo, 0);
     decl.declare_attribute("texcoord0", m_test_vbo, 1);
     decl.set_ibo(&m_test_ibo);

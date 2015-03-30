@@ -3,6 +3,7 @@
 
 #include "array.h"
 
+namespace engine {
 
 class IBO: public GLArray<uint32_t,
                           GL_ELEMENT_ARRAY_BUFFER,
@@ -14,5 +15,7 @@ public:
 };
 
 typedef IBO::allocation_t IBOAllocation;
+
+}
 
 #endif

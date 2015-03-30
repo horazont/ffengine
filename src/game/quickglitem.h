@@ -30,14 +30,14 @@ public:
 
 private:
     bool m_initialized;
-    ShaderProgram m_test_shader;
-    VBO m_test_vbo;
-    IBO m_test_ibo;
-    VBOAllocation m_test_valloc;
-    IBOAllocation m_test_ialloc;
-    Texture2D m_test_texture;
-    UBO<Matrix4f, Matrix4f> m_test_ubo;
-    std::unique_ptr<VAO> m_test_vao;
+    engine::ShaderProgram m_test_shader;
+    engine::VBO m_test_vbo;
+    engine::IBO m_test_ibo;
+    engine::VBOAllocation m_test_valloc;
+    engine::IBOAllocation m_test_ialloc;
+    engine::Texture2D m_test_texture;
+    engine::UBO<Matrix4f, Matrix4f> m_test_ubo;
+    std::unique_ptr<engine::VAO> m_test_vao;
     hrclock::time_point m_t;
     monoclock::time_point m_t0;
     unsigned int m_nframes;

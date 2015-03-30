@@ -5,6 +5,8 @@
 #include <cassert>
 
 
+namespace engine {
+
 _GLObjectBase::_GLObjectBase():
     m_glid(0)
 {
@@ -43,3 +45,4 @@ void _GLObjectBase::bound()
 
 }
 
+}

@@ -5,6 +5,8 @@
 #include "util.h"
 
 
+namespace engine {
+
 Renderbuffer::Renderbuffer(const GLenum internal_format,
                            const GLsizei width,
                            const GLsizei height):
@@ -223,3 +225,5 @@ void FBO::unbind(Usage usage)
 
 FBO *FBO::m_draw_bound = nullptr;
 FBO *FBO::m_read_bound = nullptr;
+
+}

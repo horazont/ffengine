@@ -13,6 +13,8 @@
 #include "object.h"
 #include "util.h"
 
+namespace engine {
+
 typedef unsigned int GLArrayRegionID;
 
 class GLArrayRegion
@@ -452,5 +454,7 @@ public:
     }
 
 };
+
+}
 
 #endif

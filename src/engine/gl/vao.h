@@ -6,6 +6,9 @@
 #include "ibo.h"
 #include "shader.h"
 
+
+namespace engine {
+
 class VAO: public GLObject<GL_VERTEX_ARRAY_BINDING>
 {
 public:
@@ -62,5 +65,7 @@ public:
     void set_ibo(IBO *ibo);
 
 };
+
+}
 
 #endif

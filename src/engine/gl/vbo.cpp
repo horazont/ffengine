@@ -1,5 +1,8 @@
 #include "vbo.h"
 
+
+namespace engine {
+
 VBOAttribute::VBOAttribute(unsigned int length):
     length(length)
 {
@@ -38,5 +41,7 @@ VBO::VBO(const VBOFormat &format):
 
 VBO::~VBO()
 {
+
+}
 
 }

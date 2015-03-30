@@ -7,6 +7,9 @@
 #include <iostream>
 
 
+
+namespace engine {
+
 class _GLObjectBase
 {
 protected:
@@ -52,5 +55,7 @@ public:
     }
 
 };
+
+}
 
 #endif

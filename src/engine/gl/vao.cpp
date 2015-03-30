@@ -2,6 +2,9 @@
 
 #include <algorithm>
 
+
+namespace engine {
+
 VAO::VAO():
     GLObject<GL_VERTEX_ARRAY_BINDING>(),
     m_ibo_hint(nullptr),
@@ -128,4 +131,6 @@ std::unique_ptr<VAO> ArrayDeclaration::make_vao(
 void ArrayDeclaration::set_ibo(IBO *ibo)
 {
     m_ibo = ibo;
+}
+
 }

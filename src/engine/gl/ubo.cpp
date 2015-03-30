@@ -3,6 +3,8 @@
 #include <iostream>
 
 
+namespace engine {
+
 UBOBase::UBOBase(const GLsizei size, void *storage, const GLenum usage):
     GLObject<GL_UNIFORM_BUFFER_BINDING>(),
     m_size(size),
@@ -71,4 +73,6 @@ void UBOBase::bind_at(GLuint index)
 void UBOBase::unbind_from(GLuint index)
 {
     glBindBufferBase(GL_UNIFORM_BUFFER, index, 0);
+}
+
 }

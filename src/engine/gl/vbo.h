@@ -14,6 +14,8 @@
 #include "array.h"
 
 
+namespace engine {
+
 class VBOAttribute
 {
 public:
@@ -112,6 +114,8 @@ public:
     }
 
 };
+
+}
 
 
 #endif

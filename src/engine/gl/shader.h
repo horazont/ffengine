@@ -8,6 +8,8 @@
 #include <vector>
 
 
+namespace engine {
+
 class ShaderProgram: public GLObject<GL_CURRENT_PROGRAM>
 {
 public:
@@ -33,5 +35,7 @@ public:
     void bind() override;
     void unbind() override;
 };
+
+}
 
 #endif

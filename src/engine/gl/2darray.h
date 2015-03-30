@@ -3,6 +3,8 @@
 
 #include <GL/glew.h>
 
+namespace engine {
+
 class GL2DArray
 {
 public:
@@ -35,5 +37,7 @@ public:
     virtual void attach_to_fbo(const GLenum target, const GLenum attachment) = 0;
 
 };
+
+}
 
 #endif

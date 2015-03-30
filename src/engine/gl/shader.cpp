@@ -5,6 +5,8 @@
 #include "util.h"
 
 
+namespace engine {
+
 ShaderProgram::ShaderProgram():
     GLObject<GL_CURRENT_PROGRAM>()
 {
@@ -149,4 +151,6 @@ void ShaderProgram::bind()
 void ShaderProgram::unbind()
 {
     glUseProgram(0);
+}
+
 }

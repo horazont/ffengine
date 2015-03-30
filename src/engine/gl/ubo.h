@@ -11,6 +11,8 @@
 #include "../../math/vector.h"
 #include "../../math/matrix.h"
 
+namespace engine {
+
 #include "ubo_type_wrappers.h"
 
 namespace ubo_storage_utils {
@@ -142,5 +144,7 @@ public:
         UBOBase::mark_dirty(offset, size);
     }
 };
+
+}
 
 #endif

@@ -3,6 +3,8 @@
 #include <stdexcept>
 
 
+namespace engine {
+
 GLint gl_get_integer(const GLenum pname)
 {
     GLint value = 0;
@@ -23,4 +25,6 @@ void raise_last_gl_error()
     {
         raise_gl_error(err);
     }
+}
+
 }

@@ -1,5 +1,8 @@
 #include "2darray.h"
 
+
+namespace engine {
+
 GL2DArray::GL2DArray(const GLenum internal_format,
                      const GLsizei width,
                      const GLsizei height):
@@ -7,5 +10,7 @@ GL2DArray::GL2DArray(const GLenum internal_format,
     m_width(width),
     m_height(height)
 {
+
+}
 
 }
