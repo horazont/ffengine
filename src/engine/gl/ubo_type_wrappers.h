@@ -34,6 +34,8 @@ struct ubo_wrap_type<float>
         float pad[3];
     };
 
+    static constexpr GLenum gl_type = GL_FLOAT;
+
     static inline float extract(const wrapped_type &ref)
     {
         return ref.value;
@@ -65,6 +67,8 @@ struct ubo_wrap_type<Vector2f>
         Vector2f value;
         float pad[2];
     };
+
+    static constexpr GLenum gl_type = GL_FLOAT_VEC2;
 
     static inline Vector2f extract(const wrapped_type &ref)
     {
@@ -98,6 +102,8 @@ struct ubo_wrap_type<Vector3f>
         float pad[1];
     };
 
+    static constexpr GLenum gl_type = GL_FLOAT_VEC3;
+
     static inline Vector3f extract(const wrapped_type &ref)
     {
         return ref.value;
@@ -125,6 +131,8 @@ struct ubo_wrap_type<Vector4f>
 {
     typedef Vector4f type;
     typedef type wrapped_type;
+
+    static constexpr GLenum gl_type = GL_FLOAT_VEC4;
 
     static inline type extract(const type &ref)
     {
@@ -154,6 +162,8 @@ struct ubo_wrap_type<Matrix4f>
 {
     typedef Matrix4f type;
     typedef type wrapped_type;
+
+    static constexpr GLenum gl_type = GL_FLOAT_MAT4;
 
     static inline type extract(const type &ref)
     {

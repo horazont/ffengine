@@ -25,6 +25,7 @@ struct wrapped_tuple<element_t, element_ts...>
 {
 public:
     typedef wrapped_tuple<element_ts...> next_tuple;
+    static constexpr std::size_t nelements = next_tuple::nelements + 1;
 
 public:
     wrapped_tuple():
@@ -50,6 +51,9 @@ public:
 template<>
 struct wrapped_tuple<>
 {
+public:
+    static constexpr std::size_t nelements = 0;
+
 public:
     wrapped_tuple()
     {
@@ -134,6 +138,12 @@ public:
     {
         ubo_storage_utils::set<I>(m_storage, ref);
         mark_dirty<I>();
+    }
+
+    template <std::size_t I>
+    inline std::size_t offset() const
+    {
+        return ubo_storage_utils::offset<I>(m_storage);
     }
 
     template <std::size_t I>

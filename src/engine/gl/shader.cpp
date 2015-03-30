@@ -36,6 +36,9 @@ void ShaderProgram::delete_globject()
 
 void ShaderProgram::introspect()
 {
+    m_attribs.clear();
+    m_uniforms.clear();
+    m_uniform_blocks.clear();
     introspect_vertex_attributes();
     introspect_uniforms();
 }
@@ -272,12 +275,6 @@ GLint ShaderProgram::uniform_location(const std::string &name) const
 
 GLint ShaderProgram::uniform_block_location(const std::string &name) const
 {
-    std::cout << name << " " << name.size() << std::endl;
-    for (auto &item: m_uniform_blocks) {
-        std::cout << item.first << " " << item.first.size() << " " << item.second.loc << std::endl;
-        std::cout << bool(item.first == name) << std::endl;
-    }
-
     auto iter = m_uniform_blocks.find(name);
     if (iter != m_uniform_blocks.end()) {
         return iter->second.loc;

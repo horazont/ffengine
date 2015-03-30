@@ -127,6 +127,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
     m_test_vao = &m_resources.manage("test_vao", decl.make_vao(m_test_shader));
 
     m_test_shader.bind();
+    m_test_shader.check_uniform_block("MatrixBlock", m_test_ubo);
 
     glUniform1ui(
                 m_test_shader.uniform_location("tex"),
