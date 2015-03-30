@@ -33,7 +33,7 @@ public:
 };
 
 
-class FBO
+class FBO: public Resource
 {
 public:
     enum class Usage {

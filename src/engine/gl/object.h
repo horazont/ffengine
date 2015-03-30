@@ -6,11 +6,12 @@
 #include <functional>
 #include <iostream>
 
+#include "../resource.h"
 
 
 namespace engine {
 
-class _GLObjectBase
+class _GLObjectBase: public Resource
 {
 protected:
     _GLObjectBase();

@@ -14,16 +14,21 @@
 QuickGLScene::QuickGLScene(QObject *parent):
     QObject(parent),
     m_initialized(false),
-    m_test_shader(),
-    m_test_vbo(
-        VBOFormat({
-                      VBOAttribute(2),
-                      VBOAttribute(2)
-                  })
-        ),
+    m_test_shader(m_resources.emplace<engine::ShaderProgram>("test_shader")),
+    m_test_vbo(m_resources.emplace<engine::VBO>(
+                   "test_vbo",
+                   engine::VBOFormat({
+                                         engine::VBOAttribute(2),
+                                         engine::VBOAttribute(2)
+                                     })
+                   )),
+    m_test_ibo(m_resources.emplace<engine::IBO>("test_ibo")),
     m_test_valloc(m_test_vbo.allocate(4)),
     m_test_ialloc(m_test_ibo.allocate(4)),
-    m_test_texture(GL_RGBA, 256, 256),
+    m_test_texture(m_resources.emplace<engine::Texture2D>(
+                       "test_texture",
+                       GL_RGBA, 256, 256)),
+    m_test_ubo(m_resources.emplace<engine::UBO<Matrix4f, Matrix4f>>("test_ubo")),
     m_t(hrclock::now()),
     m_t0(monoclock::now()),
     m_nframes(0)
@@ -119,7 +124,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
     decl.declare_attribute("texcoord0", m_test_vbo, 1);
     decl.set_ibo(&m_test_ibo);
 
-    m_test_vao = decl.make_vao(m_test_shader);
+    m_test_vao = &m_resources.manage("test_vao", decl.make_vao(m_test_shader));
 
     m_test_shader.bind();
 
