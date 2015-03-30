@@ -1,11 +1,27 @@
 #include "shader.h"
 
+#include <cassert>
 #include <iostream>
+#include <unordered_set>
 
 #include "util.h"
 
 
 namespace engine {
+
+ShaderUniformBlockMember::ShaderUniformBlockMember(
+        GLenum type,
+        GLint size,
+        GLsizei offset,
+        bool row_major):
+    type(type),
+    size(size),
+    offset(offset),
+    row_major(row_major)
+{
+
+}
+
 
 ShaderProgram::ShaderProgram():
     GLObject<GL_CURRENT_PROGRAM>()
@@ -16,6 +32,150 @@ ShaderProgram::ShaderProgram():
 void ShaderProgram::delete_globject()
 {
     glDeleteProgram(m_glid);
+}
+
+void ShaderProgram::introspect()
+{
+    introspect_vertex_attributes();
+    introspect_uniforms();
+}
+
+void ShaderProgram::introspect_vertex_attributes()
+{
+    GLint max_length = 0;
+    glGetProgramiv(m_glid, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_length);
+    GLint active_attrs = 0;
+    glGetProgramiv(m_glid, GL_ACTIVE_ATTRIBUTES, &active_attrs);
+
+    std::string buf(max_length, '\0');
+    for (int i = 0; i < active_attrs; i++) {
+        GLsizei actual_length = 0;
+        GLint nelements = 0;
+        GLenum type = 0;
+        glGetActiveAttrib(m_glid, i, buf.size(),
+                          &actual_length,
+                          &nelements,
+                          &type,
+                          &buf.front());
+        buf.resize(actual_length);
+
+        GLint loc = glGetAttribLocation(m_glid, buf.data());
+        assert(loc >= 0);
+
+        if (buf.size() > 0) {
+            m_attribs[buf] = ShaderVertexAttribute{loc, buf, type, nelements};
+        }
+    }
+}
+
+void ShaderProgram::introspect_uniforms()
+{
+    static const std::unordered_set<GLenum> matrix_types({
+                                                             GL_FLOAT_MAT2,
+                                                             GL_FLOAT_MAT3,
+                                                             GL_FLOAT_MAT4,
+                                                             GL_FLOAT_MAT2x3,
+                                                             GL_FLOAT_MAT2x4,
+                                                             GL_FLOAT_MAT3x2,
+                                                             GL_FLOAT_MAT3x4,
+                                                             GL_FLOAT_MAT4x2,
+                                                             GL_FLOAT_MAT4x3,
+                                                             GL_DOUBLE_MAT2,
+                                                             GL_DOUBLE_MAT3,
+                                                             GL_DOUBLE_MAT4,
+                                                             GL_DOUBLE_MAT2x3,
+                                                             GL_DOUBLE_MAT2x4,
+                                                             GL_DOUBLE_MAT3x2,
+                                                             GL_DOUBLE_MAT3x4,
+                                                             GL_DOUBLE_MAT4x2,
+                                                             GL_DOUBLE_MAT4x3
+                                                         });
+
+    GLint active_uniforms = 0;
+    glGetProgramiv(m_glid, GL_ACTIVE_UNIFORMS, &active_uniforms);
+
+    GLint active_blocks = 0;
+    glGetProgramiv(m_glid, GL_ACTIVE_UNIFORM_BLOCKS, &active_blocks);
+
+    for (GLint i = 0; i < active_blocks; i++)
+    {
+        GLint name_length;
+        GLuint uniform_count;
+        glGetActiveUniformBlockiv(m_glid, i, GL_UNIFORM_BLOCK_NAME_LENGTH, &name_length);
+        glGetActiveUniformBlockiv(m_glid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, (GLint*)&uniform_count);
+
+        std::string name(name_length-1, ' ');
+        glGetActiveUniformBlockName(m_glid, i, name.size()+1, nullptr, &name.front());
+
+        ShaderUniformBlock &block = m_uniform_blocks.emplace(name, ShaderUniformBlock()).first->second;
+        block.loc = i;
+        block.name = name;
+
+        std::basic_string<GLuint> indicies(uniform_count, 0);
+        glGetActiveUniformBlockiv(m_glid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, (GLint*)&indicies.front());
+
+        std::basic_string<GLenum> types(uniform_count, 0);
+        std::basic_string<GLint> sizes(uniform_count, 0);
+        std::basic_string<GLint> offsets(uniform_count, 0);
+        std::basic_string<GLint> matrix_strides(uniform_count, 0);
+        std::basic_string<GLint> row_majors(uniform_count, 0);
+
+        glGetActiveUniformsiv(m_glid, uniform_count, indicies.data(), GL_UNIFORM_TYPE, (GLint*)&types.front());
+        glGetActiveUniformsiv(m_glid, uniform_count, indicies.data(), GL_UNIFORM_SIZE, &sizes.front());
+        glGetActiveUniformsiv(m_glid, uniform_count, indicies.data(), GL_UNIFORM_OFFSET, &offsets.front());
+        glGetActiveUniformsiv(m_glid, uniform_count, indicies.data(), GL_UNIFORM_MATRIX_STRIDE, &matrix_strides.front());
+        glGetActiveUniformsiv(m_glid, uniform_count, indicies.data(), GL_UNIFORM_IS_ROW_MAJOR, &row_majors.front());
+
+        for (GLuint j = 0; j < uniform_count; j++) {
+            // FIXME: fix this check. strides count existing elements, so for
+            // a mat4f we expect 16.
+
+            /* if (matrix_strides[j] > 0) {
+                GLint name_length = 0;
+                glGetActiveUniformsiv(m_glid, 1, &j, GL_UNIFORM_NAME_LENGTH, &name_length);
+                std::string name(name_length, ' ');
+                glGetActiveUniformName(m_glid, j, name.size(), nullptr, &name.front());
+                throw std::runtime_error("unsupported matrix stride ("+
+                                         std::to_string(matrix_strides[j])+
+                                         ") for uniform "+
+                                         name);
+            } */
+
+            if (row_majors[j] != GL_TRUE &&
+                    matrix_types.find(types[j]) != matrix_types.end())
+            {
+                throw std::runtime_error("matrices in UBOs must be row major");
+            }
+
+            block.members.emplace_back(
+                        types[j], sizes[j], offsets[j],
+                        row_majors[j] == GL_TRUE);
+        }
+    }
+
+    for (GLuint i = 0; i < (GLuint)active_uniforms; i++)
+    {
+        GLint block_index;
+        glGetActiveUniformsiv(m_glid, 1, &i, GL_UNIFORM_BLOCK_INDEX, &block_index);
+        if (block_index > 0) {
+            continue;
+        }
+
+        GLint type, size, name_length;
+        glGetActiveUniformsiv(m_glid, 1, &i, GL_UNIFORM_TYPE, &type);
+        glGetActiveUniformsiv(m_glid, 1, &i, GL_UNIFORM_SIZE, &size);
+        glGetActiveUniformsiv(m_glid, 1, &i, GL_UNIFORM_NAME_LENGTH, &name_length);
+        raise_last_gl_error();
+
+        std::string name(name_length-1, ' ');
+        glGetActiveUniformName(m_glid, i, name.size()+1, nullptr, &name.front());
+
+        ShaderUniform &uniform = (m_uniforms[name] = ShaderUniform());
+        uniform.loc = i;
+        uniform.name = name;
+        uniform.size = size;
+        uniform.type = type;
+    }
 }
 
 bool ShaderProgram::attach(GLenum shader_type, const std::string &source)
@@ -57,21 +217,13 @@ bool ShaderProgram::attach(GLenum shader_type, const std::string &source)
 
 GLint ShaderProgram::attrib_location(const std::string &name) const
 {
+    auto iter = m_attribs.find(name);
+    if (iter != m_attribs.end())
     {
-        auto iter = m_attrib_locs.find(name);
-        if (iter != m_attrib_locs.end())
-        {
-            return iter->second;
-        }
+        return iter->second.loc;
     }
 
-    GLint loc = glGetAttribLocation(m_glid, name.data());
-    if (loc < 0) {
-        return loc;
-    }
-
-    m_attrib_locs.emplace(name, loc);
-    return loc;
+    return -1;
 }
 
 void ShaderProgram::bind_uniform_block(const std::string &name,
@@ -103,44 +255,35 @@ bool ShaderProgram::link()
         return false;
     }
 
+    introspect();
+
     return true;
 }
 
 GLint ShaderProgram::uniform_location(const std::string &name) const
 {
+    auto iter = m_uniforms.find(name);
+    if (iter != m_uniforms.end())
     {
-        auto iter = m_uniform_locs.find(name);
-        if (iter != m_uniform_locs.end())
-        {
-            return iter->second;
-        }
+        return iter->second.loc;
     }
-
-    GLint loc = glGetUniformLocation(m_glid, name.data());
-    if (loc < 0) {
-        return loc;
-    }
-
-    m_uniform_locs.emplace(name, loc);
-    return loc;
+    return -1;
 }
 
 GLint ShaderProgram::uniform_block_location(const std::string &name) const
 {
-    {
-        auto iter = m_uniform_block_locs.find(name);
-        if (iter != m_uniform_block_locs.end()) {
-            return iter->second;
-        }
+    std::cout << name << " " << name.size() << std::endl;
+    for (auto &item: m_uniform_blocks) {
+        std::cout << item.first << " " << item.first.size() << " " << item.second.loc << std::endl;
+        std::cout << bool(item.first == name) << std::endl;
     }
 
-    GLint loc = glGetUniformBlockIndex(m_glid, name.data());
-    if (loc < 0) {
-        return loc;
+    auto iter = m_uniform_blocks.find(name);
+    if (iter != m_uniform_blocks.end()) {
+        return iter->second.loc;
     }
 
-    m_uniform_block_locs.emplace(name, loc);
-    return loc;
+    return -1;
 }
 
 void ShaderProgram::bind()
