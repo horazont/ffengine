@@ -21,7 +21,7 @@ Item {
         Column {
             id: column1
             anchors.rightMargin: 8
-            anchors.leftMargin: 8
+            anchors.leftMargin: 12
             anchors.bottomMargin: 8
             anchors.topMargin: 8
             anchors.fill: parent

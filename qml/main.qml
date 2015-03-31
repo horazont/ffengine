@@ -18,7 +18,8 @@ ApplicationWindow {
         MainForm {
             width: 206
             height: 340
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: -8
             anchors.verticalCenter: parent.verticalCenter
         }
     }
@@ -27,4 +28,5 @@ ApplicationWindow {
         background: Item{
         }
     }
+
 }
