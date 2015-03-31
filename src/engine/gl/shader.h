@@ -9,6 +9,8 @@
 #include "object.h"
 #include "ubo.h"
 
+#include "../../io/log.h"
+
 
 namespace engine {
 
@@ -78,11 +80,22 @@ struct typecheck_helper<N, ubo_t, element_t, element_ts...>
     {
         typedef ubo_wrap_type<element_t> wrap_helper;
 
+        const int this_member = member_idx;
+        const int this_offset = offset;
+
         ShaderUniformBlockMember &member = get_next_member(block,
                                                            member_idx,
                                                            offset);
         if (member.type != wrap_helper::gl_type) {
-            throw std::runtime_error("inconsistent types at member "+std::to_string(member_idx));
+            io::logging().get_logger("gl.shader").logf(
+                        io::LOG_EXCEPTION,
+                        "uniform typecheck: member %d:%d: OpenGL reports type "
+                        "0x%x, UBO member reports 0x%x",
+                        this_member,
+                        this_offset,
+                        member.type,
+                        wrap_helper::gl_type);
+            throw std::runtime_error("inconsistent types at member "+std::to_string(this_member));
         }
 
         typecheck_helper<N+1, ubo_t, element_ts...>::typecheck(block, member_idx, offset, ubo);
