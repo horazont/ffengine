@@ -102,6 +102,16 @@ struct Matrix
         return result;
     }
 
+    template <
+            typename other_float_t,
+            unsigned int other_columns>
+    Matrix &operator*=(const Matrix<other_float_t, columns, other_columns> &mat)
+    {
+        Matrix<float_t, rows, other_columns> tmp = operator*<other_float_t, other_columns, float_t>(mat);
+        *this = tmp;
+        return *this;
+    }
+
     template <typename other_float_t>
     inline Matrix& operator*=(other_float_t scale)
     {

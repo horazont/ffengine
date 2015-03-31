@@ -21,6 +21,8 @@ SOURCES += \
     src/engine/gl/2darray.cpp \
     src/engine/gl/util.cpp \
     src/engine/gl/ubo.cpp \
+    src/engine/scenegraph.cpp \
+    src/engine/gl/material.cpp \
     src/engine/resource.cpp \
     src/io/log.cpp
 
@@ -49,6 +51,8 @@ HEADERS += \
     src/engine/gl/ubo.h \
     src/engine/gl/ubo_tuple_utils.h \
     src/engine/gl/ubo_type_wrappers.h \
+    src/engine/scenegraph.h \
+    src/engine/gl/material.h \
     src/engine/resource.h \
     src/io/log.h
 
