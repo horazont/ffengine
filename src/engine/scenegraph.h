@@ -312,6 +312,7 @@ class ParentNode: public Node
 {
 public:
     ParentNode();
+    explicit ParentNode(std::unique_ptr<Node> &&child);
 
 private:
     std::unique_ptr<Node> m_locked_child;
@@ -346,6 +347,14 @@ public:
      */
     void set_child(std::unique_ptr<Node> &&node);
 
+    template <typename child_t, typename... arg_ts>
+    child_t &emplace_child(arg_ts&&... args)
+    {
+        child_t *result = new child_t(std::forward<arg_ts>(args)...);
+        set_child(std::unique_ptr<Node>(result));
+        return *result;
+    }
+
 public:
     void advance(TimeInterval seconds) override;
     void render(RenderContext &context) override;
@@ -358,6 +367,7 @@ class Transformation: public ParentNode
 {
 public:
     Transformation();
+    explicit Transformation(std::unique_ptr<Node> &&child);
 
 private:
     Matrix4f m_transform;

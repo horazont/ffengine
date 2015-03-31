@@ -188,6 +188,15 @@ ParentNode::ParentNode():
 
 }
 
+ParentNode::ParentNode(std::unique_ptr<Node> &&child):
+    Node(),
+    m_locked_child(),
+    m_child(std::move(child)),
+    m_child_to_render()
+{
+
+}
+
 void ParentNode::set_child(std::unique_ptr<Node> &&node)
 {
     m_locked_child = std::move(m_child);
@@ -227,6 +236,14 @@ void ParentNode::sync()
 
 Transformation::Transformation():
     ParentNode(),
+    m_transform(Identity),
+    m_render_transform(Identity)
+{
+
+}
+
+Transformation::Transformation(std::unique_ptr<Node> &&child):
+    ParentNode(std::move(child)),
     m_transform(Identity),
     m_render_transform(Identity)
 {

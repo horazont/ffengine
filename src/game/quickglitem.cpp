@@ -125,7 +125,10 @@ QuickGLScene::QuickGLScene(QObject *parent):
     m_t0(monoclock::now()),
     m_nframes(0)
 {
-    m_scenegraph_root.emplace<GridNode>(m_matrix_ubo, 10, 10, 10);
+    engine::scenegraph::Transformation &transform =
+            m_scenegraph_root.emplace<engine::scenegraph::Transformation>();
+    transform.emplace_child<GridNode>(m_matrix_ubo, 10, 10, 10);
+    transform.transformation() = translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.4);
 }
 
 QuickGLScene::~QuickGLScene()
