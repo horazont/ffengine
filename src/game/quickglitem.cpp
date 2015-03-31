@@ -64,6 +64,7 @@ public:
                     "  layout(row_major) mat4 proj;"
                     "  layout(row_major) mat4 view;"
                     "  layout(row_major) mat4 model;"
+                    "  layout(row_major) mat3 normal;"
                     "};"
                     "in vec3 position;"
                     "void main() {"

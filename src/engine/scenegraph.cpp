@@ -20,6 +20,9 @@ void RenderContext::draw_elements(GLenum primitive,
                                   IBOAllocation &indicies)
 {
     m_matrix_ubo.set<2>(m_current_transformation);
+    Matrix3f rotational_part = Matrix3f::clip(m_current_transformation);
+    inverse(rotational_part);
+    m_matrix_ubo.set<3>(rotational_part);
     m_matrix_ubo.sync();
     m_matrix_ubo.bind_at(0);
     with_arrays.bind();

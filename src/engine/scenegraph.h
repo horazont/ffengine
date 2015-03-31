@@ -43,7 +43,7 @@ public:
 class RenderContext
 {
 public:
-    typedef UBO<Matrix4f, Matrix4f, Matrix4f> MatrixUBO;
+    typedef UBO<Matrix4f, Matrix4f, Matrix4f, Matrix3f> MatrixUBO;
 
 public:
     RenderContext(MatrixUBO &matrix_ubo);
