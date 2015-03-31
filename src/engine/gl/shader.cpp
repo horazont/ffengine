@@ -1,5 +1,6 @@
 #include "shader.h"
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <unordered_set>
@@ -190,6 +191,14 @@ void ShaderProgram::introspect_uniforms()
                         types[j], sizes[j], offsets[j],
                         row_majors[j] == GL_TRUE);
         }
+
+        std::sort(block.members.begin(),
+                  block.members.end(),
+                  [](const ShaderUniformBlockMember &m1,
+                     const ShaderUniformBlockMember &m2)
+                  {
+                      return m1.offset < m2.offset;
+                  });
     }
 
     for (GLuint i = 0; i < (GLuint)active_uniforms; i++)
