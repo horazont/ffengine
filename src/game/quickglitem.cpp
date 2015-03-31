@@ -290,7 +290,23 @@ void QuickGLItem::handle_window_changed(QQuickWindow *win)
                 << context->format().minorVersion()
                 << io::submit;
 
-        qml_gl_logger.log(io::LOG_DEBUG)
+        bool context_ok = true;
+        io::LogLevel context_info_level = io::LOG_DEBUG;
+        if (context->format().profile() != QSurfaceFormat::CoreProfile ||
+                context->format().majorVersion() != 3 ||
+                context->format().depthBufferSize() == 0)
+        {
+            context_ok = false;
+            context_info_level = io::LOG_WARNING;
+            qml_gl_logger.log(io::LOG_EXCEPTION)
+                    << "Could not create Core-profile OpenGL 3+ context with depth buffer"
+                    << io::submit;
+        } else {
+            qml_gl_logger.log(io::LOG_DEBUG,
+                              "context deemed appropriate, continuing...");
+        }
+
+        qml_gl_logger.log(context_info_level)
                 << "  renderable  : "
                 << (context->format().renderableType() == QSurfaceFormat::OpenGL
                     ? "OpenGL"
@@ -300,29 +316,33 @@ void QuickGLItem::handle_window_changed(QQuickWindow *win)
                     ? "OpenVG (software?)"
                     : "unknown")
                 << io::submit;
-        qml_gl_logger.log(io::LOG_DEBUG)
+        qml_gl_logger.log(context_info_level)
                 << "  rgba        : "
                 << context->format().redBufferSize() << " "
                 << context->format().greenBufferSize() << " "
                 << context->format().blueBufferSize() << " "
                 << context->format().alphaBufferSize() << " "
                 << io::submit;
-        qml_gl_logger.log(io::LOG_DEBUG)
+        qml_gl_logger.log(context_info_level)
                 << "  stencil     : "
                 << context->format().stencilBufferSize()
                 << io::submit;
-        qml_gl_logger.log(io::LOG_DEBUG)
+        qml_gl_logger.log(context_info_level)
                 << "  depth       : " << context->format().depthBufferSize()
                 << io::submit;
-        qml_gl_logger.log(io::LOG_DEBUG)
+        qml_gl_logger.log(context_info_level)
                 << "  multisamples: " << context->format().samples()
                 << io::submit;
-        qml_gl_logger.log(io::LOG_DEBUG)
+        qml_gl_logger.log(context_info_level)
                 << "  profile     : "
                 << (context->format().profile() == QSurfaceFormat::CoreProfile
                     ? "core"
                     : "compatibility")
                 << io::submit;
+
+        if (!context_ok) {
+            throw std::runtime_error("Failed to create appropriate OpenGL context");
+        }
 
         context->makeCurrent(win);
 
