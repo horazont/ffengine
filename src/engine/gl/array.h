@@ -472,11 +472,12 @@ public:
     void bind() override
     {
         glBindBuffer(gl_target, this->m_glid);
-        bound();
+        this->bound();
     }
 
-    void bound() override
+    void sync() override
     {
+        bind();
         upload_dirty();
     }
 

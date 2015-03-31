@@ -28,6 +28,7 @@ public:
 public:
     void bind() override;
     void bound() override;
+    void sync() override;
     void unbind() override;
 
 };

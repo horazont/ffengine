@@ -58,6 +58,11 @@ void Texture2D::bound()
 
 }
 
+void Texture2D::sync()
+{
+
+}
+
 void Texture2D::unbind()
 {
     glBindTexture(GL_TEXTURE_2D, 0);

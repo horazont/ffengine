@@ -57,6 +57,12 @@ void UBOBase::bind()
 
 void UBOBase::bound()
 {
+
+}
+
+void UBOBase::sync()
+{
+    bind();
     update_bound();
 }
 

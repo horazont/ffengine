@@ -19,6 +19,9 @@ int main(int argc, char *argv[])
                 );
     io::logging().log(io::LOG_INFO) << "Log initialized" << io::submit;
 
+    io::logging().get_logger("engine.gl.array").set_level(io::LOG_WARNING);
+    io::logging().get_logger("engine.gl.vao").set_level(io::LOG_WARNING);
+
     QApplication app(argc, argv);
     io::logging().log(io::LOG_INFO) << "QApplication initialized" << io::submit;
 

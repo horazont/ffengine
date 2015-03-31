@@ -29,6 +29,7 @@ protected:
 protected:
     virtual void delete_globject();
 
+public:
     inline GLuint glid() const
     {
         return m_glid;
@@ -37,6 +38,7 @@ protected:
 public:
     virtual void bind() = 0;
     virtual void bound();
+    virtual void sync() = 0;
     virtual void unbind() = 0;
 
 };

@@ -318,6 +318,11 @@ void ShaderProgram::bind()
     glUseProgram(m_glid);
 }
 
+void ShaderProgram::sync()
+{
+
+}
+
 void ShaderProgram::unbind()
 {
     glUseProgram(0);

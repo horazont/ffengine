@@ -133,7 +133,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
     decl.declare_attribute("texcoord0", m_test_vbo, 1);
     decl.set_ibo(&m_test_ibo);
 
-    m_test_vao = &m_resources.manage("test_vao", decl.make_vao(m_test_shader));
+    m_test_vao = &m_resources.manage("test_vao", decl.make_vao(m_test_shader, true));
 
     m_test_shader.bind();
     m_test_shader.check_uniform_block("MatrixBlock", m_test_ubo);
@@ -164,7 +164,7 @@ void QuickGLScene::paint()
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
     GLEW_GET_FUN(__glewActiveTexture)(GL_TEXTURE0);
-    m_test_vao->bind();
+    m_test_vao->sync();
     m_test_shader.bind();
     m_test_texture.bind();
     const Matrix4f proj = proj_ortho(0, 0,

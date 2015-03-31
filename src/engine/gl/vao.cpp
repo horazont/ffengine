@@ -2,8 +2,13 @@
 
 #include <algorithm>
 
+#include "../../io/log.h"
+
 
 namespace engine {
+
+io::Logger &gl_vao_logger = io::logging().get_logger("engine.gl.vao");
+
 
 VAO::VAO():
     GLObject<GL_VERTEX_ARRAY_BINDING>(),
@@ -41,11 +46,26 @@ void VAO::bind()
 
 void VAO::bound()
 {
+
+}
+
+void VAO::sync()
+{
+    bind();
+    gl_vao_logger.logf(io::LOG_DEBUG, "synchronizing VAO (glid=%d)", m_glid);
     if (m_ibo_hint) {
-        m_ibo_hint->bound();
+        gl_vao_logger.logf(
+                    io::LOG_DEBUG,
+                    "synchronizing IBO hint (glid=%d)",
+                    m_ibo_hint->glid());
+        m_ibo_hint->sync();
     }
     for (auto &vbo: m_vbo_hints) {
-        vbo->bind();
+        gl_vao_logger.logf(
+                    io::LOG_DEBUG,
+                    "synchronizing VBO hint (glid=%d)",
+                    vbo->glid());
+        vbo->sync();
     }
 }
 

@@ -167,7 +167,9 @@ public:
 
 public:
     void bind() override;
+    void sync() override;
     void unbind() override;
+
 };
 
 }

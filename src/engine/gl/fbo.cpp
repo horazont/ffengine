@@ -39,6 +39,11 @@ void Renderbuffer::bound()
            m_height);
 }
 
+void Renderbuffer::sync()
+{
+
+}
+
 void Renderbuffer::unbind()
 {
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
