@@ -101,6 +101,11 @@ public:
         return m_buffer->region_offset(m_region_id);
     }
 
+    inline unsigned int base() const
+    {
+        return m_buffer->region_base(m_region_id);
+    }
+
     inline unsigned int length() const
     {
         return m_nblocks;
@@ -134,6 +139,7 @@ class GLArray: public GLObject<gl_binding_type>
 public:
     typedef _element_t element_t;
     typedef GLArrayAllocation<buffer_t> allocation_t;
+    typedef std::vector<std::unique_ptr<GLArrayRegion> > region_container;
 
 public:
     GLArray():
@@ -159,7 +165,7 @@ protected:
     unsigned int m_block_length;
 
     std::basic_string<element_t> m_local_buffer;
-    std::vector<GLArrayRegion> m_regions;
+    std::vector<std::unique_ptr<GLArrayRegion> > m_regions;
     std::unordered_map<GLArrayRegionID, GLArrayRegion*> m_region_map;
     bool m_any_dirty;
 
@@ -171,12 +177,11 @@ protected:
                                  unsigned int count)
     {
         const GLArrayRegionID region_id = ++m_region_id_ctr;
-        m_regions.emplace_back(
-                    region_id,
-                    start,
-                    count
-        );
-        GLArrayRegion &new_region = *(m_regions.end() - 1);
+        m_regions.emplace_back(new GLArrayRegion(
+                                   region_id,
+                                   start,
+                                   count));
+        GLArrayRegion &new_region = **(m_regions.end() - 1);
         m_region_map[region_id] = &new_region;
         return new_region;
     }
@@ -186,8 +191,8 @@ protected:
         return m_block_length * sizeof(element_t);
     }
 
-    std::vector<GLArrayRegion>::iterator compact_regions(
-            std::vector<GLArrayRegion>::iterator iter,
+    region_container::iterator compact_regions(
+            region_container::iterator iter,
             const unsigned int nregions)
     {
         unsigned int total = 0;
@@ -195,15 +200,15 @@ protected:
         do {
             i -= 1;
             --iter;
-            total += iter->m_count;
-            assert(!iter->m_in_use);
+            total += (*iter)->m_count;
+            assert(!(*iter)->m_in_use);
         } while (i > 0);
 
-        iter->m_count = total;
+        (*iter)->m_count = total;
         return m_regions.erase(iter, iter+nregions);
     }
 
-    std::vector<GLArrayRegion>::iterator compact_or_expand(
+    region_container::iterator compact_or_expand(
             const unsigned int nblocks)
     {
         auto iterator = m_regions.begin();
@@ -213,14 +218,14 @@ protected:
 
         for (; iterator != m_regions.end(); iterator++)
         {
-            GLArrayRegion &region = *iterator;
+            GLArrayRegion &region = **iterator;
             if (region.m_in_use)
             {
                 if (aggregation_backlog > 1) {
                     iterator = compact_regions(
                                 iterator,
                                 aggregation_backlog);
-                    GLArrayRegion &merged = *(iterator-1);
+                    GLArrayRegion &merged = **(iterator-1);
                     if (merged.m_count >= nblocks) {
                         unsigned int metric = merged.m_count - nblocks;
                         if (metric < best_metric)
@@ -243,7 +248,7 @@ protected:
 
         unsigned int required_blocks = nblocks;
         if (m_regions.size() > 0) {
-            GLArrayRegion &last_region = *m_regions.rbegin();
+            GLArrayRegion &last_region = **m_regions.rbegin();
             if (!last_region.m_in_use) {
                 assert(last_region.m_count < nblocks);
                 required_blocks -= last_region.m_count;
@@ -303,21 +308,27 @@ protected:
         return true;
     }
 
-    void split_region(std::vector<GLArrayRegion>::iterator iter,
-                      const unsigned int blocks_for_first)
+    GLArrayRegion &split_region(
+            region_container::iterator iter,
+            const unsigned int blocks_for_first)
     {
-        GLArrayRegion &first_region = *iter;
+        GLArrayRegion *first_region = &**iter;
 
         const GLArrayRegionID new_region_id = ++m_region_id_ctr;
-        GLArrayRegion &new_region = *m_regions.emplace(
+        auto new_region_iter = m_regions.emplace(
                     iter+1,
-                    new_region_id,
-                    first_region.m_start + blocks_for_first,
-                    first_region.m_count - blocks_for_first
+                    new GLArrayRegion(
+                        new_region_id,
+                        first_region->m_start + blocks_for_first,
+                        first_region->m_count - blocks_for_first)
                     );
+        GLArrayRegion &new_region = **new_region_iter;
+        first_region = &**(new_region_iter-1);
         m_region_map[new_region_id] = &new_region;
 
-        first_region.m_count = blocks_for_first;
+        first_region->m_count = blocks_for_first;
+
+        return *first_region;
     }
 
     void upload_dirty()
@@ -335,7 +346,7 @@ protected:
                         );
             // reallocation took place, this uploads all data
             for (auto &region: m_regions) {
-                region.m_dirty = false;
+                region->m_dirty = false;
             }
             m_any_dirty = false;
             return;
@@ -354,22 +365,22 @@ protected:
 
         for (auto &region: m_regions)
         {
-            if (!region.m_in_use || !region.m_dirty)
+            if (!region->m_in_use || !region->m_dirty)
             {
                 continue;
             }
 
-            if (region.m_start < left_block)
+            if (region->m_start < left_block)
             {
-                left_block = region.m_start;
+                left_block = region->m_start;
             }
-            const unsigned int end = region.m_start + region.m_count;
+            const unsigned int end = region->m_start + region->m_count;
             if (end > right_block)
             {
                 right_block = end;
             }
 
-            region.m_dirty = false;
+            region->m_dirty = false;
         }
 
         if (right_block > 0) {
@@ -395,7 +406,7 @@ public:
         auto iterator = m_regions.begin();
         for (; iterator != m_regions.end(); ++iterator)
         {
-            GLArrayRegion &region = *iterator;
+            GLArrayRegion &region = **iterator;
             if (region.m_in_use) {
                 continue;
             }
@@ -412,20 +423,25 @@ public:
             iterator = compact_or_expand(nblocks);
         }
 
-        GLArrayRegion &region_to_use = *iterator;
-        if (region_to_use.m_count > nblocks)
+        GLArrayRegion *region_to_use = &**iterator;
+        if (region_to_use->m_count > nblocks)
         {
             // split region
-            split_region(iterator, nblocks);
+            region_to_use = &split_region(iterator, nblocks);
         }
 
-        region_to_use.m_in_use = true;
-        region_to_use.m_dirty = false;
+        region_to_use->m_in_use = true;
+        region_to_use->m_dirty = false;
+
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "allocated %d blocks to region %d",
+                             nblocks,
+                             region_to_use->m_id);
 
         return allocation_t((buffer_t*)this,
                             m_block_length,
                             nblocks,
-                            region_to_use.m_id);
+                            region_to_use->m_id);
     }
 
     void dump_remote_raw()
@@ -467,6 +483,11 @@ public:
     std::size_t region_offset(const GLArrayRegionID region_id)
     {
         return m_region_map[region_id]->m_start*m_block_length*sizeof(element_t);
+    }
+
+    unsigned int region_base(const GLArrayRegionID region_id)
+    {
+        return m_region_map[region_id]->m_start;
     }
 
     void bind() override
