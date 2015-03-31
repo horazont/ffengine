@@ -5,10 +5,14 @@
 
 namespace engine {
 
-class IBO: public GLArray<uint32_t,
+class IBO: public GLArray<uint16_t,
                           GL_ELEMENT_ARRAY_BUFFER,
-                          GL_ELEMENT_ARRAY_BUFFER_BINDING>
+                          GL_ELEMENT_ARRAY_BUFFER_BINDING,
+                          IBO>
 {
+public:
+    static constexpr GLenum gl_type = GL_UNSIGNED_SHORT;
+
 public:
     IBO();
 

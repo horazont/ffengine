@@ -45,7 +45,7 @@ public:
 };
 
 
-class VBO: public GLArray<float, GL_ARRAY_BUFFER, GL_ARRAY_BUFFER_BINDING>
+class VBO: public GLArray<float, GL_ARRAY_BUFFER, GL_ARRAY_BUFFER_BINDING, VBO>
 {
 public:
     VBO(const VBOFormat &format);

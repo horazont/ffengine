@@ -41,10 +41,11 @@ public:
 };
 
 
-template <typename buffer_t>
+template <typename _buffer_t>
 class GLArrayAllocation
 {
 public:
+    typedef _buffer_t buffer_t;
     typedef typename buffer_t::element_t element_t;
 
 public:
@@ -91,6 +92,11 @@ public:
         return m_elements_per_block;
     }
 
+    inline std::size_t offset() const
+    {
+        return m_buffer->region_offset(m_region_id);
+    }
+
     inline unsigned int length() const
     {
         return m_nblocks;
@@ -117,12 +123,13 @@ public:
 
 template <typename _element_t,
           GLuint gl_target,
-          GLuint gl_binding_type>
+          GLuint gl_binding_type,
+          typename buffer_t>
 class GLArray: public GLObject<gl_binding_type>
 {
 public:
     typedef _element_t element_t;
-    typedef GLArrayAllocation<GLArray> allocation_t;
+    typedef GLArrayAllocation<buffer_t> allocation_t;
 
 public:
     GLArray():
@@ -395,7 +402,7 @@ public:
         region_to_use.m_in_use = true;
         region_to_use.m_dirty = false;
 
-        return allocation_t(this,
+        return allocation_t((buffer_t*)this,
                             m_block_length,
                             nblocks,
                             region_to_use.m_id);
@@ -435,6 +442,11 @@ public:
     void region_release(const GLArrayRegionID region_id)
     {
         m_region_map[region_id]->m_in_use = false;
+    }
+
+    std::size_t region_offset(const GLArrayRegionID region_id)
+    {
+        return m_region_map[region_id]->m_start*m_block_length*sizeof(element_t);
     }
 
     void bind() override

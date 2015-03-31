@@ -87,7 +87,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
     m_test_valloc.mark_dirty();
 
     {
-        uint32_t *dest = m_test_ialloc.get();
+        uint16_t *dest = m_test_ialloc.get();
         *dest++ = 1;
         *dest++ = 0;
         *dest++ = 2;
