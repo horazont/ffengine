@@ -153,19 +153,35 @@ void ShaderProgram::introspect_uniforms()
             // FIXME: fix this check. strides count existing elements, so for
             // a mat4f we expect 16.
 
+            GLint name_length = 0;
+            glGetActiveUniformsiv(m_glid, 1, &j, GL_UNIFORM_NAME_LENGTH, &name_length);
+            std::string name(name_length, ' ');
+            glGetActiveUniformName(m_glid, j, name.size(), nullptr, &name.front());
+
+            const bool is_matrix = matrix_types.find(types[j]) != matrix_types.end();
+
+            shader_logger.logf(io::LOG_DEBUG,
+                               "block %d uniform %d (%s): "
+                               "type = 0x%x (is_matrix=%d), "
+                               "size = %d, "
+                               "offset = %d, "
+                               "matrix_stride = %d",
+                               i, j,
+                               name.data(),
+                               types[j],
+                               (is_matrix ? 1 : 0),
+                               sizes[j],
+                               offsets[j],
+                               matrix_strides[j]);
+
             /* if (matrix_strides[j] > 0) {
-                GLint name_length = 0;
-                glGetActiveUniformsiv(m_glid, 1, &j, GL_UNIFORM_NAME_LENGTH, &name_length);
-                std::string name(name_length, ' ');
-                glGetActiveUniformName(m_glid, j, name.size(), nullptr, &name.front());
                 throw std::runtime_error("unsupported matrix stride ("+
                                          std::to_string(matrix_strides[j])+
                                          ") for uniform "+
                                          name);
             } */
 
-            if (row_majors[j] != GL_TRUE &&
-                    matrix_types.find(types[j]) != matrix_types.end())
+            if (row_majors[j] != GL_TRUE && is_matrix)
             {
                 throw std::runtime_error("matrices in UBOs must be row major");
             }
