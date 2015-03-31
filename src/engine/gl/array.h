@@ -13,7 +13,11 @@
 #include "object.h"
 #include "util.h"
 
+#include "../../io/log.h"
+
 namespace engine {
+
+extern io::Logger &gl_array_logger;
 
 typedef unsigned int GLArrayRegionID;
 
@@ -318,9 +322,17 @@ protected:
 
     void upload_dirty()
     {
-        // std::cout << "upload dirty (glid=" << this->m_glid << ", local_size=" << m_local_buffer.size() << ")" << std::endl;
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "upload dirty called on array (glid=%d, local_size=%d)",
+                             this->m_glid,
+                             m_local_buffer.size());
+
         if (reserve_remote())
         {
+            gl_array_logger.log(
+                        io::LOG_DEBUG,
+                        "remote reallocation took place, no need to retransfer"
+                        );
             // reallocation took place, this uploads all data
             for (auto &region: m_regions) {
                 region.m_dirty = false;
@@ -330,6 +342,9 @@ protected:
         }
 
         if (!m_any_dirty) {
+            gl_array_logger.log(
+                        io::LOG_DEBUG,
+                        "not dirty, bailing out");
             // std::cout << "nothing to upload (m_any_dirty=false)" << std::endl;
             return;
         }
@@ -360,7 +375,12 @@ protected:
         if (right_block > 0) {
             const unsigned int offset = left_block * block_size();
             const unsigned int size = (left_block - right_block) * block_size();
-            // std::cout << "uploading " << size << " bytes to " << offset << std::endl;
+            gl_array_logger.logf(
+                        io::LOG_DEBUG,
+                        "uploading %d bytes at offset 0x%8x (glid=%d)",
+                        size,
+                        offset,
+                        this->m_glid);
             glBufferSubData(gl_target, offset, size, m_local_buffer.data() + offset*m_block_length);
         } else {
             // std::cout << "nothing to upload (right_block=0)" << std::endl;
