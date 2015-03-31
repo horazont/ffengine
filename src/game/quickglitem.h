@@ -17,6 +17,8 @@
 #include "../engine/gl/texture.h"
 #include "../engine/gl/ubo.h"
 
+#include "../engine/scenegraph.h"
+
 typedef std::chrono::high_resolution_clock hrclock;
 typedef std::chrono::steady_clock monoclock;
 
@@ -30,15 +32,9 @@ public:
 
 private:
     bool m_initialized;
+    engine::scenegraph::RenderContext::MatrixUBO m_matrix_ubo;
     engine::ResourceManager m_resources;
-    engine::ShaderProgram &m_test_shader;
-    engine::VBO &m_test_vbo;
-    engine::IBO &m_test_ibo;
-    engine::VBOAllocation m_test_valloc;
-    engine::IBOAllocation m_test_ialloc;
-    engine::Texture2D &m_test_texture;
-    engine::UBO<Matrix4f, Matrix4f> &m_test_ubo;
-    engine::VAO *m_test_vao;
+    engine::scenegraph::Group m_scenegraph_root;
     hrclock::time_point m_t;
     monoclock::time_point m_t0;
     unsigned int m_nframes;
@@ -51,6 +47,7 @@ public slots:
 public:
     void set_pos(const QPoint &pos);
     void set_viewport_size(const QSize &size);
+    void sync();
 
 };
 
