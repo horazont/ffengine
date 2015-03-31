@@ -141,5 +141,26 @@ struct ubo_wrap_type<Matrix4f>
     }
 };
 
+template<>
+struct ubo_wrap_type<Matrix3f>
+{
+    typedef Matrix3f type;
+    typedef Matrix4f wrapped_type;
+
+    static constexpr GLenum gl_type = GL_FLOAT_MAT3;
+
+    static inline type unpack(const wrapped_type &from)
+    {
+        return type::clip(from);
+    }
+
+    template <typename value_t>
+    static inline wrapped_type pack(value_t &&ref)
+    {
+        return wrapped_type::extend(ref);
+    }
+
+};
+
 #endif // SCC_ENGINE_GL_UBO_TYPE_WRAPPERS_H
 

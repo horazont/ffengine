@@ -246,6 +246,30 @@ struct Matrix
         typename other_float_t,
         unsigned int other_rows,
         unsigned int other_columns>
+    static inline Matrix clip(
+        const Matrix<other_float_t, other_rows, other_columns> &mat)
+    {
+        static_assert(other_rows >= rows,
+                      "Source matrix must have equal or more rows than "
+                      "destination matrix.");
+        static_assert(other_columns >= columns,
+                      "Source matrix must have equal or more columns "
+                      "than destination matrix.");
+
+        Matrix result;
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < columns; j++) {
+                result.component(i, j) = mat.component(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    template <
+        typename other_float_t,
+        unsigned int other_rows,
+        unsigned int other_columns>
     static inline Matrix extend(
         const Matrix<other_float_t, other_rows, other_columns> &mat)
     {
