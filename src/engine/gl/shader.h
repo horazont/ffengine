@@ -14,6 +14,9 @@ namespace engine {
 
 struct ShaderVertexAttribute
 {
+    ShaderVertexAttribute() = default;
+    ShaderVertexAttribute(GLint loc, const std::string &name, GLenum type, GLint size);
+
     GLint loc;
     std::string name;
     GLenum type;
@@ -104,9 +107,11 @@ public:
     ShaderProgram();
 
 private:
-    mutable std::unordered_map<std::string, ShaderVertexAttribute> m_attribs;
-    mutable std::unordered_map<std::string, ShaderUniform> m_uniforms;
-    mutable std::unordered_map<std::string, ShaderUniformBlock> m_uniform_blocks;
+    std::vector<ShaderVertexAttribute> m_attribs;
+    std::unordered_map<std::string, ShaderVertexAttribute&> m_attrib_map;
+
+    std::unordered_map<std::string, ShaderUniform> m_uniforms;
+    std::unordered_map<std::string, ShaderUniformBlock> m_uniform_blocks;
 
 protected:
     void delete_globject() override;
@@ -141,6 +146,12 @@ public:
     bool link();
     GLint uniform_location(const std::string &name) const;
     GLint uniform_block_location(const std::string &name) const;
+
+public:
+    inline const std::vector<ShaderVertexAttribute> &attributes() const
+    {
+        return m_attribs;
+    }
 
 public:
     template <typename ubo_t>

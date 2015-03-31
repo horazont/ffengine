@@ -9,6 +9,20 @@
 
 namespace engine {
 
+ShaderVertexAttribute::ShaderVertexAttribute(
+        GLint loc,
+        const std::string &name,
+        GLenum type,
+        GLint size):
+    loc(loc),
+    name(name),
+    type(type),
+    size(size)
+{
+
+}
+
+
 ShaderUniformBlockMember::ShaderUniformBlockMember(
         GLenum type,
         GLint size,
@@ -66,7 +80,9 @@ void ShaderProgram::introspect_vertex_attributes()
         assert(loc >= 0);
 
         if (buf.size() > 0) {
-            m_attribs[buf] = ShaderVertexAttribute{loc, buf, type, nelements};
+            m_attribs.emplace_back(loc, buf, type, nelements);
+            ShaderVertexAttribute &attr = *(m_attribs.end() - 1);
+            m_attrib_map.emplace(buf, attr);
         }
     }
 }
@@ -220,8 +236,8 @@ bool ShaderProgram::attach(GLenum shader_type, const std::string &source)
 
 GLint ShaderProgram::attrib_location(const std::string &name) const
 {
-    auto iter = m_attribs.find(name);
-    if (iter != m_attribs.end())
+    auto iter = m_attrib_map.find(name);
+    if (iter != m_attrib_map.end())
     {
         return iter->second.loc;
     }

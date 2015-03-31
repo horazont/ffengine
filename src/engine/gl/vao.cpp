@@ -92,28 +92,28 @@ std::unique_ptr<VAO> ArrayDeclaration::make_vao(
         result->set_ibo_hint(m_ibo);
     }
     try {
-        for (auto &decl: m_attribs)
+        for (auto &attr: for_shader.attributes())
         {
-            GLint loc = for_shader.attrib_location(decl.first);
-            if (loc < 0) {
-                throw std::runtime_error("shader does not have attribute: "+
-                                         decl.first);
+            auto iter = m_attribs.find(attr.name);
+            if (iter == m_attribs.end()) {
+                throw std::runtime_error("No binding for vertex shader input "+attr.name);
             }
+            const AttributeMapping &decl = iter->second;
 
-            const VBOFinalAttribute &attr = decl.second.vbo.attrs().at(
-                        decl.second.attr_index);
-            decl.second.vbo.bind();
-            glEnableVertexAttribArray(loc);
+            const VBOFinalAttribute &vbo_attr = decl.vbo.attrs().at(
+                        decl.attr_index);
+            decl.vbo.bind();
+            glEnableVertexAttribArray(attr.loc);
             glVertexAttribPointer(
-                        loc,
-                        attr.length,
+                        attr.loc,
+                        vbo_attr.length,
                         GL_FLOAT,
-                        (decl.second.normalized ? GL_TRUE : GL_FALSE),
-                        decl.second.vbo.vertex_size(),
-                        reinterpret_cast<GLvoid*>(attr.offset));
+                        (decl.normalized ? GL_TRUE : GL_FALSE),
+                        decl.vbo.vertex_size(),
+                        reinterpret_cast<GLvoid*>(vbo_attr.offset));
 
             if (add_vbo_hints) {
-                result->add_vbo_hint(&decl.second.vbo);
+                result->add_vbo_hint(&decl.vbo);
             }
         }
 
