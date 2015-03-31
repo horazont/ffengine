@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 {
     io::logging().attach_sink<io::LogAsynchronousSink>(
                 std::move(std::unique_ptr<io::LogSink>(new io::LogTTYSink()))
-                );
+                )->set_synchronous(true);
     io::logging().log(io::LOG_INFO) << "Log initialized" << io::submit;
 
     io::logging().get_logger("engine.gl.array").set_level(io::LOG_WARNING);

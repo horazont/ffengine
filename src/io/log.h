@@ -103,7 +103,8 @@ public:
 
 private:
     std::unique_ptr<LogSink> m_backend;
-    std::mutex m_state_mutex;
+    mutable std::mutex m_state_mutex;
+    bool m_synchronous;
     bool m_terminated;
     std::vector<std::unique_ptr<LogRecord> > m_log_queue;
     std::condition_variable m_wakeup_cv;
@@ -113,6 +114,15 @@ public:
     void log_direct(const LogRecord &record) override;
 
     void thread_impl();
+
+public:
+    inline bool synchronous() const
+    {
+        std::lock_guard<std::mutex> lock(m_state_mutex);
+        return m_synchronous;
+    }
+
+    void set_synchronous(bool synchronous);
 
 };
 

@@ -183,7 +183,12 @@ void LogAsynchronousSink::log_direct(const LogRecord &record)
 {
     {
         std::lock_guard<std::mutex> lock(m_state_mutex);
-        m_log_queue.emplace_back(new LogRecord(record));
+        if (!m_synchronous) {
+            m_log_queue.emplace_back(new LogRecord(record));
+        } else {
+            m_backend->log_direct(record);
+            return;
+        }
     }
     m_wakeup_cv.notify_all();
 }
@@ -214,6 +219,12 @@ void LogAsynchronousSink::thread_impl()
 
         lock.lock();
     }
+}
+
+void LogAsynchronousSink::set_synchronous(bool synchronous)
+{
+    std::lock_guard<std::mutex> lock(m_state_mutex);
+    m_synchronous = synchronous;
 }
 
 
