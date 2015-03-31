@@ -264,8 +264,15 @@ void QuickGLItem::handle_window_changed(QQuickWindow *win)
 
         QSurfaceFormat format;
         format.setRenderableType(QSurfaceFormat::OpenGL);
-        format.setVersion(3, 2);
+        format.setVersion(3, 3);
         format.setProfile(QSurfaceFormat::CoreProfile);
+        format.setSamples(0);
+        format.setRedBufferSize(8);
+        format.setGreenBufferSize(8);
+        format.setBlueBufferSize(8);
+        format.setAlphaBufferSize(8);
+        format.setStencilBufferSize(8);
+        format.setDepthBufferSize(24);
 
         win->setFormat(format);
         win->create();
