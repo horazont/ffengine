@@ -2,19 +2,19 @@
 #define SCC_ENGINE_GL_UBO_TUPLE_UTILS_H
 
 template <std::size_t I, typename Type, typename... Types>
-inline typename std::enable_if<(I > 0), typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type &get(wrapped_tuple<Type, Types...> &tpl)
+inline typename std::enable_if<(I > 0), typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type get(wrapped_tuple<Type, Types...> &tpl)
 {
     return get<I-1, Types...>(tpl.m_next);
 }
 
 template <std::size_t I, typename Type, typename... Types>
-inline typename std::enable_if<I == 0, typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type &get(wrapped_tuple<Type, Types...> &tpl)
+inline typename std::enable_if<I == 0, typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type get(wrapped_tuple<Type, Types...> &tpl)
 {
     typedef ubo_wrap_type<Type> helper;
-    return helper::extract_ref(tpl.m_data);
+    return helper::unpack(tpl.m_data);
 }
 
-template <std::size_t I, typename Type, typename... Types>
+/*template <std::size_t I, typename Type, typename... Types>
 inline const typename std::enable_if<(I > 0), typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type &get(const wrapped_tuple<Type, Types...> &tpl)
 {
     return get<I-1, Types...>(tpl.m_next);
@@ -25,12 +25,20 @@ inline const typename std::enable_if<I == 0, typename std::tuple_element<I, std:
 {
     typedef ubo_wrap_type<Type> helper;
     return helper::extract_const_ref(tpl.m_data);
+}*/
+
+
+template <std::size_t I, typename value_t, typename Type, typename... Types>
+inline typename std::enable_if<(I > 0), void>::type set(wrapped_tuple<Type, Types...> &tpl, value_t &&value)
+{
+    return set<I-1, value_t, Types...>(tpl.m_next, std::forward<value_t>(value));
 }
 
 template <std::size_t I, typename value_t, typename Type, typename... Types>
-inline void set(wrapped_tuple<Type, Types...> &tpl, value_t &&value)
+inline typename std::enable_if<(I == 0), void>::type set(wrapped_tuple<Type, Types...> &tpl, value_t &&value)
 {
-    get<I>(tpl) = value;
+    typedef ubo_wrap_type<Type> helper;
+    tpl.m_data = helper::pack(value);
 }
 
 template <std::size_t I, typename Type, typename... Types>

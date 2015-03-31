@@ -28,6 +28,7 @@ struct ubo_wrap_type;
 template<>
 struct ubo_wrap_type<float>
 {
+    typedef float type;
     struct wrapped_type
     {
         float value;
@@ -36,23 +37,13 @@ struct ubo_wrap_type<float>
 
     static constexpr GLenum gl_type = GL_FLOAT;
 
-    static inline float extract(const wrapped_type &ref)
+    static inline type unpack(const wrapped_type &from)
     {
-        return ref.value;
-    }
-
-    static inline float &extract_ref(wrapped_type &ref)
-    {
-        return ref.value;
-    }
-
-    static inline const float &extract_ref(const wrapped_type &ref)
-    {
-        return ref.value;
+        return from.value;
     }
 
     template <typename value_t>
-    static inline wrapped_type pack(value_t &&ref)
+    static inline type pack(value_t &&ref)
     {
         return wrapped_type{ref};
     }
@@ -62,6 +53,7 @@ struct ubo_wrap_type<float>
 template<>
 struct ubo_wrap_type<Vector2f>
 {
+    typedef Vector2f type;
     struct wrapped_type
     {
         Vector2f value;
@@ -70,23 +62,13 @@ struct ubo_wrap_type<Vector2f>
 
     static constexpr GLenum gl_type = GL_FLOAT_VEC2;
 
-    static inline Vector2f extract(const wrapped_type &ref)
+    static inline type unpack(const wrapped_type &from)
     {
-        return ref.value;
-    }
-
-    static inline Vector2f &extract_ref(wrapped_type &ref)
-    {
-        return ref.value;
-    }
-
-    static inline const Vector2f &extract_ref(const wrapped_type &ref)
-    {
-        return ref.value;
+        return from.value;
     }
 
     template <typename value_t>
-    static inline wrapped_type pack(value_t &&ref)
+    static inline type pack(value_t &&ref)
     {
         return wrapped_type{ref};
     }
@@ -96,6 +78,7 @@ struct ubo_wrap_type<Vector2f>
 template<>
 struct ubo_wrap_type<Vector3f>
 {
+    typedef Vector3f type;
     struct wrapped_type
     {
         Vector3f value;
@@ -104,22 +87,13 @@ struct ubo_wrap_type<Vector3f>
 
     static constexpr GLenum gl_type = GL_FLOAT_VEC3;
 
-    static inline Vector3f extract(const wrapped_type &ref)
+    static inline type unpack(const wrapped_type &from)
     {
-        return ref.value;
+        return from.value;
     }
 
-    static inline Vector3f &extract_ref(wrapped_type &ref)
-    {
-        return ref.value;
-    }
-
-    static inline const Vector3f &extract_ref(const wrapped_type &ref)
-    {
-        return ref.value;
-    }
     template <typename value_t>
-    static inline wrapped_type pack(value_t &&ref)
+    static inline type pack(value_t &&ref)
     {
         return wrapped_type{ref};
     }
@@ -134,19 +108,9 @@ struct ubo_wrap_type<Vector4f>
 
     static constexpr GLenum gl_type = GL_FLOAT_VEC4;
 
-    static inline type extract(const type &ref)
+    static inline type unpack(const wrapped_type &from)
     {
-        return ref;
-    }
-
-    static inline type &extract_ref(type &ref)
-    {
-        return ref;
-    }
-
-    static inline const type &extract_const_ref(const type &ref)
-    {
-        return ref;
+        return from;
     }
 
     template <typename value_t>
@@ -165,19 +129,9 @@ struct ubo_wrap_type<Matrix4f>
 
     static constexpr GLenum gl_type = GL_FLOAT_MAT4;
 
-    static inline type extract(const type &ref)
+    static inline type unpack(const wrapped_type &from)
     {
-        return ref;
-    }
-
-    static inline type &extract_ref(type &ref)
-    {
-        return ref;
-    }
-
-    static inline const type &extract_const_ref(const type &ref)
-    {
-        return ref;
+        return from;
     }
 
     template <typename value_t>
