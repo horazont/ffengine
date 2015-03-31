@@ -300,6 +300,10 @@ GLint ShaderProgram::uniform_location(const std::string &name) const
     {
         return iter->second.loc;
     }
+
+    shader_logger.logf(io::LOG_DEBUG, "inactive uniform requested: %s",
+                       name.data());
+
     return -1;
 }
 
