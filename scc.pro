@@ -21,7 +21,8 @@ SOURCES += \
     src/engine/gl/2darray.cpp \
     src/engine/gl/util.cpp \
     src/engine/gl/ubo.cpp \
-    src/engine/resource.cpp
+    src/engine/resource.cpp \
+    src/io/log.cpp
 
 RESOURCES += qml.qrc
 
@@ -48,7 +49,8 @@ HEADERS += \
     src/engine/gl/ubo.h \
     src/engine/gl/ubo_tuple_utils.h \
     src/engine/gl/ubo_type_wrappers.h \
-    src/engine/resource.h
+    src/engine/resource.h \
+    src/io/log.h
 
 DISTFILES +=
 CONFIG += object_parallel_to_source

@@ -6,8 +6,12 @@
 
 #include "util.h"
 
+#include "../../io/log.h"
+
 
 namespace engine {
+
+io::Logger &shader_logger = io::logging().get_logger("gl.shader");
 
 ShaderVertexAttribute::ShaderVertexAttribute(
         GLint loc,
@@ -207,19 +211,29 @@ bool ShaderProgram::attach(GLenum shader_type, const std::string &source)
     glCompileShader(shader);
     raise_last_gl_error();
 
+    GLint status = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    raise_last_gl_error();
+
     GLint len = 0;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
     raise_last_gl_error();
     if (len > 1) {
+        const io::LogLevel level = (status != GL_TRUE ? io::LOG_ERROR : io::LOG_WARNING);
+        if (status != GL_TRUE) {
+            shader_logger.log(level, "shader failed to compile");
+        } else {
+            shader_logger.log(level, "shader compiled with warnings");
+        }
+
         std::string log;
         log.resize(len);
         glGetShaderInfoLog(shader, log.size(), &len, &log.front());
-        std::cout << log << std::endl;
+        shader_logger.log(level, log);
+    } else {
+        shader_logger.log(io::LOG_INFO, "shader compiled successfully");
     }
 
-    GLint status = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-    raise_last_gl_error();
     if (status != GL_TRUE)
     {
         glDeleteShader(shader);

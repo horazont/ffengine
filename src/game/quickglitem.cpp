@@ -10,6 +10,9 @@
 
 #include "../math/matrix.h"
 
+#include "../io/log.h"
+
+io::Logger &qml_gl_logger = io::logging().get_logger("qmlgl");
 
 QuickGLScene::QuickGLScene(QObject *parent):
     QObject(parent),
@@ -92,7 +95,7 @@ QuickGLScene::QuickGLScene(QObject *parent):
         m_test_ialloc.mark_dirty();
     }
 
-    std::cout << m_test_shader.attach(
+    if (!m_test_shader.attach(
                 GL_VERTEX_SHADER,
                 "#version 330\n"
                 "layout(std140) uniform MatrixBlock {"
@@ -105,9 +108,11 @@ QuickGLScene::QuickGLScene(QObject *parent):
                 "void main() {"
                 "    gl_Position = matrices.proj * matrices.modelview * vec4(vertex, 0f, 1.0f);"
                 "    tc = texcoord0;"
-                "}") << std::endl;
-
-    std::cout << m_test_shader.attach(
+                "}"))
+    {
+        throw std::runtime_error("failed to compile shader");
+    }
+    if (!m_test_shader.attach(
                 GL_FRAGMENT_SHADER,
                 "#version 330\n"
                 "uniform sampler2D tex;"
@@ -115,9 +120,13 @@ QuickGLScene::QuickGLScene(QObject *parent):
                 "out vec4 color;"
                 "void main() {"
                 "    color = texture2D(tex, tc);"
-                "}") << std::endl;
-
-    std::cout << m_test_shader.link() << std::endl;
+                "}"))
+    {
+        throw std::runtime_error("failed to compile shader");
+    }
+    if (!m_test_shader.link()) {
+        throw std::runtime_error("failed to link shader");
+    }
 
     engine::ArrayDeclaration decl;
     decl.declare_attribute("vertex", m_test_vbo, 0);
@@ -177,9 +186,9 @@ void QuickGLScene::paint()
 
     hrclock::time_point t1 = hrclock::now();
     const unsigned int msecs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - m_t).count();
-    if (msecs > 1000)
+    if (msecs >= 1000)
     {
-        std::cout << "fps: " << (double)m_nframes / (double)msecs * 1000.0d << std::endl;
+        qml_gl_logger.logf(io::LOG_DEBUG, "fps: %.2lf", (double)m_nframes / (double)msecs * 1000.0d);
         m_nframes = 0;
         m_t = t1;
     }
@@ -210,19 +219,19 @@ QuickGLItem::QuickGLItem(QQuickItem *parent):
 
 void QuickGLItem::hoverMoveEvent(QHoverEvent *event)
 {
-    std::cout << "hover" << std::endl;
+    qml_gl_logger.log(io::LOG_DEBUG, "hover");
     m_hover_pos = event->pos();
 }
 
 void QuickGLItem::mouseMoveEvent(QMouseEvent *event)
 {
-    std::cout << "move" << std::endl;
+    qml_gl_logger.log(io::LOG_DEBUG, "move");
     m_hover_pos = event->pos();
 }
 
 void QuickGLItem::mousePressEvent(QMouseEvent *event)
 {
-    std::cout << "press" << std::endl;
+    qml_gl_logger.log(io::LOG_DEBUG, "press");
     m_hover_pos = event->pos();
 }
 
@@ -242,7 +251,7 @@ void QuickGLItem::handle_window_changed(QQuickWindow *win)
 {
     if (win)
     {
-        std::cout << "win" << std::endl;
+        qml_gl_logger.log(io::LOG_INFO, "initializing window...");
 
         connect(win, SIGNAL(beforeSynchronizing()),
                 this, SLOT(sync()),
@@ -267,19 +276,68 @@ void QuickGLItem::handle_window_changed(QQuickWindow *win)
             throw std::runtime_error("failed to create context");
         }
 
-        std::cout << context->format().majorVersion() << "." <<
-                     context->format().minorVersion() << std::endl;
+        qml_gl_logger.log(io::LOG_INFO)
+                << "created context, version "
+                << context->format().majorVersion()
+                << "."
+                << context->format().minorVersion()
+                << io::submit;
+
+        qml_gl_logger.log(io::LOG_DEBUG)
+                << "  renderable  : "
+                << (context->format().renderableType() == QSurfaceFormat::OpenGL
+                    ? "OpenGL"
+                    : context->format().renderableType() == QSurfaceFormat::OpenGLES
+                    ? "OpenGL ES"
+                    : context->format().renderableType() == QSurfaceFormat::OpenVG
+                    ? "OpenVG (software?)"
+                    : "unknown")
+                << io::submit;
+        qml_gl_logger.log(io::LOG_DEBUG)
+                << "  rgba        : "
+                << context->format().redBufferSize() << " "
+                << context->format().greenBufferSize() << " "
+                << context->format().blueBufferSize() << " "
+                << context->format().alphaBufferSize() << " "
+                << io::submit;
+        qml_gl_logger.log(io::LOG_DEBUG)
+                << "  stencil     : "
+                << context->format().stencilBufferSize()
+                << io::submit;
+        qml_gl_logger.log(io::LOG_DEBUG)
+                << "  depth       : " << context->format().depthBufferSize()
+                << io::submit;
+        qml_gl_logger.log(io::LOG_DEBUG)
+                << "  multisamples: " << context->format().samples()
+                << io::submit;
+        qml_gl_logger.log(io::LOG_DEBUG)
+                << "  profile     : "
+                << (context->format().profile() == QSurfaceFormat::CoreProfile
+                    ? "core"
+                    : "compatibility")
+                << io::submit;
 
         context->makeCurrent(win);
 
+        qml_gl_logger.log(io::LOG_INFO)
+                << "initializing GLEW in experimental mode"
+                << io::submit;
         glewExperimental = GL_TRUE;
         GLenum err = glewInit();
         if (err != GLEW_OK) {
-            throw std::runtime_error("failed to initialize GLEW: " +
-                                     std::string((const char*)glewGetErrorString(err)));
+            const std::string error = std::string((const char*)glewGetErrorString(err));
+            qml_gl_logger.log(io::LOG_EXCEPTION)
+                    << "GLEW failed to initialize"
+                    << error
+                    << io::submit;
+            throw std::runtime_error("failed to initialize GLEW: " + error);
         }
 
+        qml_gl_logger.log(io::LOG_DEBUG) << "turning off clear" << io::submit;
         win->setClearBeforeRendering(false);
+
+        qml_gl_logger.log(io::LOG_INFO) << "Window and rendering context initialized :)"
+                                        << io::submit;
     }
 }
 
