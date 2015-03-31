@@ -178,7 +178,7 @@ void QuickGLScene::paint()
 
     m_test_ubo.bind_at(0);
 
-    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
+    draw_elements(m_test_ialloc, GL_TRIANGLE_STRIP);
 
     m_test_texture.unbind();
     m_test_shader.unbind();

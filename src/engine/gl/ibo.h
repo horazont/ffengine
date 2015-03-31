@@ -20,6 +20,11 @@ public:
 
 typedef IBO::allocation_t IBOAllocation;
 
+static inline void draw_elements(const IBOAllocation &alloc, GLenum mode)
+{
+    glDrawElements(mode, alloc.length(), IBOAllocation::buffer_t::gl_type, (const GLvoid*)alloc.offset());
+}
+
 }
 
 #endif
