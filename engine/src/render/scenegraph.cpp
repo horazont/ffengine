@@ -190,7 +190,9 @@ void ParentNode::sync()
 {
     m_locked_child = nullptr;
     m_child_to_render = m_child.get();
-    m_child_to_render->sync();
+    if (m_child_to_render) {
+        m_child_to_render->sync();
+    }
 }
 
 
