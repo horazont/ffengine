@@ -58,3 +58,5 @@ unix {
     target.path = /usr/lib
     INSTALLS += target
 }
+
+CONFIG += object_parallel_to_source
