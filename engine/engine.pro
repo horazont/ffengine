@@ -34,7 +34,16 @@ SOURCES += \
     src/render/camera.cpp \
     src/render/rendergraph.cpp \
     src/render/terrain.cpp \
-    src/sim/terrain.cpp
+    src/sim/terrain.cpp \
+    src/io/common.cpp \
+    src/io/errors.cpp \
+    src/io/filesystem.cpp \
+    src/io/mount.cpp \
+    src/io/utils.cpp \
+    src/io/filestream.cpp \
+    src/io/stdiostream.cpp \
+    src/io/stream.cpp \
+    src/io/stream_operators.inc.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -62,7 +71,18 @@ HEADERS += \
     engine/common/types.hpp \
     engine/render/rendergraph.hpp \
     engine/render/terrain.hpp \
-    engine/sim/terrain.hpp
+    engine/sim/terrain.hpp \
+    engine/io/common.hpp \
+    engine/io/errors.hpp \
+    engine/io/filesystem.hpp \
+    engine/io/mount.hpp \
+    engine/io/utils.hpp \
+    engine/common/utils.hpp \
+    engine/io/stream_operators.inc.hpp \
+    engine/io/filestream.hpp \
+    engine/io/stdiostream.hpp \
+    engine/io/stream.hpp \
+    engine/math/variadic_initializer.inc.hpp
 
 unix {
     target.path = /usr/lib
