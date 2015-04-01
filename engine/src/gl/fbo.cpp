@@ -59,8 +59,8 @@ FBO::FBO(const GLsizei width, const GLsizei height):
     m_glid(0),
     m_bound(false),
     m_current_primary_target(0),
-    m_width(width),
     m_height(height),
+    m_width(width),
     m_dirty(false)
 {
     glGenFramebuffers(1, &m_glid);
