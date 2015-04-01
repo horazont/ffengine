@@ -15,7 +15,7 @@ void RenderContext::prepare_draw()
 {
     m_matrix_ubo.set<2>(m_current_transformation);
     Matrix3f rotational_part = Matrix3f::clip(m_current_transformation);
-    inverse(rotational_part);
+    invert(rotational_part);
     m_matrix_ubo.set<3>(rotational_part);
     m_matrix_ubo.update_bound();
 }

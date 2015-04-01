@@ -337,6 +337,7 @@ struct Matrix
     }
 };
 
+typedef Matrix<float, 2, 2> Matrix2f;
 typedef Matrix<float, 3, 3> Matrix3f;
 typedef Matrix<float, 4, 4> Matrix4f;
 
@@ -385,6 +386,53 @@ inline Matrix3 operator*(
 {
     return mat*scale;
 }
+
+template <typename float_t>
+static inline Matrix<float_t, 3, 3> &invert(Matrix<float_t, 3, 3> &matrix)
+{
+    const float_t A = (matrix.coeff[4]*matrix.coeff[8] - matrix.coeff[5]*matrix.coeff[7]);
+    const float_t B = (matrix.coeff[5]*matrix.coeff[6] - matrix.coeff[3]*matrix.coeff[8]);
+    const float_t C = (matrix.coeff[3]*matrix.coeff[7] - matrix.coeff[4]*matrix.coeff[6]);
+    const float_t D = (matrix.coeff[2]*matrix.coeff[7] - matrix.coeff[1]*matrix.coeff[8]);
+    const float_t E = (matrix.coeff[0]*matrix.coeff[8] - matrix.coeff[2]*matrix.coeff[6]);
+    const float_t F = (matrix.coeff[1]*matrix.coeff[6] - matrix.coeff[0]*matrix.coeff[7]);
+    const float_t G = (matrix.coeff[1]*matrix.coeff[5] - matrix.coeff[2]*matrix.coeff[4]);
+    const float_t H = (matrix.coeff[2]*matrix.coeff[3] - matrix.coeff[0]*matrix.coeff[5]);
+    const float_t I = (matrix.coeff[0]*matrix.coeff[4] - matrix.coeff[1]*matrix.coeff[3]);
+
+    const float_t det = matrix.coeff[0]*A+matrix.coeff[1]*B+matrix.coeff[2]*C;
+
+    matrix.coeff[0] = A/det;
+    matrix.coeff[1] = D/det;
+    matrix.coeff[2] = G/det;
+    matrix.coeff[3] = B/det;
+    matrix.coeff[4] = E/det;
+    matrix.coeff[5] = H/det;
+    matrix.coeff[6] = C/det;
+    matrix.coeff[7] = F/det;
+    matrix.coeff[8] = I/det;
+
+    return matrix;
+}
+
+template <typename float_t>
+static inline Matrix<float_t, 2, 2> &invert(Matrix<float_t, 2, 2> &matrix)
+{
+    const float_t det = matrix.coeff[0]*matrix.coeff[3] - matrix.coeff[1]*matrix.coeff[2];
+
+    float_t tmp = matrix.coeff[3];
+    matrix.coeff[3] = matrix.coeff[0]/det;
+    matrix.coeff[0] = tmp/det;
+
+    tmp = -matrix.coeff[1];
+    matrix.coeff[1] = -matrix.coeff[2]/det;
+    matrix.coeff[2] = tmp/det;
+
+    return matrix;
+}
+
+Matrix4f &invert_proj_matrix(Matrix4f &matrix);
+
 
 namespace {
 
@@ -452,34 +500,6 @@ struct matrix_to_stream<double, rows, columns>
         return stream;
     }
 };
-
-template <typename float_t>
-static inline Matrix<float_t, 3, 3> &inverse(Matrix<float_t, 3, 3> &matrix)
-{
-    const float_t A = (matrix.coeff[4]*matrix.coeff[8] - matrix.coeff[5]*matrix.coeff[7]);
-    const float_t B = (matrix.coeff[5]*matrix.coeff[6] - matrix.coeff[3]*matrix.coeff[8]);
-    const float_t C = (matrix.coeff[3]*matrix.coeff[7] - matrix.coeff[4]*matrix.coeff[6]);
-    const float_t D = (matrix.coeff[2]*matrix.coeff[7] - matrix.coeff[1]*matrix.coeff[8]);
-    const float_t E = (matrix.coeff[0]*matrix.coeff[8] - matrix.coeff[2]*matrix.coeff[6]);
-    const float_t F = (matrix.coeff[1]*matrix.coeff[6] - matrix.coeff[0]*matrix.coeff[7]);
-    const float_t G = (matrix.coeff[1]*matrix.coeff[5] - matrix.coeff[2]*matrix.coeff[4]);
-    const float_t H = (matrix.coeff[2]*matrix.coeff[3] - matrix.coeff[0]*matrix.coeff[5]);
-    const float_t I = (matrix.coeff[0]*matrix.coeff[4] - matrix.coeff[1]*matrix.coeff[3]);
-
-    const float_t det = matrix.coeff[0]*A+matrix.coeff[1]*B+matrix.coeff[2]*C;
-
-    matrix.coeff[0] = A/det;
-    matrix.coeff[1] = D/det;
-    matrix.coeff[2] = G/det;
-    matrix.coeff[3] = B/det;
-    matrix.coeff[4] = E/det;
-    matrix.coeff[5] = H/det;
-    matrix.coeff[6] = C/det;
-    matrix.coeff[7] = F/det;
-    matrix.coeff[8] = I/det;
-
-    return matrix;
-}
 
 }
 

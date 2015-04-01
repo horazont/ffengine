@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cmath>
 #include <cstring>
 
@@ -145,4 +146,41 @@ Matrix4 proj_ortho_center(const double left,
                 0, 0, 0, 1
     );
     return result;
+}
+
+Matrix4f &invert_proj_matrix(Matrix4f &matrix)
+{
+    // projection matrices are of the form
+    //  [ A  0 ]
+    //  [ 0  B ]
+    //
+    // we can invert A and B on their own
+
+    Matrix2f A(matrix.coeff[0], matrix.coeff[1],
+               matrix.coeff[4], matrix.coeff[5]);
+    Matrix2f B(matrix.coeff[10], matrix.coeff[11],
+               matrix.coeff[14], matrix.coeff[15]);
+    invert(A);
+    invert(B);
+
+    matrix.coeff[0] = A.coeff[0];
+    matrix.coeff[1] = A.coeff[1];
+    matrix.coeff[4] = A.coeff[2];
+    matrix.coeff[5] = A.coeff[3];
+
+    matrix.coeff[10] = B.coeff[0];
+    matrix.coeff[11] = B.coeff[1];
+    matrix.coeff[14] = B.coeff[2];
+    matrix.coeff[15] = B.coeff[3];
+
+    assert(matrix.coeff[2] == 0);
+    assert(matrix.coeff[3] == 0);
+    assert(matrix.coeff[6] == 0);
+    assert(matrix.coeff[7] == 0);
+    assert(matrix.coeff[8] == 0);
+    assert(matrix.coeff[9] == 0);
+    assert(matrix.coeff[12] == 0);
+    assert(matrix.coeff[13] == 0);
+
+    return matrix;
 }
