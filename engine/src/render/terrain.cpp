@@ -144,6 +144,8 @@ void Terrain::sync_chunk_from_sim(const unsigned int xchunk,
             slice_index += 1;
         }
     }
+
+    vbo_alloc.mark_dirty();
 }
 
 void Terrain::render(RenderContext &context)
