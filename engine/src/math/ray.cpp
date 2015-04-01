@@ -39,5 +39,21 @@ std::tuple<float, bool> intersect_triangle(
 
     const float t = (edge2 * qvec) * inv_det;
 
-    return std::make_tuple(t, true);
+    return std::make_tuple(t, t >= 0);
+}
+
+std::tuple<float, bool> intersect_plane(const Ray &ray,
+                                        const Vector3f &plane_origin,
+                                        const Vector3f &plane_normal)
+{
+    const float normal_dir = ray.direction * plane_normal;
+
+    if (normal_dir > -EPSILON && normal_dir < EPSILON) {
+        // parallel
+        return std::make_tuple(NAN, false);
+    }
+
+    const float t = (plane_origin*plane_normal - plane_normal*ray.origin) / normal_dir;
+
+    return std::make_tuple(t, t >= 0);
 }

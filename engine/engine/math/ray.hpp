@@ -18,4 +18,8 @@ std::tuple<float, bool> intersect_triangle(
         const Vector3f &p1,
         const Vector3f &p2);
 
+std::tuple<float, bool> intersect_plane(const Ray &ray,
+                                        const Vector3f &plane_origin,
+                                        const Vector3f &plane_normal);
+
 #endif
