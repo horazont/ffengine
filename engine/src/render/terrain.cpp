@@ -37,8 +37,9 @@ Terrain::Terrain(sim::Terrain &src):
             const unsigned int curr_base = x*(CHUNK_SIZE+1)+y;
             // make a triangle
             *dest++ = curr_base + (CHUNK_SIZE+1);
-            *dest++ = curr_base;
             *dest++ = curr_base + (CHUNK_SIZE+1) + 1;
+            *dest++ = curr_base;
+
             *dest++ = curr_base;
             *dest++ = curr_base + (CHUNK_SIZE+1) + 1;
             *dest++ = curr_base + 1;
