@@ -27,7 +27,7 @@ Mount::~Mount()
 
 }
 
-std::string Mount::get_real_path(const std::string &local_path)
+std::string Mount::get_real_path(const std::string &)
 {
     return "";
 }

@@ -14,7 +14,7 @@ void Stream::flush()
 
 }
 
-std::size_t Stream::read(void *data, const std::size_t length)
+std::size_t Stream::read(void *, const std::size_t)
 {
     throw StreamNotSupportedError(std::string(typeid(this).name()) + " does not support reading");
 }
@@ -24,7 +24,7 @@ std::size_t Stream::read(char *data, const std::size_t length)
     return read((void*)data, length);
 }
 
-std::size_t Stream::seek(const int whence, const std::ptrdiff_t offset)
+std::size_t Stream::seek(const int, const std::ptrdiff_t)
 {
     raise_seek_not_supported_error();
     return 0;
@@ -41,7 +41,7 @@ std::size_t Stream::tell() const
     return 0;
 }
 
-std::size_t Stream::write(const void *data, const std::size_t length)
+std::size_t Stream::write(const void *, const std::size_t)
 {
     throw StreamNotSupportedError(std::string(typeid(this).name()) + " does not support writing");
 }

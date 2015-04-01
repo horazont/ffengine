@@ -112,7 +112,7 @@ bool FileStream::is_writable() const {
 int open_file_with_modes(const std::string &filename,
                          const OpenMode openmode,
                          const WriteMode writemode,
-                         const ShareMode sharemode)
+                         const ShareMode)
 {
     int flags = 0;
 
