@@ -45,10 +45,17 @@ private:
     std::stack<Matrix4f> m_model_stack;
     Matrix4 m_current_transformation;
 
+protected:
+    void prepare_draw();
+
 public:
     void draw_elements(GLenum primitive,
                        VAO &with_arrays, Material &using_material,
                        IBOAllocation &indicies);
+    void draw_elements_base_vertex(GLenum primitive,
+                                   VAO &with_arrays, Material &using_material,
+                                   IBOAllocation &indicies,
+                                   GLint base_vertex);
 
     void pop_transformation();
 

@@ -7,15 +7,15 @@
 
 namespace engine {
 
-class CameraPlaneController
+class CameraController
 {
 public:
-    CameraPlaneController();
+    CameraController();
 
 private:
-    Vector2f m_pos;
-    Vector2f m_pos_vel;
-    Vector2f m_pos_accel;
+    Vector3f m_pos;
+    Vector3f m_pos_vel;
+    Vector3f m_pos_accel;
 
     Vector2f m_rot;
     Vector2f m_rot_vel;
@@ -28,7 +28,7 @@ private:
     bool m_moving, m_rotating;
 
 public:
-    inline const Vector2f &pos() const
+    inline const Vector3f &pos() const
     {
         return m_pos;
     }
@@ -43,11 +43,11 @@ public:
         return m_distance;
     }
 
-    void set_pos(const Vector2f &pos, bool reset_mechanics = true);
+    void set_pos(const Vector3f &pos, bool reset_mechanics = true);
     void set_rot(const Vector2f &rot, bool reset_mechanics = true);
     void set_distance(const float distance, bool reset_mechanics = true);
 
-    void boost_movement(const Vector2f &by);
+    void boost_movement(const Vector3f &by);
     void boost_rotation(const Vector2f &by);
     void boost_zoom(const float by);
 
@@ -92,7 +92,7 @@ public:
             float viewport_height);
 
 private:
-    CameraPlaneController m_controller;
+    CameraController m_controller;
 
     float m_viewport_width;
     float m_viewport_height;
@@ -125,7 +125,7 @@ public:
         return m_znear;
     }
 
-    inline CameraPlaneController &controller()
+    inline CameraController &controller()
     {
         return m_controller;
     }
@@ -148,7 +148,7 @@ public:
     PerspectivalCamera();
 
 private:
-    CameraPlaneController m_controller;
+    CameraController m_controller;
 
     float m_viewport_width;
     float m_viewport_height;
@@ -188,7 +188,7 @@ public:
         return m_fovy;
     }
 
-    inline CameraPlaneController &controller()
+    inline CameraController &controller()
     {
         return m_controller;
     }

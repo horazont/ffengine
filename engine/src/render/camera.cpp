@@ -4,10 +4,10 @@ namespace engine {
 
 io::Logger &camera_logger = io::logging().get_logger("engine.render.camera");
 
-CameraPlaneController::CameraPlaneController():
-    m_pos(0, 0),
-    m_pos_vel(0, 0),
-    m_pos_accel(0, 0),
+CameraController::CameraController():
+    m_pos(0, 0, 0),
+    m_pos_vel(0, 0, 0),
+    m_pos_accel(0, 0, 0),
     m_rot(0, 0),
     m_rot_vel(0, 0),
     m_rot_accel(0, 0),
@@ -18,17 +18,27 @@ CameraPlaneController::CameraPlaneController():
 
 }
 
-void CameraPlaneController::set_pos(const Vector2f &pos, bool reset_mechanics)
+void CameraController::boost_movement(const Vector3f &by)
+{
+    m_pos_accel += by;
+}
+
+void CameraController::boost_rotation(const Vector2f &by)
+{
+    m_rot_accel += by;
+}
+
+void CameraController::set_pos(const Vector3f &pos, bool reset_mechanics)
 {
     if (reset_mechanics) {
-        m_pos_vel = Vector2f();
-        m_pos_accel = Vector2f();
+        m_pos_vel = Vector3f();
+        m_pos_accel = Vector3f();
     }
 
     m_pos = pos;
 }
 
-void CameraPlaneController::set_rot(const Vector2f &rot, bool reset_mechanics)
+void CameraController::set_rot(const Vector2f &rot, bool reset_mechanics)
 {
     if (reset_mechanics) {
         m_rot_vel = Vector2f();
@@ -38,7 +48,7 @@ void CameraPlaneController::set_rot(const Vector2f &rot, bool reset_mechanics)
     m_rot = rot;
 }
 
-void CameraPlaneController::set_distance(const float distance, bool reset_mechanics)
+void CameraController::set_distance(const float distance, bool reset_mechanics)
 {
     if (reset_mechanics) {
         m_distance_vel = 0;
@@ -48,7 +58,7 @@ void CameraPlaneController::set_distance(const float distance, bool reset_mechan
     m_distance = distance;
 }
 
-void CameraPlaneController::advance(TimeInterval seconds)
+void CameraController::advance(TimeInterval seconds)
 {
     const TimeInterval seconds_sqr = seconds * seconds;
 
@@ -142,11 +152,11 @@ void OrthogonalCamera::sync()
     // put 0, 0, 0 into the viewports center
     m_render_projection = m_projection;
 
-    const Vector2f &pos = m_controller.pos();
+    const Vector3f &pos = m_controller.pos();
     const Vector2f &rot = m_controller.rot();
     const float distance = m_controller.distance();
 
-    m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.0f))
+    m_render_view = translation4(pos)
             * rotation4(eX, -rot[eX])
             * rotation4(eZ, rot[eY])
             * scale4(Vector3(1, 1, 1)/distance);
@@ -211,14 +221,19 @@ void PerspectivalCamera::sync()
     // put 0, 0, 0 into the viewports center
     m_render_projection = m_projection;
 
-    const Vector2f &pos = m_controller.pos();
+    const Vector3f &pos = m_controller.pos();
     const Vector2f &rot = m_controller.rot();
     const float distance = m_controller.distance();
 
-    m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.f))
+    /* m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.f))
             * rotation4(eX, -rot[eX])
             * rotation4(eZ, rot[eY])
-            * translation4(Vector3f(0, 0, -distance));
+            * translation4(Vector3f(0, 0, -distance)); */
+
+    m_render_view = translation4(Vector3f(0, 0, -distance))
+            * rotation4(eX, rot[eX])
+            * rotation4(eZ, rot[eY])
+            * translation4(-pos);
 
     camera_logger.log(io::LOG_DEBUG)
             << "view = " << m_render_view

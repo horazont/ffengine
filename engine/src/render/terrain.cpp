@@ -1,0 +1,147 @@
+#include "engine/render/terrain.hpp"
+
+namespace engine {
+
+const unsigned int Terrain::CHUNK_SIZE = 64;
+const unsigned int Terrain::CHUNK_VERTICIES = (CHUNK_SIZE+1)*(CHUNK_SIZE+1);
+const VBOFormat Terrain::VBO_FORMAT({
+                                        VBOAttribute(3),  // position
+                                        VBOAttribute(3),  // normal
+                                        VBOAttribute(3),  // tangent
+                                        VBOAttribute(2),  // tex coord
+                                    });
+
+Terrain::Terrain(sim::Terrain &src):
+    scenegraph::Node(),
+    m_xchunks((src.m_width-1) / CHUNK_SIZE),
+    m_ychunks((src.m_height-1) / CHUNK_SIZE),
+    m_source(src),
+    m_vbo(VBO_FORMAT),
+    m_ibo(),
+    m_chunk_indicies(m_ibo.allocate((CHUNK_SIZE+1)*(CHUNK_SIZE+1)*6)),
+    m_chunks()
+{
+    if (m_xchunks*CHUNK_SIZE+1 != src.m_width ||
+            m_ychunks*CHUNK_SIZE+1 != src.m_height)
+    {
+        throw std::invalid_argument(
+                    "Terrain size minus one (" + std::to_string(src.m_width-1) + "×" + std::to_string(src.m_height-1) +
+                    ") not divisible by chunk size " + std::to_string(CHUNK_SIZE));
+    }
+
+    uint16_t *dest = m_chunk_indicies.get();
+    for (unsigned int x = 0; x < CHUNK_SIZE; x++)
+    {
+        for (unsigned int y = 0; y < CHUNK_SIZE; y++)
+        {
+            const unsigned int curr_base = x*(CHUNK_SIZE+1)+y;
+            // make a triangle
+            *dest++ = curr_base + (CHUNK_SIZE+1);
+            *dest++ = curr_base;
+            *dest++ = curr_base + (CHUNK_SIZE+1) + 1;
+            *dest++ = curr_base;
+            *dest++ = curr_base + (CHUNK_SIZE+1) + 1;
+            *dest++ = curr_base + 1;
+        }
+    }
+
+    ArrayDeclaration decl;
+    decl.declare_attribute("position", m_vbo, 0);
+    decl.declare_attribute("normal", m_vbo, 1);
+    decl.declare_attribute("tangent", m_vbo, 2);
+    decl.declare_attribute("texcoord0", m_vbo, 3);
+    decl.set_ibo(&m_ibo);
+
+    bool success = m_material.shader().attach(
+                GL_VERTEX_SHADER,
+                "#version 330\n"
+                "layout(std140) uniform MatrixBlock {"
+                "   layout(row_major) mat4 proj;"
+                "   layout(row_major) mat4 view;"
+                "   layout(row_major) mat4 model;"
+                "   layout(row_major) mat3 normal;"
+                "};"
+                "in vec3 position;"
+                "void main() {"
+                "   gl_Position = proj * view * model * vec4(position, 1.f);"
+                "}");
+    success = success && m_material.shader().attach(
+                GL_FRAGMENT_SHADER,
+                "#version 330\n"
+                "out vec4 color;"
+                "void main() {"
+                "   color = vec4(1.0, 1.0, 1.0, 1.0);"
+                "}");
+    success = success && m_material.shader().link();
+
+    if (!success) {
+        throw std::runtime_error("failed to compile or link shader");
+    }
+
+    for (unsigned int xc = 0; xc < m_xchunks; xc++)
+    {
+        for (unsigned int yc = 0; yc < m_ychunks; yc++)
+        {
+            m_chunks.push_back(m_vbo.allocate(CHUNK_VERTICIES));
+        }
+    }
+
+    m_vao = decl.make_vao(m_material.shader(), true);
+}
+
+void Terrain::sync_from_sim()
+{
+    unsigned int i = 0;
+    for (unsigned int xchunk = 0; xchunk < m_xchunks; xchunk++)
+    {
+        for (unsigned int ychunk = 0; ychunk < m_ychunks; ychunk++)
+        {
+            sync_chunk_from_sim(xchunk, ychunk, m_chunks[i]);
+            i++;
+        }
+    }
+}
+
+void Terrain::sync_chunk_from_sim(const unsigned int xchunk,
+                                  const unsigned int ychunk,
+                                  VBOAllocation &vbo_alloc)
+{
+    auto pos_slice = VBOSlice<Vector3f>(vbo_alloc, 0);
+    auto normal_slice = VBOSlice<Vector3f>(vbo_alloc, 1);
+    auto tangent_slice = VBOSlice<Vector3f>(vbo_alloc, 2);
+    auto texcoord_slice = VBOSlice<Vector2f>(vbo_alloc, 3);
+
+    const unsigned int xbase = xchunk*CHUNK_SIZE;
+    const unsigned int ybase = ychunk*CHUNK_SIZE;
+    unsigned int slice_index = 0;
+    for (unsigned int x = 0; x <= CHUNK_SIZE; x++)
+    {
+        for (unsigned int y = 0; y <= CHUNK_SIZE; y++)
+        {
+            pos_slice[slice_index] = Vector3f(xbase+x, ybase+y, m_source.get(xbase+x, ybase+y));
+            normal_slice[slice_index] = Vector3f(0, 0, 1.);
+            tangent_slice[slice_index] = Vector3f(1, 0, 0);
+            texcoord_slice[slice_index] = Vector2f(0, 0);
+            slice_index += 1;
+        }
+    }
+}
+
+void Terrain::render(RenderContext &context)
+{
+    for (unsigned int i = 0; i < m_xchunks*m_ychunks; i++)
+    {
+        context.draw_elements_base_vertex(
+                    GL_TRIANGLES, *m_vao, m_material, m_chunk_indicies,
+                    m_chunks[i].base());
+    }
+
+}
+
+void Terrain::sync()
+{
+    sync_from_sim();
+    m_vao->sync();
+}
+
+}

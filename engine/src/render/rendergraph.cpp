@@ -11,19 +11,36 @@ RenderContext::RenderContext():
     m_matrix_ubo.bind_at(MATRIX_BLOCK_UBO_SLOT);
 }
 
-void RenderContext::draw_elements(GLenum primitive,
-                                  VAO &with_arrays,
-                                  Material &using_material,
-                                  IBOAllocation &indicies)
+void RenderContext::prepare_draw()
 {
     m_matrix_ubo.set<2>(m_current_transformation);
     Matrix3f rotational_part = Matrix3f::clip(m_current_transformation);
     inverse(rotational_part);
     m_matrix_ubo.set<3>(rotational_part);
     m_matrix_ubo.update_bound();
+}
+
+void RenderContext::draw_elements(GLenum primitive,
+                                  VAO &with_arrays,
+                                  Material &using_material,
+                                  IBOAllocation &indicies)
+{
+    prepare_draw();
     with_arrays.bind();
     using_material.shader().bind();
     ::engine::draw_elements(indicies, primitive);
+}
+
+void RenderContext::draw_elements_base_vertex(
+        GLenum primitive,
+        VAO &with_arrays, Material &using_material,
+        IBOAllocation &indicies,
+        GLint base_vertex)
+{
+    prepare_draw();
+    with_arrays.bind();
+    using_material.shader().bind();
+    ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex);
 }
 
 void RenderContext::push_transformation(const Matrix4f &mat)

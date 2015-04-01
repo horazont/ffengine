@@ -32,7 +32,9 @@ SOURCES += \
     src/math/vector.cpp \
     src/render/scenegraph.cpp \
     src/render/camera.cpp \
-    src/render/rendergraph.cpp
+    src/render/rendergraph.cpp \
+    src/render/terrain.cpp \
+    src/sim/terrain.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -58,7 +60,9 @@ HEADERS += \
     engine/render/scenegraph.hpp \
     engine/render/camera.hpp \
     engine/common/types.hpp \
-    engine/render/rendergraph.hpp
+    engine/render/rendergraph.hpp \
+    engine/render/terrain.hpp \
+    engine/sim/terrain.hpp
 
 unix {
     target.path = /usr/lib
