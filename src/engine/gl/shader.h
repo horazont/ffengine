@@ -52,18 +52,15 @@ struct ShaderUniformBlock
 };
 
 
-template <int N, typename ubo_t, typename... element_ts>
-struct typecheck_helper;
-
-template <int N, typename ubo_t, typename element_t, typename... element_ts>
-struct typecheck_helper<N, ubo_t, element_t, element_ts...>
+template <int N, typename ubo_t>
+struct typecheck_helper
 {
-    static inline ShaderUniformBlockMember &get_next_member(
-            ShaderUniformBlock &block,
+    static inline const ShaderUniformBlockMember &get_next_member(
+            const ShaderUniformBlock &block,
             int &member_idx,
             int &offset)
     {
-        ShaderUniformBlockMember &result = block.members[member_idx];
+        const ShaderUniformBlockMember &result = block.members[member_idx];
         offset += 1;
         if (offset >= result.size) {
             member_idx += 1;
@@ -73,20 +70,20 @@ struct typecheck_helper<N, ubo_t, element_t, element_ts...>
         return result;
     }
 
-    static void typecheck(ShaderUniformBlock &block,
-                          int member_idx,
-                          int offset,
-                          const ubo_t &ubo)
+    static inline void typecheck(const ShaderUniformBlock &block,
+                                 int member_idx,
+                                 int offset)
     {
-        typedef ubo_wrap_type<element_t> wrap_helper;
-
         const int this_member = member_idx;
         const int this_offset = offset;
 
-        ShaderUniformBlockMember &member = get_next_member(block,
-                                                           member_idx,
-                                                           offset);
-        if (member.type != wrap_helper::gl_type) {
+        const ShaderUniformBlockMember &member =
+                get_next_member(block, member_idx, offset);
+
+        typedef ubo_wrap_type<typename std::tuple_element<N, typename ubo_t::local_types>::type> wrap_helper;
+
+        if (member.type != wrap_helper::gl_type)
+        {
             io::logging().get_logger("gl.shader").logf(
                         io::LOG_EXCEPTION,
                         "uniform typecheck: member %d:%d: OpenGL reports type "
@@ -98,19 +95,19 @@ struct typecheck_helper<N, ubo_t, element_t, element_ts...>
             throw std::runtime_error("inconsistent types at member "+std::to_string(this_member));
         }
 
-        typecheck_helper<N+1, ubo_t, element_ts...>::typecheck(block, member_idx, offset, ubo);
+        typecheck_helper<N+1, ubo_t>::typecheck(block, member_idx, offset);
     }
-
 };
 
-template <int N, typename ubo_t>
-struct typecheck_helper<N, ubo_t>
+template <typename ubo_t>
+struct typecheck_helper<std::tuple_size<typename ubo_t::local_types>::value, ubo_t>
 {
-    static void typecheck(ShaderUniformBlock &, int, int, const ubo_t&)
+    static inline void typecheck(const ShaderUniformBlock&,
+                                 int,
+                                 int)
     {
 
     }
-
 };
 
 
@@ -133,10 +130,9 @@ protected:
     void introspect_uniforms();
 
 protected:
-    template <typename... element_ts>
-    inline void check_uniform_block(ShaderUniformBlock &block, const UBO<element_ts...> &ubo)
+    template <typename ubo_t>
+    inline void check_uniform_block_impl(ShaderUniformBlock &block)
     {
-        typedef UBO<element_ts...> ubo_t;
         std::size_t total_members = 0;
         for (auto &member: block.members) {
             total_members += member.size;
@@ -149,7 +145,7 @@ protected:
                                      " locally)");
         }
 
-        typecheck_helper<0, ubo_t, element_ts...>::typecheck(block, 0, 0, ubo);
+        typecheck_helper<0, ubo_t>::typecheck(block, 0, 0);
     }
 
 public:
@@ -175,7 +171,18 @@ public:
             throw std::invalid_argument("no such uniform block: "+block_name);
         }
 
-        check_uniform_block(iter->second, ubo);
+        check_uniform_block_impl<ubo_t>(iter->second);
+    }
+
+    template <typename ubo_t>
+    inline void check_uniform_block(const std::string &block_name)
+    {
+        auto iter = m_uniform_blocks.find(block_name);
+        if (iter == m_uniform_blocks.end()) {
+            throw std::invalid_argument("no such uniform block: "+block_name);
+        }
+
+        check_uniform_block_impl<ubo_t>(iter->second);
     }
 
 public:

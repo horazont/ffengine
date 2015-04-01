@@ -2,13 +2,13 @@
 #define SCC_ENGINE_GL_UBO_TUPLE_UTILS_H
 
 template <std::size_t I, typename Type, typename... Types>
-inline typename std::enable_if<(I > 0), typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type get(wrapped_tuple<Type, Types...> &tpl)
+inline typename std::enable_if<(I > 0), typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type get(const wrapped_tuple<Type, Types...> &tpl)
 {
     return get<I-1, Types...>(tpl.m_next);
 }
 
 template <std::size_t I, typename Type, typename... Types>
-inline typename std::enable_if<I == 0, typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type get(wrapped_tuple<Type, Types...> &tpl)
+inline typename std::enable_if<I == 0, typename std::tuple_element<I, std::tuple<Type, Types...>>::type>::type get(const wrapped_tuple<Type, Types...> &tpl)
 {
     typedef ubo_wrap_type<Type> helper;
     return helper::unpack(tpl.m_data);

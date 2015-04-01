@@ -108,6 +108,7 @@ template <typename... element_ts>
 class UBO: public UBOBase
 {
 public:
+    typedef std::tuple<element_ts...> local_types;
     typedef ubo_storage_utils::wrapped_tuple<element_ts...> storage_t;
 
 public:
@@ -123,13 +124,7 @@ private:
 
 public:
     template <std::size_t I>
-    inline typename std::tuple_element<I, std::tuple<element_ts...>>::type &element()
-    {
-        return ubo_storage_utils::get<I>(m_storage);
-    }
-
-    template <std::size_t I>
-    inline const typename std::tuple_element<I, std::tuple<element_ts...>>::type &get() const
+    inline typename std::tuple_element<I, std::tuple<element_ts...>>::type get() const
     {
         return ubo_storage_utils::get<I>(m_storage);
     }
