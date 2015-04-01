@@ -3,6 +3,8 @@
 
 #include "engine/common/types.hpp"
 
+#include "engine/math/ray.hpp"
+
 #include "engine/render/rendergraph.hpp"
 
 namespace engine {
@@ -160,6 +162,8 @@ private:
     Matrix4f m_projection;
 
 protected:
+    Matrix4f calc_view() const;
+    Matrix4f calc_inv_view() const;
     void update_projection();
 
 public:
@@ -192,6 +196,9 @@ public:
     {
         return m_controller;
     }
+
+public:
+    Ray ray(const Vector2f viewport_pos) const;
 
 public:
     void set_fovy(const float fovy);

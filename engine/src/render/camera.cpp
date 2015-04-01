@@ -183,11 +183,61 @@ PerspectivalCamera::PerspectivalCamera():
 
 }
 
+Matrix4f PerspectivalCamera::calc_view() const
+{
+    const Vector3f &pos = m_controller.pos();
+    const Vector2f &rot = m_controller.rot();
+    const float distance = m_controller.distance();
+
+    return translation4(Vector3f(0, 0, -distance))
+                * rotation4(eX, rot[eX])
+                * rotation4(eZ, rot[eY])
+                * translation4(-pos);
+}
+
+Matrix4f PerspectivalCamera::calc_inv_view() const
+{
+    const Vector3f &pos = m_controller.pos();
+    const Vector2f &rot = m_controller.rot();
+    const float distance = m_controller.distance();
+
+    return translation4(pos)
+            * rotation4(eZ, -rot[eY])
+            * rotation4(eX, -rot[eX])
+            * translation4(Vector3f(0, 0, distance));
+}
+
 void PerspectivalCamera::update_projection()
 {
     m_projection = proj_perspective(m_fovy,
                                     m_viewport_width/m_viewport_height,
                                     m_znear, m_zfar);
+}
+
+Ray PerspectivalCamera::ray(const Vector2f viewport_pos) const
+{
+    const float f = tan(M_PI_2 - m_fovy/2.);
+
+    const Matrix3f inv_proj_partial(
+                m_viewport_width/m_viewport_height/f, 0, 0,
+                0, 1/f, 0,
+                0, 0, 1);
+
+    const Matrix4f inv_view = calc_inv_view();
+
+    const Vector4f pos4 = inv_view * Vector4f(0, 0, 0, 1);
+    const Vector3f pos(pos4[eX], pos4[eY], pos4[eZ]);
+
+    const Vector3f on_view_plane = inv_proj_partial*Vector3f(
+                2*viewport_pos[eX]/m_viewport_width-1.0,
+                1.0-2*viewport_pos[eY]/m_viewport_height,
+                -1.0);
+
+    const Vector4f direction = inv_view * Vector4f(on_view_plane, 0.);
+
+    return Ray{pos, Vector3f(direction[eX],
+                             direction[eY],
+                             direction[eZ]).normalized()};
 }
 
 void PerspectivalCamera::set_viewport(const float width, const float height)
@@ -221,19 +271,12 @@ void PerspectivalCamera::sync()
     // put 0, 0, 0 into the viewports center
     m_render_projection = m_projection;
 
-    const Vector3f &pos = m_controller.pos();
-    const Vector2f &rot = m_controller.rot();
-    const float distance = m_controller.distance();
-
     /* m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.f))
             * rotation4(eX, -rot[eX])
             * rotation4(eZ, rot[eY])
             * translation4(Vector3f(0, 0, -distance)); */
 
-    m_render_view = translation4(Vector3f(0, 0, -distance))
-            * rotation4(eX, rot[eX])
-            * rotation4(eZ, rot[eY])
-            * translation4(-pos);
+    m_render_view = calc_view();
 
     camera_logger.log(io::LOG_DEBUG)
             << "view = " << m_render_view
