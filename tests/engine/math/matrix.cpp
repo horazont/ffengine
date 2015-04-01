@@ -7,15 +7,15 @@
 #define CHECK_APPROX_ZERO(expr) CHECK((expr).abssum() < EPSILON)
 
 TEST_CASE("math/matrix/Matrix4/init0"
-          "Test creation of identity matrix")
+          "Test initialization with zeros")
 {
     Matrix4 id(
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0
     );
-    CHECK(Matrix4(Identity) == id);
+    CHECK(Matrix4() == id);
 }
 
 TEST_CASE("math/matrix/Matrix4/Identity"
