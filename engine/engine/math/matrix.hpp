@@ -441,10 +441,10 @@ inline void matrix_data_to_stream(
     std::ostream &stream,
     const Matrix<float_t, rows, columns> &mat)
 {
-    stream << "(";
+    stream << "[";
     for (unsigned int i = 0; i < rows; i++) {
         if (i > 0) {
-            stream << "; ";
+            stream << ", ";
         }
         stream << "[" << mat.component(i, 0);
         for (unsigned int j = 1; j < columns; j++) {
@@ -452,7 +452,7 @@ inline void matrix_data_to_stream(
         }
         stream << "]";
     }
-    stream << ")";
+    stream << "]";
 }
 
 template <typename float_t, unsigned int rows, unsigned int columns>
