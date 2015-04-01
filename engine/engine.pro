@@ -30,7 +30,9 @@ SOURCES += \
     src/io/log.cpp \
     src/math/matrix.cpp \
     src/math/vector.cpp \
-    src/render/scenegraph.cpp
+    src/render/scenegraph.cpp \
+    src/render/camera.cpp \
+    src/render/rendergraph.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -53,7 +55,10 @@ HEADERS += \
     engine/math/MatrixTemplates.hpppp \
     engine/math/variadic_initializer.hpp \
     engine/math/vector.hpp \
-    engine/render/scenegraph.hpp
+    engine/render/scenegraph.hpp \
+    engine/render/camera.hpp \
+    engine/common/types.hpp \
+    engine/render/rendergraph.hpp
 
 unix {
     target.path = /usr/lib
