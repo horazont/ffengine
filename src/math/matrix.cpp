@@ -130,3 +130,19 @@ Matrix4 proj_ortho(const double left,
     );
     return result;
 }
+
+Matrix4 proj_ortho_center(const double left,
+                          const double top,
+                          const double right,
+                          const double bottom,
+                          const double znear,
+                          const double zfar)
+{
+    Matrix4 result(
+                2/(right-left), 0, 0, 0,
+                0, 2/(top-bottom), 0, 0,
+                0, 0, -2/(zfar-znear), -(zfar+znear)/(zfar-znear),
+                0, 0, 0, 1
+    );
+    return result;
+}

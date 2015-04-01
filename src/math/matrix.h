@@ -367,6 +367,12 @@ Matrix4 proj_ortho(const double left,
                    const double bottom,
                    const double znear,
                    const double zfar);
+Matrix4 proj_ortho_center(const double left,
+                          const double top,
+                          const double right,
+                          const double bottom,
+                          const double znear,
+                          const double zfar);
 
 template <
     typename scale_float_t,
