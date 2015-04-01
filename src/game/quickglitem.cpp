@@ -19,8 +19,7 @@ io::Logger &qml_gl_logger = io::logging().get_logger("qmlgl");
 class GridNode: public engine::scenegraph::Node
 {
 public:
-    GridNode(engine::scenegraph::RenderContext::MatrixUBO &matrix_ubo,
-             const unsigned int xcells,
+    GridNode(const unsigned int xcells,
              const unsigned int ycells,
              const float size):
         m_vbo(engine::VBOFormat({
@@ -89,8 +88,11 @@ public:
         m_vao = decl.make_vao(m_material.shader(), true);
 
         m_material.shader().bind();
-        m_material.shader().check_uniform_block("MatrixBlock", matrix_ubo);
-        m_material.shader().bind_uniform_block("MatrixBlock", 0);
+        m_material.shader().check_uniform_block<engine::scenegraph::RenderContext::MatrixUBO>(
+                    "MatrixBlock");
+        m_material.shader().bind_uniform_block(
+                    "MatrixBlock",
+                    engine::scenegraph::RenderContext::MATRIX_BLOCK_UBO_SLOT);
     }
 
 private:
@@ -119,17 +121,22 @@ public:
 QuickGLScene::QuickGLScene(QObject *parent):
     QObject(parent),
     m_initialized(false),
-    m_matrix_ubo(),
     m_resources(),
-    m_scenegraph_root(),
+    m_camera(),
+    m_scenegraph(),
     m_t(hrclock::now()),
     m_t0(monoclock::now()),
     m_nframes(0)
 {
-    engine::scenegraph::Transformation &transform =
-            m_scenegraph_root.emplace<engine::scenegraph::Transformation>();
-    transform.emplace_child<GridNode>(m_matrix_ubo, 10, 10, 10);
-    transform.transformation() = translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.4);
+    /*engine::scenegraph::Transformation &transform =
+            m_scenegraph.root().emplace<engine::scenegraph::Transformation>();
+    transform.emplace_child<GridNode>(10, 10, 10);
+    transform.transformation() = translation4(Vector3(100, 100, 0)) * rotation4(eZ, 1.4);*/
+
+    m_scenegraph.root().emplace<GridNode>(64, 64, 1);
+
+    m_camera.controller().set_distance(20.0);
+    m_camera.controller().set_rot(Vector2f(45.f/180.f*M_PI, 45.f/180.f*M_PI));
 }
 
 QuickGLScene::~QuickGLScene()
@@ -146,14 +153,7 @@ void QuickGLScene::paint()
     glClearColor(0.4, 0.3, 0.2, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    engine::scenegraph::RenderContext ctx(m_matrix_ubo);
-    ctx.set_view(Matrix4f(Identity));
-    ctx.set_projection(
-                proj_ortho(0, 0,
-                           m_viewport_size.width(),
-                           m_viewport_size.height(),
-                           -2, 2));
-    m_scenegraph_root.render(ctx);
+    m_scenegraph.render(m_camera);
 
     hrclock::time_point t1 = hrclock::now();
     const unsigned int msecs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - m_t).count();
@@ -173,12 +173,15 @@ void QuickGLScene::set_pos(const QPoint &pos)
 
 void QuickGLScene::set_viewport_size(const QSize &size)
 {
-    m_viewport_size = size;
+    m_camera.set_viewport(size.width(), size.height());
+    m_camera.set_znear(1.0);
+    m_camera.set_zfar(100);
 }
 
 void QuickGLScene::sync()
 {
-    m_scenegraph_root.sync();
+    m_camera.sync();
+    m_scenegraph.sync();
 }
 
 

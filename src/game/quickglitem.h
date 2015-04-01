@@ -32,13 +32,12 @@ public:
 
 private:
     bool m_initialized;
-    engine::scenegraph::RenderContext::MatrixUBO m_matrix_ubo;
     engine::ResourceManager m_resources;
-    engine::scenegraph::Group m_scenegraph_root;
+    engine::scenegraph::PerspectivalCamera m_camera;
+    engine::scenegraph::SceneGraph m_scenegraph;
     hrclock::time_point m_t;
     monoclock::time_point m_t0;
     unsigned int m_nframes;
-    QSize m_viewport_size;
     Vector2f m_pos;
 
 public slots:
