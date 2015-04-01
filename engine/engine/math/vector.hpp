@@ -73,6 +73,25 @@ struct Vector {
         }
     }
 
+    template <typename other_vector_float_t,
+              unsigned int other_dimension,
+              typename... other_float_ts>
+    explicit Vector(const Vector<other_vector_float_t, other_dimension> &ref,
+                    other_float_ts... values):
+        as_array()
+    {
+        static_assert(sizeof...(values) + other_dimension == dimension,
+                      "Must initialize vector with exactly N = dim "
+                      "elements");
+
+        for (unsigned int i = 0; i < other_dimension; i++) {
+            as_array[i] = ref.as_array[i];
+        }
+
+        init_array_with_data<vector_float_t, other_float_ts...>::init(
+                    &as_array[other_dimension], values...);
+    }
+
     vector_float_t as_array[dimension];
 
     template <
