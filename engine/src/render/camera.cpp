@@ -4,6 +4,7 @@ namespace engine {
 
 io::Logger &camera_logger = io::logging().get_logger("engine.render.camera");
 
+
 CameraController::CameraController():
     m_pos(0, 0, 0),
     m_pos_vel(0, 0, 0),
@@ -18,6 +19,22 @@ CameraController::CameraController():
 
 }
 
+std::tuple<bool, bool> CameraController::enforce_2d_restriction()
+{
+    bool bounces[2];
+    for (unsigned int i = 0; i < 2; i++) {
+        if (m_pos.as_array[i] < m_2d_min.as_array[i]) {
+            m_pos.as_array[i] = m_2d_min.as_array[i];
+            bounces[i] = true;
+        } else if (m_pos.as_array[i] > m_2d_max.as_array[i]) {
+            m_pos.as_array[i] = m_2d_max.as_array[i];
+            bounces[i] = true;
+        }
+    }
+
+    return std::make_tuple(bounces[0], bounces[1]);
+}
+
 void CameraController::boost_movement(const Vector3f &by)
 {
     m_pos_accel += by;
@@ -28,6 +45,18 @@ void CameraController::boost_rotation(const Vector2f &by)
     m_rot_accel += by;
 }
 
+void CameraController::restrict_2d_box(const Vector2f &min, const Vector2f &max)
+{
+    m_2d_min = min;
+    m_2d_max = max;
+    m_2d_restricted = true;
+}
+
+void CameraController::unrestrict_2d_box()
+{
+    m_2d_restricted = false;
+}
+
 void CameraController::set_pos(const Vector3f &pos, bool reset_mechanics)
 {
     if (reset_mechanics) {
@@ -36,6 +65,9 @@ void CameraController::set_pos(const Vector3f &pos, bool reset_mechanics)
     }
 
     m_pos = pos;
+    if (m_2d_restricted) {
+        enforce_2d_restriction();
+    }
 }
 
 void CameraController::set_rot(const Vector2f &rot, bool reset_mechanics)
@@ -67,6 +99,17 @@ void CameraController::advance(TimeInterval seconds)
 
     m_pos_accel /= 180 * seconds;
     m_pos_vel /= 110 * seconds;
+
+    if (m_2d_restricted) {
+        bool xbounce, ybounce;
+        std::tie(xbounce, ybounce) = enforce_2d_restriction();
+        if (xbounce) {
+            m_pos_vel[eX] = -0.5*m_pos_vel[eX];
+        }
+        if (ybounce) {
+            m_pos_vel[eY] = -0.5*m_pos_vel[eY];
+        }
+    }
 
     m_rot += m_rot_accel * seconds_sqr / 2. + m_rot_vel * seconds;
     m_rot_vel += m_rot_accel * seconds;

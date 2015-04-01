@@ -29,6 +29,13 @@ private:
 
     bool m_moving, m_rotating;
 
+    bool m_2d_restricted;
+    Vector2f m_2d_min;
+    Vector2f m_2d_max;
+
+protected:
+    std::tuple<bool, bool> enforce_2d_restriction();
+
 public:
     inline const Vector3f &pos() const
     {
@@ -48,6 +55,9 @@ public:
     void set_pos(const Vector3f &pos, bool reset_mechanics = true);
     void set_rot(const Vector2f &rot, bool reset_mechanics = true);
     void set_distance(const float distance, bool reset_mechanics = true);
+
+    void restrict_2d_box(const Vector2f &min, const Vector2f &max);
+    void unrestrict_2d_box();
 
     void boost_movement(const Vector3f &by);
     void boost_rotation(const Vector2f &by);
