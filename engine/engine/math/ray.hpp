@@ -13,7 +13,7 @@ struct Ray
 
 
 std::tuple<float, bool> intersect_triangle(
-        const Ray& ray,
+        const Ray &ray,
         const Vector3f &p0,
         const Vector3f &p1,
         const Vector3f &p2);
