@@ -4,7 +4,7 @@
 #include <stack>
 #include <vector>
 
-#include "../math/matrix.h"
+#include "math/matrix.h"
 
 #include "gl/ibo.h"
 #include "gl/material.h"

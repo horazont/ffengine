@@ -2,7 +2,7 @@
 
 #include "gl/ibo.h"
 
-#include "../io/log.h"
+#include "io/log.h"
 
 namespace engine {
 namespace scenegraph {
@@ -353,7 +353,7 @@ Camera::~Camera()
 
 }
 
-void Camera::advance(TimeInterval seconds)
+void Camera::advance(TimeInterval)
 {
 
 }

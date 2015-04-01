@@ -6,10 +6,10 @@
 #include <tuple>
 #include <utility>
 
-#include "object.h"
+#include "gl/object.h"
 
-#include "../../math/vector.h"
-#include "../../math/matrix.h"
+#include "math/vector.h"
+#include "math/matrix.h"
 
 namespace engine {
 

@@ -6,10 +6,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "object.h"
-#include "ubo.h"
+#include "gl/object.h"
+#include "gl/ubo.h"
 
-#include "../../io/log.h"
+#include "io/log.h"
 
 
 namespace engine {

@@ -7,9 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "object.h"
-#include "2darray.h"
-#include "texture.h"
+#include "gl/object.h"
+#include "gl/2darray.h"
+#include "gl/texture.h"
 
 
 namespace engine {

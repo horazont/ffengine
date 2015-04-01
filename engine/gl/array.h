@@ -10,10 +10,10 @@
 
 #include <GL/glew.h>
 
-#include "object.h"
-#include "util.h"
+#include "gl/object.h"
+#include "gl/util.h"
 
-#include "../../io/log.h"
+#include "io/log.h"
 
 namespace engine {
 

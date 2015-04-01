@@ -1,7 +1,7 @@
 #ifndef SCC_ENGINE_GL_IBO_H
 #define SCC_ENGINE_GL_IBO_H
 
-#include "array.h"
+#include "gl/array.h"
 
 namespace engine {
 

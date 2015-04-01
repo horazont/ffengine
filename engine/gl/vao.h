@@ -1,10 +1,10 @@
 #ifndef SCC_ENGINE_GL_VAO_H
 #define SCC_ENGINE_GL_VAO_H
 
-#include "object.h"
-#include "vbo.h"
-#include "ibo.h"
-#include "shader.h"
+#include "gl/object.h"
+#include "gl/vbo.h"
+#include "gl/ibo.h"
+#include "gl/shader.h"
 
 
 namespace engine {

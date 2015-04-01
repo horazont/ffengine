@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "../../io/log.h"
+#include "io/log.h"
 
 
 namespace engine {

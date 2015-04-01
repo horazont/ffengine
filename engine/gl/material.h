@@ -4,8 +4,8 @@
 #include <cassert>
 #include <unordered_map>
 
-#include "shader.h"
-#include "texture.h"
+#include "gl/shader.h"
+#include "gl/texture.h"
 
 
 namespace engine {

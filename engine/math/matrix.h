@@ -1,7 +1,7 @@
 #ifndef SCC_MATH_MATRICES_H
 #define SCC_MATH_MATRICES_H
 
-#include "vector.h"
+#include "math/vector.h"
 
 
 enum matrix_identity_t

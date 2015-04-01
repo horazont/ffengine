@@ -10,8 +10,8 @@
 
 #include <GL/glew.h>
 
-#include "object.h"
-#include "array.h"
+#include "gl/object.h"
+#include "gl/array.h"
 
 
 namespace engine {

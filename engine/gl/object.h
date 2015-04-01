@@ -6,7 +6,7 @@
 #include <functional>
 #include <iostream>
 
-#include "../resource.h"
+#include "common/resource.h"
 
 
 namespace engine {

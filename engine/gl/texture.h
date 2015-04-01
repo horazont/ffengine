@@ -3,8 +3,8 @@
 
 #include <GL/glew.h>
 
-#include "object.h"
-#include "2darray.h"
+#include "gl/object.h"
+#include "gl/2darray.h"
 
 
 namespace engine {
