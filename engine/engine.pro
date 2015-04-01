@@ -43,7 +43,8 @@ SOURCES += \
     src/io/filestream.cpp \
     src/io/stdiostream.cpp \
     src/io/stream.cpp \
-    src/io/stream_operators.inc.cpp
+    src/io/stream_operators.inc.cpp \
+    src/math/ray.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -82,7 +83,8 @@ HEADERS += \
     engine/io/filestream.hpp \
     engine/io/stdiostream.hpp \
     engine/io/stream.hpp \
-    engine/math/variadic_initializer.inc.hpp
+    engine/math/variadic_initializer.inc.hpp \
+    engine/math/ray.hpp
 
 unix {
     target.path = /usr/lib

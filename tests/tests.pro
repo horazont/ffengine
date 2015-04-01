@@ -5,7 +5,8 @@ CONFIG -= qt
 
 SOURCES += main.cpp \
     engine/math/matrix.cpp \
-    engine/math/vector.cpp
+    engine/math/vector.cpp \
+    engine/math/ray.cpp
 
 QMAKE_CXXFLAGS += -std=c++11
 
