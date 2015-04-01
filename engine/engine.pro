@@ -14,46 +14,47 @@ TEMPLATE = lib
 CONFIG += staticlib
 
 SOURCES += \
-    common/resource.cpp \
-    gl/2darray.cpp \
-    gl/array.cpp \
-    gl/fbo.cpp \
-    gl/ibo.cpp \
-    gl/material.cpp \
-    gl/object.cpp \
-    gl/shader.cpp \
-    gl/texture.cpp \
-    gl/ubo.cpp \
-    gl/util.cpp \
-    gl/vao.cpp \
-    gl/vbo.cpp \
-    io/log.cpp \
-    math/matrix.cpp \
-    math/vector.cpp \
-    render/scenegraph.cpp
+    src/common/resource.cpp \
+    src/gl/2darray.cpp \
+    src/gl/array.cpp \
+    src/gl/fbo.cpp \
+    src/gl/ibo.cpp \
+    src/gl/material.cpp \
+    src/gl/object.cpp \
+    src/gl/shader.cpp \
+    src/gl/texture.cpp \
+    src/gl/ubo.cpp \
+    src/gl/util.cpp \
+    src/gl/vao.cpp \
+    src/gl/vbo.cpp \
+    src/io/log.cpp \
+    src/math/matrix.cpp \
+    src/math/vector.cpp \
+    src/render/scenegraph.cpp
 
 HEADERS += \
-    common/resource.h \
-    gl/2darray.h \
-    gl/array.h \
-    gl/fbo.h \
-    gl/ibo.h \
-    gl/material.h \
-    gl/object.h \
-    gl/shader.h \
-    gl/texture.h \
-    gl/ubo.h \
-    gl/ubo_tuple_utils.h \
-    gl/ubo_type_wrappers.h \
-    gl/util.h \
-    gl/vao.h \
-    gl/vbo.h \
-    io/log.h \
-    math/matrix.h \
-    math/MatrixTemplates.hpp \
-    math/variadic_initializer.h \
-    math/vector.h \
-    render/scenegraph.h
+    engine/common/resource.hpp \
+    engine/gl/2darray.hpp \
+    engine/gl/array.hpp \
+    engine/gl/fbo.hpp \
+    engine/gl/ibo.hpp \
+    engine/gl/material.hpp \
+    engine/gl/object.hpp \
+    engine/gl/shader.hpp \
+    engine/gl/texture.hpp \
+    engine/gl/ubo.hpp \
+    engine/gl/ubo_tuple_utils.hpp \
+    engine/gl/ubo_type_wrappers.hpp \
+    engine/gl/util.hpp \
+    engine/gl/vao.hpp \
+    engine/gl/vbo.hpp \
+    engine/io/log.hpp \
+    engine/math/matrix.hpp \
+    engine/math/MatrixTemplates.hpppp \
+    engine/math/variadic_initializer.hpp \
+    engine/math/vector.hpp \
+    engine/render/scenegraph.hpp
+
 unix {
     target.path = /usr/lib
     INSTALLS += target
