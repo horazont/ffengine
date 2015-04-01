@@ -214,7 +214,7 @@ struct Matrix
     inline Vector<out_float_t, rows> operator*(
         const Vector<other_float_t, columns> &vec) const
     {
-        Vector<out_float_t, rows> result(0, 0, 0);
+        Vector<out_float_t, rows> result;
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < columns; j++) {
                 result[i] += component(i,j) * vec[j];
