@@ -95,7 +95,7 @@ Matrix4 translation4(const Vector3 &by) {
 Matrix4 scale4(const Vector3 &factors) {
     Matrix4 result(Identity);
     for (unsigned int j = 0; j < 3; j++) {
-        result.component(3, j) = factors[j];
+        result.component(j, j) = factors[j];
     }
     return result;
 }
