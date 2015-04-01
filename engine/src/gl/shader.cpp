@@ -319,6 +319,16 @@ bool ShaderProgram::link()
     return true;
 }
 
+const ShaderUniform &ShaderProgram::uniform(const std::string &name) const
+{
+    auto iter = m_uniforms.find(name);
+    if (iter != m_uniforms.end()) {
+        return iter->second;
+    }
+
+    throw std::runtime_error("no such uniform: "+name);
+}
+
 GLint ShaderProgram::uniform_location(const std::string &name) const
 {
     auto iter = m_uniforms.find(name);

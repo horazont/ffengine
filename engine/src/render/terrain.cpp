@@ -73,14 +73,13 @@ Terrain::Terrain(sim::Terrain &src):
                 "#version 330\n"
                 "out vec4 color;"
                 "in vec2 tc0;"
-                "uniform sampler2D tex0;"
+                "uniform sampler2D grass;"
                 "void main() {"
-                "   color = texture2D(tex0, tc0);"
+                "   color = texture2D(grass, tc0);"
                 "}");
     success = success && m_material.shader().link();
 
     m_material.shader().bind();
-    glUniform1i(m_material.shader().uniform_location("tex0"), 0);
 
     if (!success) {
         throw std::runtime_error("failed to compile or link shader");
@@ -95,6 +94,11 @@ Terrain::Terrain(sim::Terrain &src):
     }
 
     m_vao = decl.make_vao(m_material.shader(), true);
+}
+
+void Terrain::set_grass_texture(Texture2D *tex)
+{
+    m_material.attach_texture("grass", tex);
 }
 
 void Terrain::sync_from_sim()

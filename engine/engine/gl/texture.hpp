@@ -9,8 +9,20 @@
 
 namespace engine {
 
+class Texture
+{
+public:
+    virtual ~Texture();
+
+public:
+    virtual GLenum shader_uniform_type() = 0;
+    virtual GLenum target() = 0;
+
+};
+
 class Texture2D: public GLObject<GL_TEXTURE_BINDING_2D>,
-                 public GL2DArray
+                 public GL2DArray,
+                 public Texture
 {
 public:
     Texture2D(const GLenum internal_format,
@@ -22,6 +34,10 @@ public:
     void bound() override;
     void sync() override;
     void unbind() override;
+
+public:
+    GLenum shader_uniform_type() override;
+    GLenum target() override;
 
 public:
     void attach_to_fbo(const GLenum target, const GLenum attachment) override;

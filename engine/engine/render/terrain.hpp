@@ -39,6 +39,9 @@ protected:
                              VBOAllocation &vbo_alloc);
 
 public:
+    void set_grass_texture(Texture2D *tex);
+
+public:
     void render(RenderContext &context) override;
     void sync() override;
 

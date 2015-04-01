@@ -13,14 +13,25 @@ namespace engine {
 class Material: public Resource
 {
 public:
-    static const unsigned int MAX_TEXTURES = 8;
+    struct TextureAttachment
+    {
+        std::string name;
+        GLint texture_unit;
+        Texture *texture_obj;
+    };
 
 public:
     Material();
 
 private:
+    const GLint m_max_texture_units;
     ShaderProgram m_shader;
-    std::array<Texture2D*, MAX_TEXTURES> m_texture_units;
+    std::unordered_map<std::string, TextureAttachment> m_texture_bindings;
+    std::vector<GLint> m_free_units;
+    GLint m_base_free_unit;
+
+protected:
+    GLint get_next_texture_unit();
 
 public:
     inline ShaderProgram &shader()
@@ -28,11 +39,9 @@ public:
         return m_shader;
     }
 
-    inline Texture2D *&texture_unit(unsigned int nunit)
-    {
-        assert(nunit < MAX_TEXTURES);
-        return m_texture_units[nunit];
-    }
+public:
+    GLint attach_texture(const std::string &name, Texture *tex);
+    void detach_texture(const std::string &name);
 
 };
 

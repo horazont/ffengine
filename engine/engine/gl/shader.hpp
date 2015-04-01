@@ -155,6 +155,7 @@ public:
     bool link();
     GLint uniform_location(const std::string &name) const;
     GLint uniform_block_location(const std::string &name) const;
+    const ShaderUniform &uniform(const std::string &name) const;
 
 public:
     inline const std::vector<ShaderVertexAttribute> &attributes() const

@@ -30,6 +30,12 @@ GLint get_suitable_format_for_null(const GLenum internal_format)
 }
 
 
+Texture::~Texture()
+{
+
+}
+
+
 Texture2D::Texture2D(const GLenum internal_format,
                      const GLsizei width,
                      const GLsizei height):
@@ -66,6 +72,16 @@ void Texture2D::sync()
 void Texture2D::unbind()
 {
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+GLenum Texture2D::shader_uniform_type()
+{
+    return GL_SAMPLER_2D;
+}
+
+GLenum Texture2D::target()
+{
+    return GL_TEXTURE_2D;
 }
 
 void Texture2D::attach_to_fbo(const GLenum target, const GLenum attachment)
