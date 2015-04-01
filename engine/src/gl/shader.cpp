@@ -74,6 +74,7 @@ void ShaderProgram::introspect_vertex_attributes()
         GLsizei actual_length = 0;
         GLint nelements = 0;
         GLenum type = 0;
+        buf.resize(max_length);
         glGetActiveAttrib(m_glid, i, buf.size(),
                           &actual_length,
                           &nelements,

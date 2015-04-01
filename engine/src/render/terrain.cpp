@@ -62,17 +62,25 @@ Terrain::Terrain(sim::Terrain &src):
                 "   layout(row_major) mat3 normal;"
                 "};"
                 "in vec3 position;"
+                "in vec2 texcoord0;"
+                "out vec2 tc0;"
                 "void main() {"
+                "   tc0 = texcoord0;"
                 "   gl_Position = proj * view * model * vec4(position, 1.f);"
                 "}");
     success = success && m_material.shader().attach(
                 GL_FRAGMENT_SHADER,
                 "#version 330\n"
                 "out vec4 color;"
+                "in vec2 tc0;"
+                "uniform sampler2D tex0;"
                 "void main() {"
-                "   color = vec4(1.0, 1.0, 1.0, 1.0);"
+                "   color = texture2D(tex0, tc0);"
                 "}");
     success = success && m_material.shader().link();
+
+    m_material.shader().bind();
+    glUniform1i(m_material.shader().uniform_location("tex0"), 0);
 
     if (!success) {
         throw std::runtime_error("failed to compile or link shader");
@@ -114,14 +122,20 @@ void Terrain::sync_chunk_from_sim(const unsigned int xchunk,
     const unsigned int xbase = xchunk*CHUNK_SIZE;
     const unsigned int ybase = ychunk*CHUNK_SIZE;
     unsigned int slice_index = 0;
+
+    const float texcoord_factor = 1./5.;
+
     for (unsigned int x = 0; x <= CHUNK_SIZE; x++)
     {
+        const unsigned int absx = xbase+x;
         for (unsigned int y = 0; y <= CHUNK_SIZE; y++)
         {
-            pos_slice[slice_index] = Vector3f(xbase+x, ybase+y, m_source.get(xbase+x, ybase+y));
+            const unsigned int absy = ybase+y;
+            pos_slice[slice_index] = Vector3f(absx, absy, m_source.get(absx, absy));
             normal_slice[slice_index] = Vector3f(0, 0, 1.);
             tangent_slice[slice_index] = Vector3f(1, 0, 0);
-            texcoord_slice[slice_index] = Vector2f(0, 0);
+            texcoord_slice[slice_index] = Vector2f(absx*texcoord_factor,
+                                                   absy*texcoord_factor);
             slice_index += 1;
         }
     }
