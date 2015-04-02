@@ -283,6 +283,12 @@ Ray PerspectivalCamera::ray(const Vector2f viewport_pos) const
                              direction[eZ]).normalized()};
 }
 
+void PerspectivalCamera::set_fovy(const float fovy)
+{
+    m_fovy = fovy;
+    update_projection();
+}
+
 void PerspectivalCamera::set_viewport(const float width, const float height)
 {
     m_viewport_width = width;

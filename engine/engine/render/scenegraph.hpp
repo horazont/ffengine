@@ -355,6 +355,7 @@ public:
     SceneGraph();
 
 private:
+    Vector4f m_clear_color;
     RenderContext m_render_context;
     scenegraph::Group m_root;
 

@@ -27,7 +27,7 @@ GLint Material::get_next_texture_unit()
     return m_base_free_unit++;
 }
 
-GLint Material::attach_texture(const std::string &name, Texture *tex)
+GLint Material::attach_texture(const std::string &name, Texture2D *tex)
 {
     auto iter = m_texture_bindings.find(name);
     if (iter != m_texture_bindings.end()) {
@@ -57,6 +57,16 @@ void Material::detach_texture(const std::string &name)
     }
 
     m_texture_bindings.erase(iter);
+}
+
+void Material::bind()
+{
+    m_shader.bind();
+    for (auto &binding: m_texture_bindings)
+    {
+        glActiveTexture(GL_TEXTURE0+binding.second.texture_unit);
+        binding.second.texture_obj->bind();
+    }
 }
 
 }

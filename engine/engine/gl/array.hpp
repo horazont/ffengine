@@ -72,11 +72,27 @@ public:
         m_elements_per_block(elements_per_block),
         m_nblocks(nblocks)
     {
+
+    }
+
+    GLArrayAllocation(const GLArrayAllocation &ref) = delete;
+    GLArrayAllocation(GLArrayAllocation &&src):
+        m_region_id(src.m_region_id),
+        m_buffer(src.m_buffer),
+        m_elements_per_block(src.m_elements_per_block),
+        m_nblocks(src.m_nblocks)
+    {
+        src.m_region_id = 0;
+        src.m_buffer = nullptr;
+        src.m_elements_per_block = 0;
+        src.m_nblocks = 0;
     }
 
     ~GLArrayAllocation()
     {
-        m_buffer->region_release(m_region_id);
+        if (m_buffer) {
+            m_buffer->region_release(m_region_id);
+        }
     }
 
 private:
@@ -144,7 +160,7 @@ public:
 public:
     GLArray():
         GLObject<gl_binding_type>(),
-        m_usage(GL_STATIC_DRAW),
+        m_usage(GL_DYNAMIC_DRAW),
         m_block_length(0),
         m_local_buffer(),
         m_regions(),
@@ -202,6 +218,7 @@ protected:
             --iter;
             total += (*iter)->m_count;
             assert(!(*iter)->m_in_use);
+            assert(false);
         } while (i > 0);
 
         (*iter)->m_count = total;
@@ -247,13 +264,21 @@ protected:
         }
 
         unsigned int required_blocks = nblocks;
+        gl_array_logger.log(io::LOG_DEBUG,
+                            "out of luck, we have to reallocate");
         if (m_regions.size() > 0) {
+            gl_array_logger.log(io::LOG_DEBUG, "but we have regions");
             GLArrayRegion &last_region = **m_regions.rbegin();
             if (!last_region.m_in_use) {
+                gl_array_logger.log(io::LOG_DEBUG, "and the last one is not in use");
                 assert(last_region.m_count < nblocks);
                 required_blocks -= last_region.m_count;
             }
         }
+
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "requesting expansion by %d (out of %d) blocks",
+                             required_blocks, nblocks);
 
         expand(required_blocks);
         return m_regions.end() - 1;
@@ -289,8 +314,15 @@ protected:
         }
 
         m_local_buffer.resize(new_size);
-        append_region(old_size / m_block_length,
-                      (new_size - old_size) / m_block_length);
+        if (m_regions.size() > 0) {
+            GLArrayRegion &last_region = **(m_regions.end() - 1);
+            if (!last_region.m_in_use) {
+                last_region.m_count += (new_size - old_size) / m_block_length;
+            }
+        } else {
+            append_region(old_size / m_block_length,
+                          (new_size - old_size) / m_block_length);
+        }
     }
 
     bool reserve_remote()
@@ -385,13 +417,12 @@ protected:
 
         if (right_block > 0) {
             const unsigned int offset = left_block * block_size();
-            const unsigned int size = (left_block - right_block) * block_size();
-            gl_array_logger.logf(
-                        io::LOG_DEBUG,
-                        "uploading %d bytes at offset 0x%8x (glid=%d)",
-                        size,
-                        offset,
-                        this->m_glid);
+            const unsigned int size = (right_block - left_block) * block_size();
+            gl_array_logger.log(io::LOG_DEBUG)
+                    << "uploading "
+                    << size << " bytes at offset "
+                    << offset
+                    << " (glid=" << this->m_glid << ")" << io::submit;
             glBufferSubData(gl_target, offset, size, m_local_buffer.data() + offset*m_block_length);
         } else {
             // std::cout << "nothing to upload (right_block=0)" << std::endl;
@@ -403,31 +434,66 @@ protected:
 public:
     allocation_t allocate(unsigned int nblocks)
     {
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "(glid=%d) trying to allocate %d blocks",
+                             this->m_glid,
+                             nblocks);
+
         auto iterator = m_regions.begin();
         for (; iterator != m_regions.end(); ++iterator)
         {
             GLArrayRegion &region = **iterator;
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "region (%p) %d: start=%d, in_use=%d, count=%d",
+                                 &region,
+                                 region.m_id,
+                                 region.m_start,
+                                 region.m_in_use,
+                                 region.m_count);
             if (region.m_in_use) {
+                gl_array_logger.logf(io::LOG_DEBUG,
+                                     "region %d in use, skipping",
+                                     region.m_id);
                 continue;
             }
             if (region.m_count < nblocks) {
+                gl_array_logger.logf(io::LOG_DEBUG,
+                                     "region %d too small (%d), skipping",
+                                     region.m_id,
+                                     region.m_count);
                 continue;
             }
-
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "region %d looks suitable",
+                                 region.m_id);
             break;
         }
 
         if (iterator == m_regions.end())
         {
+            gl_array_logger.log(io::LOG_DEBUG,
+                                "out of buffer memory");
             // out of memory
             iterator = compact_or_expand(nblocks);
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "compact_or_expand returned region %d (count=%d)",
+                                 (*iterator)->m_id,
+                                 (*iterator)->m_count);
         }
 
         GLArrayRegion *region_to_use = &**iterator;
         if (region_to_use->m_count > nblocks)
         {
             // split region
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "region %d too large, splitting",
+                                 region_to_use->m_id);
             region_to_use = &split_region(iterator, nblocks);
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "now using region %d (start=%d, count=%d)",
+                                 region_to_use->m_id,
+                                 region_to_use->m_start,
+                                 region_to_use->m_count);
         }
 
         region_to_use->m_in_use = true;
@@ -437,6 +503,14 @@ public:
                              "allocated %d blocks to region %d",
                              nblocks,
                              region_to_use->m_id);
+
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "region (%p) %d: start=%d, in_use=%d, count=%d",
+                             region_to_use,
+                             region_to_use->m_id,
+                             region_to_use->m_start,
+                             region_to_use->m_in_use,
+                             region_to_use->m_count);
 
         return allocation_t((buffer_t*)this,
                             m_block_length,
@@ -477,6 +551,9 @@ public:
 
     void region_release(const GLArrayRegionID region_id)
     {
+        gl_array_logger.logf(io::LOG_DEBUG, "(glid=%d) region %d released",
+                             this->m_glid,
+                             region_id);
         m_region_map[region_id]->m_in_use = false;
     }
 

@@ -1,4 +1,5 @@
 #ifndef SCC_ENGINE_IO_FILESYSTEM_H
+#define SCC_ENGINE_IO_FILESYSTEM_H
 
 #include <map>
 #include <list>

@@ -17,7 +17,7 @@ public:
     {
         std::string name;
         GLint texture_unit;
-        Texture *texture_obj;
+        _GLObjectBase *texture_obj;
     };
 
 public:
@@ -40,8 +40,11 @@ public:
     }
 
 public:
-    GLint attach_texture(const std::string &name, Texture *tex);
+    GLint attach_texture(const std::string &name, Texture2D *tex);
     void detach_texture(const std::string &name);
+
+public:
+    void bind();
 
 };
 

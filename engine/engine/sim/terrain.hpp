@@ -29,6 +29,11 @@ public:
         return m_heightmap[y*m_height+x];
     }
 
+    inline void set(unsigned int x, unsigned int y, height_t v)
+    {
+        m_heightmap[y*m_height+x] = v;
+    }
+
 };
 
 }

@@ -44,7 +44,9 @@ SOURCES += \
     src/io/stdiostream.cpp \
     src/io/stream.cpp \
     src/io/stream_operators.inc.cpp \
-    src/math/ray.cpp
+    src/math/ray.cpp \
+    src/render/grid.cpp \
+    src/render/pointer.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -84,7 +86,10 @@ HEADERS += \
     engine/io/stdiostream.hpp \
     engine/io/stream.hpp \
     engine/math/variadic_initializer.inc.hpp \
-    engine/math/ray.hpp
+    engine/math/ray.hpp \
+    engine/render/grid.hpp \
+    engine/render/pointer.hpp \
+    engine/math/mesh.hpp
 
 unix {
     target.path = /usr/lib

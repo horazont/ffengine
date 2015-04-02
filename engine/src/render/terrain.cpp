@@ -1,5 +1,7 @@
 #include "engine/render/terrain.hpp"
 
+#include <unistd.h>
+
 namespace engine {
 
 const unsigned int Terrain::CHUNK_SIZE = 64;
@@ -10,6 +12,8 @@ const VBOFormat Terrain::VBO_FORMAT({
                                         VBOAttribute(3),  // tangent
                                         VBOAttribute(2),  // tex coord
                                     });
+
+static bool dump = false;
 
 Terrain::Terrain(sim::Terrain &src):
     scenegraph::Node(),
@@ -61,22 +65,26 @@ Terrain::Terrain(sim::Terrain &src):
                 "   layout(row_major) mat4 view;"
                 "   layout(row_major) mat4 model;"
                 "   layout(row_major) mat3 normal;"
-                "};"
+                "} mats;"
                 "in vec3 position;"
                 "in vec2 texcoord0;"
+                "in vec3 normal;"
                 "out vec2 tc0;"
+                "out vec3 norm;"
                 "void main() {"
                 "   tc0 = texcoord0;"
-                "   gl_Position = proj * view * model * vec4(position, 1.f);"
+                "   norm = normal;"
+                "   gl_Position = mats.proj * mats.view * mats.model * vec4(position, 1.f);"
                 "}");
     success = success && m_material.shader().attach(
                 GL_FRAGMENT_SHADER,
                 "#version 330\n"
                 "out vec4 color;"
                 "in vec2 tc0;"
+                "in vec3 norm;"
                 "uniform sampler2D grass;"
                 "void main() {"
-                "   color = texture2D(grass, tc0);"
+                "   color = texture2D(grass, tc0) * vec4(normalize(norm), 1.0);"
                 "}");
     success = success && m_material.shader().link();
 
@@ -136,7 +144,11 @@ void Terrain::sync_chunk_from_sim(const unsigned int xchunk,
         for (unsigned int y = 0; y <= CHUNK_SIZE; y++)
         {
             const unsigned int absy = ybase+y;
-            pos_slice[slice_index] = Vector3f(absx, absy, m_source.get(absx, absy));
+            const sim::Terrain::height_t h = m_source.get(absx, absy);
+            if (h != 20) {
+                dump = true;
+            }
+            pos_slice[slice_index] = Vector3f(absx, absy, h);
             normal_slice[slice_index] = Vector3f(0, 0, 1.);
             tangent_slice[slice_index] = Vector3f(1, 0, 0);
             texcoord_slice[slice_index] = Vector2f(absx*texcoord_factor,

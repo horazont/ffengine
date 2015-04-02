@@ -27,7 +27,7 @@ void RenderContext::draw_elements(GLenum primitive,
 {
     prepare_draw();
     with_arrays.bind();
-    using_material.shader().bind();
+    using_material.bind();
     ::engine::draw_elements(indicies, primitive);
 }
 
@@ -39,7 +39,7 @@ void RenderContext::draw_elements_base_vertex(
 {
     prepare_draw();
     with_arrays.bind();
-    using_material.shader().bind();
+    using_material.bind();
     ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex);
 }
 
