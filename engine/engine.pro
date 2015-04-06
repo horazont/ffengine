@@ -46,7 +46,9 @@ SOURCES += \
     src/io/stream_operators.inc.cpp \
     src/math/ray.cpp \
     src/render/grid.cpp \
-    src/render/pointer.cpp
+    src/render/pointer.cpp \
+    src/sim/quadterrain.cpp \
+    src/math/shapes.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -89,7 +91,8 @@ HEADERS += \
     engine/math/ray.hpp \
     engine/render/grid.hpp \
     engine/render/pointer.hpp \
-    engine/math/mesh.hpp
+    engine/sim/quadterrain.hpp \
+    engine/math/shapes.hpp
 
 unix {
     target.path = /usr/lib

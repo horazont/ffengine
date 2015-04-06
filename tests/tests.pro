@@ -6,7 +6,9 @@ CONFIG -= qt
 SOURCES += main.cpp \
     engine/math/matrix.cpp \
     engine/math/vector.cpp \
-    engine/math/ray.cpp
+    engine/math/ray.cpp \
+    engine/sim/quadterrain.cpp \
+    engine/math/shapes.cpp
 
 QMAKE_CXXFLAGS += -std=c++11
 
@@ -17,5 +19,12 @@ INCLUDEPATH += $$PWD/../engine/
 LIBS += -L../engine -lengine
 
 include(deployment.pri)
-qtcAddDeployment()
 
+CONFIG += object_parallel_to_source
+
+unix {
+    make_engine.commands = cd ..; make sub-engine
+}
+
+QMAKE_EXTRA_TARGETS += make_engine
+PRE_TARGETDEPS += make_engine ../engine/libengine.a
