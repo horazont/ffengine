@@ -220,7 +220,7 @@ struct Vector {
     }
 
     template <typename other_float_t>
-    inline bool operator==(const Vector<other_float_t, dimension> &oth)
+    inline bool operator==(const Vector<other_float_t, dimension> &oth) const
     {
         for (unsigned int i = 0; i < dimension; i++) {
             if (as_array[i] != oth.as_array[i]) {
@@ -231,7 +231,7 @@ struct Vector {
     }
 
     template <typename other_float_t>
-    inline bool operator!=(const Vector<other_float_t, dimension> &oth)
+    inline bool operator!=(const Vector<other_float_t, dimension> &oth) const
     {
         return !(*this == oth);
     }
