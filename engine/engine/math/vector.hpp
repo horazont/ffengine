@@ -392,13 +392,44 @@ struct vector_to_stream<double, dimension>
 
 }
 
+namespace std {
+
 template <typename vector_float_t, unsigned int dimension>
-std::ostream& operator<<(
-    std::ostream &ostream,
+ostream& operator<<(
+    ostream &ostream,
     const Vector<vector_float_t, dimension> &vec)
 {
     return vector_to_stream<vector_float_t, dimension>::put(
         ostream, vec);
+}
+
+template <typename float_t, unsigned int ndim>
+struct hash<Vector<float_t, ndim> >
+{
+    typedef std::size_t result_type;
+    typedef Vector<float_t, ndim> argument_type;
+
+    hash():
+        m_float_hash()
+    {
+
+    }
+
+private:
+    std::hash<float_t> m_float_hash;
+
+public:
+    result_type operator()(const argument_type &v) const
+    {
+        result_type result = 0;
+        for (unsigned int i = 0; i < ndim; i++) {
+            result ^= m_float_hash(v.as_array[i]);
+        }
+        return result;
+    }
+
+};
+
 }
 
 
