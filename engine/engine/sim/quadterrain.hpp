@@ -26,12 +26,18 @@ public:
         HEIGHTMAP,
     };
 
-    static constexpr unsigned int NORTHWEST = 0;
-    static constexpr unsigned int NORTHEAST = 1;
-    static constexpr unsigned int SOUTHWEST = 2;
-    static constexpr unsigned int SOUTHEAST = 3;
-
     typedef std::basic_string<terrain_height_t> Heightmap;
+
+    enum Direction {
+        NORTH = 4,
+        NORTHWEST = 0,
+        WEST = 5,
+        SOUTHWEST = 2,
+        SOUTH = 6,
+        SOUTHEAST = 3,
+        EAST = 7,
+        NORTHEAST = 1,
+    };
 
 public:
     QuadNode(QuadNode *parent,
@@ -66,11 +72,15 @@ private:
 
 private:
     void free_data();
-    void init_data();
+    QuadNode *get_root();
     void heightmap_recalculate_height();
+    void init_data();
     void normal_recalculate_height();
 
 protected:
+    QuadNode *find_node_at(terrain_coord_t x,
+                           terrain_coord_t y,
+                           const terrain_coord_t lod = 1);
     void from_heightmap(Heightmap &src,
                         const terrain_coord_t x0,
                         const terrain_coord_t y0,
@@ -82,8 +92,14 @@ protected:
 
 public: /* general */
     void cleanup();
+    QuadNode *find_node_at(const TerrainRect::point_t &p,
+                           const terrain_coord_t lod = 1);
     std::tuple<float, bool> hittest(const Ray &ray);
-    terrain_height_t sample(const float x, const float y);
+    QuadNode *neighbour(const Direction dir);
+    terrain_height_t sample_int(const terrain_coord_t x,
+                                const terrain_coord_t y);
+    terrain_height_t sample_local_int(const terrain_coord_t x,
+                                      const terrain_coord_t y);
     void set_height_rect(const TerrainRect &rect,
                          const terrain_height_t new_height);
 

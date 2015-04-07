@@ -5,6 +5,8 @@ SUBDIRS += \
     game \
     tests
 
+engine.subdir = engine
+
 game.depends = engine
 tests.depends = engine
 

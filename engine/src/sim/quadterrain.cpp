@@ -71,6 +71,27 @@ void QuadNode::free_data()
     }
 }
 
+QuadNode *QuadNode::get_root()
+{
+    if (!m_parent) {
+        return this;
+    }
+    return m_parent->get_root();
+}
+
+void QuadNode::heightmap_recalculate_height()
+{
+    // zero point five
+    intermediate_terrain_height_t total_height = m_size*m_size / 2;
+    const Heightmap::size_type size = m_data.heightmap->size();
+    const terrain_height_t *ptr = m_data.heightmap->data();
+    for (unsigned int i = 0; i < size; i++) {
+        total_height += *ptr++;
+    }
+    total_height /= (m_size*m_size);
+    m_height = total_height;
+}
+
 void QuadNode::init_data()
 {
     switch (m_type)
@@ -126,19 +147,6 @@ void QuadNode::init_data()
     }
 }
 
-void QuadNode::heightmap_recalculate_height()
-{
-    // zero point five
-    intermediate_terrain_height_t total_height = m_size*m_size / 2;
-    const Heightmap::size_type size = m_data.heightmap->size();
-    const terrain_height_t *ptr = m_data.heightmap->data();
-    for (unsigned int i = 0; i < size; i++) {
-        total_height += *ptr++;
-    }
-    total_height /= (m_size*m_size);
-    m_height = total_height;
-}
-
 void QuadNode::normal_recalculate_height()
 {
     intermediate_terrain_height_t total_height = 2; // zero point five
@@ -152,38 +160,47 @@ void QuadNode::normal_recalculate_height()
     }
 }
 
-void QuadNode::cleanup()
+QuadNode *QuadNode::find_node_at(terrain_coord_t x,
+                                 terrain_coord_t y,
+                                 const terrain_coord_t lod)
 {
+    if (x >= m_size || y >= m_size)
+    {
+        return nullptr;
+    }
+
+    // TODO: if the lookups become a problem, we can read the indicies for the
+    // "children" array directly from the coordinates. We only need a fast
+    // way to reverse the bit order in x and y
+    if (m_size <= lod) {
+        return this;
+    }
+
     switch (m_type)
     {
-    case Type::HEIGHTMAP:
-    {
-        if (m_dirty) {
-            heightmap_recalculate_height();
-        }
-        break;
-    }
-    case Type::LEAF:
-    {
-        break;
-    }
     case Type::NORMAL:
     {
-        bool any_changed = false;
-        for (unsigned int i = 0; i < 4; i++) {
-            QuadNode *const child = m_data.children[i];
-            child->cleanup();
-            any_changed |= child->subtree_changed();
+        unsigned int child_index = 0;
+        if (x >= m_size/2) {
+            x -= m_size/2;
+            child_index |= 1;
         }
-        m_child_changed = any_changed;
-        if (m_child_changed) {
-            normal_recalculate_height();
+        if (y >= m_size/2) {
+            y -= m_size/2;
+            child_index |= 2;
         }
-        break;
+
+        return m_data.children[child_index]->find_node_at(x, y, lod);
+    }
+    case Type::HEIGHTMAP:
+    case Type::LEAF:
+    {
+        return this;
     }
     }
-    m_changed = m_dirty;
-    m_dirty = false;
+
+    assert(false);
+    return nullptr;
 }
 
 void QuadNode::from_heightmap(Heightmap &src,
@@ -283,6 +300,128 @@ void QuadNode::to_heightmap(Heightmap &dest,
         break;
     }
     }
+}
+
+void QuadNode::cleanup()
+{
+    switch (m_type)
+    {
+    case Type::HEIGHTMAP:
+    {
+        if (m_dirty) {
+            heightmap_recalculate_height();
+        }
+        break;
+    }
+    case Type::LEAF:
+    {
+        break;
+    }
+    case Type::NORMAL:
+    {
+        bool any_changed = false;
+        for (unsigned int i = 0; i < 4; i++) {
+            QuadNode *const child = m_data.children[i];
+            child->cleanup();
+            any_changed |= child->subtree_changed();
+        }
+        m_child_changed = any_changed;
+        if (m_child_changed) {
+            normal_recalculate_height();
+        }
+        break;
+    }
+    }
+    m_changed = m_dirty;
+    m_dirty = false;
+}
+
+QuadNode *QuadNode::find_node_at(const TerrainRect::point_t &p,
+                                 const terrain_coord_t lod)
+{
+    /* std::cout << p << " " << m_rect << " ... " << std::endl; */
+    QuadNode *result = find_node_at(p[eX], p[eY], lod);
+    /* std::cout << " ... " << result << std::endl; */
+    return result;
+}
+
+QuadNode *QuadNode::neighbour(const Direction dir)
+{
+    TerrainRect::point_t p(x0(), y0());
+    switch (dir)
+    {
+    case NORTH:
+    case NORTHWEST:
+    case NORTHEAST:
+    {
+        if (p[eY] == 0) {
+            return nullptr;
+        }
+        p[eY] -= 1;
+        break;
+    }
+    case SOUTH:
+    case SOUTHWEST:
+    case SOUTHEAST:
+    {
+        p[eY] += m_size;
+        break;
+    }
+    default:;
+    }
+    switch (dir)
+    {
+    case NORTHWEST:
+    case WEST:
+    case SOUTHWEST:
+    {
+        if (p[eX] == 0) {
+            return nullptr;
+        }
+        p[eX] -= 1;
+        break;
+    }
+    case NORTHEAST:
+    case EAST:
+    case SOUTHEAST:
+    {
+        p[eX] += m_size;
+        break;
+    }
+    default:;
+    }
+
+    return get_root()->find_node_at(p, m_size);
+}
+
+terrain_height_t QuadNode::sample_int(const terrain_coord_t x,
+                                      const terrain_coord_t y)
+{
+    QuadNode *const node = find_node_at(x, y);
+    if (!node) {
+        return 0;
+    }
+
+    return node->sample_local_int(x - node->m_rect.x0(),
+                                  y - node->m_rect.y0());
+}
+
+terrain_height_t QuadNode::sample_local_int(const terrain_coord_t x,
+                                            const terrain_coord_t y)
+{
+    switch (m_type)
+    {
+    case Type::LEAF:
+    case Type::NORMAL:
+    {
+        return m_height;
+    }
+    case Type::HEIGHTMAP:
+    {
+        return (*m_data.heightmap)[y*m_size+x];
+    }
+    }
+    return 0;
 }
 
 void QuadNode::set_height_rect(const TerrainRect &rect,

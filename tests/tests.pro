@@ -8,7 +8,8 @@ SOURCES += main.cpp \
     engine/math/vector.cpp \
     engine/math/ray.cpp \
     engine/sim/quadterrain.cpp \
-    engine/math/shapes.cpp
+    engine/math/shapes.cpp \
+    engine/render/quadterrain.cpp
 
 QMAKE_CXXFLAGS += -std=c++11
 

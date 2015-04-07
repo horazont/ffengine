@@ -352,7 +352,17 @@ inline void vector_data_to_stream(
 }
 
 template <typename vector_float_t, unsigned int dimension>
-struct vector_to_stream;
+struct vector_to_stream
+{
+    static inline std::ostream &put(
+            std::ostream &ostream,
+            const Vector<vector_float_t, dimension> &vec)
+    {
+        ostream << "vec_any" << dimension;
+        vector_data_to_stream(ostream, vec);
+        return ostream;
+    }
+};
 
 template <unsigned int dimension>
 struct vector_to_stream<float, dimension>

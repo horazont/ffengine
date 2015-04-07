@@ -383,3 +383,124 @@ TEST_CASE("sim/quadterrain/QuadNode/set_height_rect/with_heightmap_node")
     CHECK(*node.child(QuadNode::NORTHWEST)->heightmap() == ref);
     CHECK(node.child(QuadNode::NORTHWEST)->dirty());
 }
+
+QuadNode *new_test_tree()
+{
+    QuadNode *node = new QuadNode(nullptr, QuadNode::Type::NORMAL, 0, 0, 128, 0);
+    node->set_height_rect(TerrainRect(63, 63, 64, 64), 1);
+    return node;
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/find_node_at")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+    REQUIRE(bottom->type() == QuadNode::Type::LEAF);
+    REQUIRE(bottom->size() == 1);
+    REQUIRE(bottom->height() == 1);
+
+    CHECK(bottom == tree->find_node_at(TerrainRect::point_t(63, 63)));
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/find_node_at/lod")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+    REQUIRE(bottom->type() == QuadNode::Type::LEAF);
+    REQUIRE(bottom->size() == 1);
+    REQUIRE(bottom->height() == 1);
+
+    CHECK(bottom->parent()->parent()->parent()
+          == tree->find_node_at(TerrainRect::point_t(63, 63), 8));
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/sample_int/with_test_tree")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+    CHECK(tree->sample_int(63, 63) == 1);
+    CHECK(tree->sample_int(63, 64) == 0);
+    CHECK(tree->sample_int(64, 63) == 0);
+    CHECK(tree->sample_int(62, 63) == 0);
+    CHECK(tree->sample_int(63, 62) == 0);
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/sample_int/with_heightmap")
+{
+    QuadNode node(nullptr, QuadNode::Type::NORMAL, 0, 0, 128, 0);
+    node.child(0)->heightmapify();
+    node.set_height_rect(TerrainRect(0, 0, 32, 32), 10);
+    CHECK(node.sample_int(32, 32) == 0);
+    CHECK(node.sample_int(32, 31) == 0);
+    CHECK(node.sample_int(31, 32) == 0);
+    CHECK(node.sample_int(31, 31) == 10);
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/neighbour")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+    REQUIRE(bottom->type() == QuadNode::Type::LEAF);
+    REQUIRE(bottom->size() == 1);
+    REQUIRE(bottom->height() == 1);
+
+    QuadNode *neighbour= bottom->neighbour(QuadNode::NORTH);
+    CHECK(neighbour == bottom->parent()->child(QuadNode::NORTHEAST));
+
+    neighbour = bottom->neighbour(QuadNode::SOUTH);
+    CHECK(neighbour == tree->child(QuadNode::SOUTHWEST));
+
+    neighbour = bottom->neighbour(QuadNode::EAST);
+    CHECK(neighbour == tree->child(QuadNode::NORTHEAST));
+
+    neighbour = bottom->neighbour(QuadNode::WEST);
+    CHECK(neighbour == bottom->parent()->child(QuadNode::SOUTHWEST));
+
+    neighbour = bottom->neighbour(QuadNode::NORTHWEST);
+    CHECK(neighbour == bottom->parent()->child(QuadNode::NORTHWEST));
+
+    neighbour = bottom->neighbour(QuadNode::NORTHEAST);
+    CHECK(neighbour == tree->child(QuadNode::NORTHEAST));
+
+    neighbour = bottom->neighbour(QuadNode::SOUTHWEST);
+    CHECK(neighbour == tree->child(QuadNode::SOUTHWEST));
+
+    neighbour = bottom->neighbour(QuadNode::SOUTHEAST);
+    CHECK(neighbour == tree->child(QuadNode::SOUTHEAST));
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/neighbour/over_the_edge")
+{
+    QuadNode node(nullptr, QuadNode::Type::LEAF, 0, 0, 128, 0);
+    CHECK(node.neighbour(QuadNode::NORTH) == nullptr);
+    CHECK(node.neighbour(QuadNode::NORTHEAST) == nullptr);
+    CHECK(node.neighbour(QuadNode::EAST) == nullptr);
+    CHECK(node.neighbour(QuadNode::SOUTHEAST) == nullptr);
+    CHECK(node.neighbour(QuadNode::SOUTH) == nullptr);
+    CHECK(node.neighbour(QuadNode::SOUTHWEST) == nullptr);
+    CHECK(node.neighbour(QuadNode::WEST) == nullptr);
+    CHECK(node.neighbour(QuadNode::NORTHWEST) == nullptr);
+}

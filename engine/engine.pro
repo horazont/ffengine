@@ -48,7 +48,8 @@ SOURCES += \
     src/render/grid.cpp \
     src/render/pointer.cpp \
     src/sim/quadterrain.cpp \
-    src/math/shapes.cpp
+    src/math/shapes.cpp \
+    src/render/quadterrain.cpp
 
 HEADERS += \
     engine/common/resource.hpp \
@@ -92,7 +93,8 @@ HEADERS += \
     engine/render/grid.hpp \
     engine/render/pointer.hpp \
     engine/sim/quadterrain.hpp \
-    engine/math/shapes.hpp
+    engine/math/shapes.hpp \
+    engine/render/quadterrain.hpp
 
 unix {
     target.path = /usr/lib
