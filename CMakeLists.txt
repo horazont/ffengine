@@ -5,4 +5,4 @@ list(APPEND CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra")
 
 add_subdirectory(engine)
 add_subdirectory(game)
-add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(tests)
