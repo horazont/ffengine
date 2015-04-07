@@ -84,7 +84,7 @@ Terrain::Terrain(sim::Terrain &src):
                 "in vec3 norm;"
                 "uniform sampler2D grass;"
                 "void main() {"
-                "   color = texture2D(grass, tc0) * vec4(normalize(norm), 1.0);"
+                "   color = texture2D(grass, tc0);"
                 "}");
     success = success && m_material.shader().link();
 
