@@ -94,7 +94,8 @@ HEADERS += \
     engine/render/pointer.hpp \
     engine/sim/quadterrain.hpp \
     engine/math/shapes.hpp \
-    engine/render/quadterrain.hpp
+    engine/render/quadterrain.hpp \
+    engine/gl/mesh.hpp
 
 unix {
     target.path = /usr/lib
