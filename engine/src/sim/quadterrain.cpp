@@ -424,6 +424,55 @@ terrain_height_t QuadNode::sample_local_int(const terrain_coord_t x,
     return 0;
 }
 
+void QuadNode::sample_line(std::vector<TerrainVector> &dest,
+                           const terrain_coord_t x0,
+                           const terrain_coord_t y0,
+                           const SampleDirection dir,
+                           terrain_coord_t n)
+{
+    switch (dir)
+    {
+    case QuadNode::SAMPLE_SOUTH:
+    {
+        for (unsigned int i = 0; i <= n; i++) {
+            const terrain_coord_t x = x0;
+            const terrain_coord_t y = y0 + i;
+            QuadNode *node = find_node_at(TerrainRect::point_t(x, y));
+            if (!node) {
+                break;
+            }
+            dest.emplace_back(x, node->y0(), node->height());
+            if (node->size() > 1 && i < n) {
+                dest.emplace_back(x, node->y0()+node->size()-1, node->height());
+            }
+            std::cout << node->size() << std::endl;
+            i += node->size()-1;
+        }
+        break;
+    }
+    case QuadNode::SAMPLE_EAST:
+    {
+        for (unsigned int i = 0; i <= n; i++) {
+            const terrain_coord_t x = x0 + i;
+            const terrain_coord_t y = y0;
+            QuadNode *node = find_node_at(TerrainRect::point_t(x, y));
+            if (!node) {
+                break;
+            }
+            dest.emplace_back(node->x0(), y, node->height());
+            if (node->size() > 1 && i < n) {
+                dest.emplace_back(node->x0()+node->size()-1, y, node->height());
+            }
+            std::cout << node->size() << std::endl;
+            i += node->size()-1;
+        }
+        break;
+    }
+    }
+
+
+}
+
 void QuadNode::set_height_rect(const TerrainRect &rect,
                                const terrain_height_t new_height)
 {
@@ -514,6 +563,17 @@ void QuadNode::quadtreeify()
     m_type = Type::LEAF;
     init_data();
     from_heightmap(*heightmap, m_rect.x0(), m_rect.y0(), m_size);
+}
+
+/* engine::QuadTerrain */
+
+QuadTerrain::QuadTerrain(terrain_coord_t max_subdivisions,
+                         terrain_height_t initial_height):
+    m_max_subdivisions(max_subdivisions),
+    m_size(1 << max_subdivisions),
+    m_root(nullptr, QuadNode::Type::LEAF, 0, 0, m_size, initial_height)
+{
+
 }
 
 }

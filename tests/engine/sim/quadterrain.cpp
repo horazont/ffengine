@@ -504,3 +504,103 @@ TEST_CASE("sim/quadterrain/QuadNode/neighbour/over_the_edge")
     CHECK(node.neighbour(QuadNode::WEST) == nullptr);
     CHECK(node.neighbour(QuadNode::NORTHWEST) == nullptr);
 }
+
+TEST_CASE("sim/quadterrain/QuadNode/sample_line/large_to_small")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+
+    std::vector<TerrainVector> points;
+    tree->sample_line(points,
+                      tree->child(QuadNode::NORTHEAST)->x0()-1,
+                      tree->child(QuadNode::NORTHEAST)->y0(),
+                      QuadNode::SAMPLE_SOUTH,
+                      tree->child(QuadNode::NORTHEAST)->size());
+
+    std::vector<TerrainVector> ref({
+                                       TerrainVector(63, 0, 0),
+                                       TerrainVector(63, 31, 0),
+                                       TerrainVector(63, 32, 0),
+                                       TerrainVector(63, 47, 0),
+                                       TerrainVector(63, 48, 0),
+                                       TerrainVector(63, 55, 0),
+                                       TerrainVector(63, 56, 0),
+                                       TerrainVector(63, 59, 0),
+                                       TerrainVector(63, 60, 0),
+                                       TerrainVector(63, 61, 0),
+                                       TerrainVector(63, 62, 0),
+                                       TerrainVector(63, 63, 1),
+                                       TerrainVector(63, 64, 0)
+                                   });
+    CHECK(points == ref);
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/sample_line/small_to_large")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+
+    std::vector<TerrainVector> points;
+    tree->sample_line(points,
+                      bottom->x0()+1,
+                      bottom->y0(),
+                      QuadNode::SAMPLE_SOUTH,
+                      bottom->size());
+
+    std::vector<TerrainVector> ref({
+                                       TerrainVector(64, 0, 0),
+                                       TerrainVector(64, 63, 0)
+                                   });
+    CHECK(points == ref);
+}
+
+TEST_CASE("sim/quadterrain/QuadNode/sample_line/large_to_small_along_x")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+
+    std::vector<TerrainVector> points;
+    tree->sample_line(points,
+                      tree->child(QuadNode::SOUTHWEST)->x0(),
+                      tree->child(QuadNode::SOUTHWEST)->y0()-1,
+                      QuadNode::SAMPLE_EAST,
+                      tree->child(QuadNode::SOUTHWEST)->size());
+
+    std::vector<TerrainVector> ref({
+                                       TerrainVector(0, 63, 0),
+                                       TerrainVector(31, 63, 0),
+                                       TerrainVector(32, 63, 0),
+                                       TerrainVector(47, 63, 0),
+                                       TerrainVector(48, 63, 0),
+                                       TerrainVector(55, 63, 0),
+                                       TerrainVector(56, 63, 0),
+                                       TerrainVector(59, 63, 0),
+                                       TerrainVector(60, 63, 0),
+                                       TerrainVector(61, 63, 0),
+                                       TerrainVector(62, 63, 0),
+                                       TerrainVector(63, 63, 1),
+                                       TerrainVector(64, 63, 0)
+                                   });
+    CHECK(points == ref);
+}

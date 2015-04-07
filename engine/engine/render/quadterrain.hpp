@@ -1,6 +1,10 @@
 #ifndef SCC_ENGINE_RENDER_QUADTERRAIN_H
 #define SCC_ENGINE_RENDER_QUADTERRAIN_H
 
+#include <unordered_map>
+
+#include <surface_mesh/Surface_mesh.h>
+
 #include "engine/gl/vbo.hpp"
 #include "engine/gl/ibo.hpp"
 
@@ -13,14 +17,35 @@ namespace engine {
 class QuadTerrainChunk
 {
 public:
-    QuadTerrainChunk(VBO &vbo, IBO &ibo);
+    QuadTerrainChunk(VBO &pos_vbo, VBO &normal_vbo, IBO &ibo);
 
 private:
-    VBO &m_vbo;
+    VBO &m_pos_vbo;
+    VBO &m_normal_vbo;
     IBO &m_ibo;
 
-    VBOAllocation m_valloc;
+    VBOAllocation m_pos_alloc;
+    VBOAllocation m_normal_alloc;
     IBOAllocation m_ialloc;
+
+    surface_mesh::Surface_mesh m_mesh;
+    std::vector<sim::TerrainVector> m_tmp_terrain_vectors;
+    std::unordered_map<sim::TerrainVector, surface_mesh::Surface_mesh::Vertex> m_vertex_cache;
+
+protected:
+    surface_mesh::Surface_mesh::Vertex add_vertex_cached(const sim::TerrainVector &vec);
+    void build_from_quadtree(sim::QuadNode *subtree_root,
+                             unsigned int lod,
+                             const std::array<unsigned int, 4> &neighbour_lod);
+    void make_quad(surface_mesh::Surface_mesh::Vertex v1,
+                   surface_mesh::Surface_mesh::Vertex v2,
+                   surface_mesh::Surface_mesh::Vertex v3,
+                   surface_mesh::Surface_mesh::Vertex v4);
+    void make_quad_flipped(surface_mesh::Surface_mesh::Vertex v1,
+                           surface_mesh::Surface_mesh::Vertex v2,
+                           surface_mesh::Surface_mesh::Vertex v3,
+                           surface_mesh::Surface_mesh::Vertex v4);
+
 
 public:
     /**
@@ -52,6 +77,19 @@ public:
                 const sim::terrain_coord_t size,
                 const sim::terrain_height_t height);
 
+    void mesh_to_buffers();
+
+    inline unsigned int base()
+    {
+        assert(m_pos_alloc.base() == m_normal_alloc.base());
+        return m_pos_alloc.base();
+    }
+
+    inline IBOAllocation &ibo_alloc()
+    {
+        return m_ialloc;
+    }
+
 };
 
 class QuadTerrainNode: public scenegraph::Node
@@ -60,26 +98,28 @@ public:
     QuadTerrainNode(sim::QuadNode *root, unsigned int chunk_lod = 64);
 
 private:
+    const unsigned int m_xchunks;
+    const unsigned int m_ychunks;
+    const unsigned int m_chunk_lod;
     sim::QuadNode *m_root;
-    unsigned int m_xchunks;
-    unsigned int m_ychunks;
+    VBO m_pos_vbo;
+    VBO m_normal_vbo;
+    IBO m_ibo;
+    Material m_material;
+    Material m_line_material;
     std::vector<std::unique_ptr<QuadTerrainChunk> > m_chunks;
+    std::unique_ptr<VAO> m_vao;
+    std::unique_ptr<VAO> m_line_vao;
 
 public:
+    void update();
+    void set_grass_texture(Texture2D *tex);
 
+public:
+    void render(RenderContext &context) override;
+    void sync() override;
 
 };
-
-
-void create_geometry(
-        sim::QuadNode *root,
-        sim::QuadNode *subtree_root,
-        unsigned int lod,
-        const std::array<unsigned int, 4> &neighbour_lod,
-        std::vector<unsigned int> &indicies,
-        std::vector<Vector3f> &positions,
-        std::vector<Vector3f> &normals,
-        std::vector<Vector3f> &tangents);
 
 }
 

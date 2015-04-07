@@ -4,7 +4,7 @@
 
 using namespace engine;
 using namespace sim;
-
+/*
 
 #define VECTORS std::vector<Vector3f> position, normal, tangent; std::vector<unsigned int> indicies
 #define NEIGHBOUR_LOD std::array<unsigned int, 4> neighbour_lod({1, 1, 1, 1})
@@ -174,3 +174,4 @@ TEST_CASE("render/quadterrain/create_geometry"
 
     CHECK(expected_positions == resolve_indicies(indicies, position));
 }
+*/

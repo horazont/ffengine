@@ -15,6 +15,7 @@ typedef std::uint_least16_t terrain_height_t;
 typedef std::uint_least16_t terrain_coord_t;
 typedef std::uint_least32_t intermediate_terrain_height_t;
 typedef GenericRect<terrain_coord_t> TerrainRect;
+typedef Vector<terrain_coord_t, 3> TerrainVector;
 
 
 struct QuadNode
@@ -37,6 +38,11 @@ public:
         SOUTHEAST = 3,
         EAST = 7,
         NORTHEAST = 1,
+    };
+
+    enum SampleDirection {
+        SAMPLE_EAST,
+        SAMPLE_SOUTH
     };
 
 public:
@@ -100,6 +106,11 @@ public: /* general */
                                 const terrain_coord_t y);
     terrain_height_t sample_local_int(const terrain_coord_t x,
                                       const terrain_coord_t y);
+    void sample_line(std::vector<TerrainVector> &dest,
+                     const terrain_coord_t x0,
+                     const terrain_coord_t y0,
+                     const SampleDirection dir,
+                     terrain_coord_t n);
     void set_height_rect(const TerrainRect &rect,
                          const terrain_height_t new_height);
 
@@ -188,8 +199,21 @@ private:
     QuadNode m_root;
 
 public:
+    inline terrain_coord_t width() const
+    {
+        return m_size;
+    }
 
+    inline terrain_coord_t height() const
+    {
+        return m_size;
+    }
 
+public:
+    QuadNode *root()
+    {
+        return &m_root;
+    }
 
 };
 
