@@ -76,6 +76,7 @@ public:
     }
 
     GLArrayAllocation(const GLArrayAllocation &ref) = delete;
+
     GLArrayAllocation(GLArrayAllocation &&src):
         m_region_id(src.m_region_id),
         m_buffer(src.m_buffer),
@@ -86,6 +87,34 @@ public:
         src.m_buffer = nullptr;
         src.m_elements_per_block = 0;
         src.m_nblocks = 0;
+    }
+
+    GLArrayAllocation &operator=(GLArrayAllocation &&src)
+    {
+        m_region_id = src.m_region_id;
+        m_buffer = src.m_buffer;
+        m_elements_per_block = src.m_elements_per_block;
+        m_nblocks = src.m_nblocks;
+
+        src.m_buffer = nullptr;
+        src.m_region_id = 0;
+        src.m_elements_per_block = 0;
+        src.m_nblocks = 0;
+
+        return *this;
+    }
+
+    GLArrayAllocation &operator=(std::nullptr_t)
+    {
+        if (m_buffer) {
+            m_buffer->region_release(m_region_id);
+        }
+        m_buffer = nullptr;
+        m_region_id = 0;
+        m_elements_per_block = 0;
+        m_nblocks = 0;
+
+        return *this;
     }
 
     ~GLArrayAllocation()
