@@ -48,6 +48,9 @@ std::string MountDirectory::canonicalize_file_name(
 {
     // FIXME: portability
     char *canonical = realpath(name, nullptr);
+    if (!canonical) {
+        throw std::system_error(errno, std::system_category());
+    }
     std::string result;
     try {
         result = canonical;
