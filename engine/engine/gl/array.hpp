@@ -247,11 +247,10 @@ protected:
             --iter;
             total += (*iter)->m_count;
             assert(!(*iter)->m_in_use);
-            assert(false);
         } while (i > 0);
 
         (*iter)->m_count = total;
-        return m_regions.erase(iter, iter+nregions);
+        return m_regions.erase(iter+1, iter+nregions);
     }
 
     region_container::iterator compact_or_expand(
@@ -259,8 +258,8 @@ protected:
     {
         auto iterator = m_regions.begin();
         unsigned int aggregation_backlog = 0;
+        bool found = false;
         auto best = m_regions.end();
-        unsigned int best_metric = m_local_buffer.size() / m_block_length;
 
         for (; iterator != m_regions.end(); iterator++)
         {
@@ -268,17 +267,28 @@ protected:
             if (region.m_in_use)
             {
                 if (aggregation_backlog > 1) {
+                    gl_array_logger.logf(io::LOG_DEBUG,
+                                         "compacting %d regions",
+                                         aggregation_backlog);
                     iterator = compact_regions(
                                 iterator,
                                 aggregation_backlog);
                     GLArrayRegion &merged = **(iterator-1);
+                    gl_array_logger.logf(io::LOG_DEBUG,
+                                         "resulting region (%d) has %d elements",
+                                         merged.m_id,
+                                         merged.m_count);
                     if (merged.m_count >= nblocks) {
-                        unsigned int metric = merged.m_count - nblocks;
-                        if (metric < best_metric)
-                        {
-                            best = iterator-1;
-                            best_metric = metric;
-                        }
+                        gl_array_logger.logf(io::LOG_DEBUG,
+                                             "suggesting region %d",
+                                             merged.m_id);
+                        best = iterator-1;
+                        found = true;
+                        break;
+                    }
+                    // iterator might point behind the list after erase
+                    if (iterator == m_regions.end()) {
+                        break;
                     }
                 }
                 aggregation_backlog = 0;
@@ -288,7 +298,11 @@ protected:
             aggregation_backlog += 1;
         }
 
-        if (best != m_regions.end()) {
+        if (found) {
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "using merged region %d with %d elements",
+                                 (*best)->m_id,
+                                 (*best)->m_count);
             return best;
         }
 
@@ -347,11 +361,12 @@ protected:
             GLArrayRegion &last_region = **(m_regions.end() - 1);
             if (!last_region.m_in_use) {
                 last_region.m_count += (new_size - old_size) / m_block_length;
+                return;
             }
-        } else {
-            append_region(old_size / m_block_length,
-                          (new_size - old_size) / m_block_length);
         }
+
+        append_region(old_size / m_block_length,
+                      (new_size - old_size) / m_block_length);
     }
 
     bool reserve_remote()
