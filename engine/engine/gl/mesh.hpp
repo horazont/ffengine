@@ -3,6 +3,8 @@
 
 #include "engine/math/vector.hpp"
 
+namespace engine {
+
 struct MeshFace
 {
     int32_t verticies[3];
@@ -57,6 +59,8 @@ struct MeshFaceRef
     Mesh *mesh;
     int32_t face;
 };
+
+}
 
 #endif // SCC_ENGINE_MATH_MESH_H
 
