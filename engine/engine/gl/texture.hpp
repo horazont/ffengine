@@ -27,7 +27,9 @@ class Texture2D: public GLObject<GL_TEXTURE_BINDING_2D>,
 public:
     Texture2D(const GLenum internal_format,
               const GLsizei width,
-              const GLsizei height);
+              const GLsizei height,
+              const GLenum init_format = 0,
+              const GLenum init_type = GL_UNSIGNED_BYTE);
 
 public:
     void bind() override;

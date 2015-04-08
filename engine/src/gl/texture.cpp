@@ -17,12 +17,6 @@ GLint get_suitable_format_for_null(const GLenum internal_format)
         return GL_DEPTH_COMPONENT;
     }
 
-    case GL_LUMINANCE:
-    case GL_LUMINANCE_ALPHA:
-    {
-        return GL_LUMINANCE;
-    }
-
     default:
         return GL_RGBA;
 
@@ -38,16 +32,21 @@ Texture::~Texture()
 
 Texture2D::Texture2D(const GLenum internal_format,
                      const GLsizei width,
-                     const GLsizei height):
+                     const GLsizei height,
+                     const GLenum init_format,
+                     const GLenum init_type):
     GLObject<GL_TEXTURE_BINDING_2D>(),
     GL2DArray(internal_format, width, height)
 {
+    const GLenum null_format = (init_format ? init_format : get_suitable_format_for_null(m_internal_format));
+    const GLenum null_type = init_type;
+
     glGenTextures(1, &m_glid);
     glBindTexture(GL_TEXTURE_2D, m_glid);
     raise_last_gl_error();
     glTexImage2D(GL_TEXTURE_2D, 0, m_internal_format, m_width, m_height, 0,
-                 get_suitable_format_for_null(m_internal_format),
-                 GL_FLOAT,
+                 null_format,
+                 null_type,
                  (const void*)0);
     raise_last_gl_error();
     bound();
