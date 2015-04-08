@@ -13,14 +13,14 @@ io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
 
 Terrain::Terrain(const unsigned int size):
     m_size(size),
-    m_lod_count(engine::log2_of_pot(size)),
+    m_lod_count(engine::log2_of_pot(size-1)+1),
     m_heightmap(m_size*m_size, default_height),
     m_heightmap_changed(true),
     m_terminate(false),
     m_lod_thread(std::bind(&Terrain::lod_thread, this))
 {
-    if (!engine::is_power_of_two(m_size)) {
-        throw std::runtime_error("Terrain size must be power-of-two");
+    if (!engine::is_power_of_two(m_size-1)) {
+        throw std::runtime_error("Terrain size must be power-of-two plus one");
     }
 }
 
@@ -55,7 +55,7 @@ void Terrain::lod_iterate()
 
     for (unsigned int i = 1; i < m_lod_count; i++)
     {
-        const unsigned int this_size = m_size >> i;
+        const unsigned int this_size = (m_size >> i)+1;
         next_heightfield.resize(this_size*this_size);
         lod_logger.logf(io::LOG_DEBUG, "generating LOD %u (size=%u)", i,
                         this_size);
@@ -65,13 +65,7 @@ void Terrain::lod_iterate()
         {
             for (unsigned int x = 0, src_x = 0; x < this_size; x++, src_x += 2)
             {
-                float aggregated_height = 0;
-                aggregated_height += (*prev_heightfield)[src_y*prev_size+src_x];
-                aggregated_height += (*prev_heightfield)[src_y*prev_size+src_x+1];
-                aggregated_height += (*prev_heightfield)[(src_y+1)*prev_size+src_x];
-                aggregated_height += (*prev_heightfield)[(src_y+1)*prev_size+src_x+1]; 
-
-                *dest_ptr++ = aggregated_height / 4; 
+                *dest_ptr++ = (*prev_heightfield)[src_y*prev_size+src_x];
             }
         }
         lod_logger.logf(io::LOG_DEBUG, "generated LOD %d, saving", i);

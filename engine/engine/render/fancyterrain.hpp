@@ -116,6 +116,8 @@ private:
 
     std::vector<HeightmapSliceMeta> m_tmp_slices;
 
+    std::vector<std::tuple<HeightmapSliceMeta, unsigned int> > m_render_slices;
+
 protected:
     void collect_slices_recurse(
             std::vector<HeightmapSliceMeta> &requested_slices,
