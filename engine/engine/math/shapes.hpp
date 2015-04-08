@@ -246,6 +246,27 @@ static inline ostream& operator<<(ostream& stream, const GenericRect<coord_t> &r
     }
 }
 
+template <typename coord_t>
+struct hash<GenericRect<coord_t> >
+{
+    typedef typename hash<coord_t>::result_type result_type;
+    typedef GenericRect<coord_t> argument_type;
+
+private:
+    hash<coord_t> m_coord_hash;
+
+public:
+    result_type operator()(const argument_type &value) const
+    {
+        return m_coord_hash(value.x0())
+                ^ m_coord_hash(value.y0())
+                ^ m_coord_hash(value.x1())
+                ^ m_coord_hash(value.y1());
+
+    }
+
+};
+
 }
 
 #endif
