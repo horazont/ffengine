@@ -13,8 +13,8 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                                    const unsigned int texture_cache_size):
     m_grid_size(grid_size),
     m_texture_cache_size(texture_cache_size),
-    m_min_lod(terrain.m_width / grid_size),
-    m_max_lod(terrain.m_width),
+    m_min_lod(terrain.size() / grid_size),
+    m_max_lod(terrain.size()),
     m_terrain(terrain),
     m_heightmap(GL_R32F,
                 texture_cache_size*grid_size,
@@ -156,8 +156,11 @@ void FancyTerrainNode::sync()
 {
     m_vao->sync();
     m_heightmap.bind();
+    m_vao->sync();
+    const sim::Terrain::HeightField *heightmap = nullptr;
+    auto lock = m_terrain.readonly_heightmap(heightmap);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 64, 64, GL_RED, GL_FLOAT,
-                    m_terrain.m_heightmap.data());
+                    heightmap->data());
 }
 
 }

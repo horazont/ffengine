@@ -17,19 +17,19 @@ static bool dump = false;
 
 Terrain::Terrain(sim::Terrain &src):
     scenegraph::Node(),
-    m_xchunks((src.m_width-1) / CHUNK_SIZE),
-    m_ychunks((src.m_height-1) / CHUNK_SIZE),
+    m_xchunks((src.width()-1) / CHUNK_SIZE),
+    m_ychunks((src.height()-1) / CHUNK_SIZE),
     m_source(src),
     m_vbo(VBO_FORMAT),
     m_ibo(),
     m_chunk_indicies(m_ibo.allocate((CHUNK_SIZE+1)*(CHUNK_SIZE+1)*6)),
     m_chunks()
 {
-    if (m_xchunks*CHUNK_SIZE+1 != src.m_width ||
-            m_ychunks*CHUNK_SIZE+1 != src.m_height)
+    if (m_xchunks*CHUNK_SIZE+1 != src.width() ||
+            m_ychunks*CHUNK_SIZE+1 != src.height())
     {
         throw std::invalid_argument(
-                    "Terrain size minus one (" + std::to_string(src.m_width-1) + "×" + std::to_string(src.m_height-1) +
+                    "Terrain size minus one (" + std::to_string(src.width()-1) + "×" + std::to_string(src.height()-1) +
                     ") not divisible by chunk size " + std::to_string(CHUNK_SIZE));
     }
 
