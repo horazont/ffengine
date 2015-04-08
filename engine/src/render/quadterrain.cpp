@@ -32,6 +32,7 @@ surface_mesh::Surface_mesh::Vertex QuadTerrainChunk::add_vertex_cached(
 }
 
 void QuadTerrainChunk::build_from_quadtree(
+        sim::QuadNode *root,
         sim::QuadNode *subtree_root,
         unsigned int lod,
         const std::array<unsigned int, 4> &neighbour_lod)
@@ -48,123 +49,37 @@ void QuadTerrainChunk::build_from_quadtree(
                                       subtree_root->y0(),
                                       subtree_root->height());
 
-        sim::TerrainVector nw, ne, sw, se;
+        const Vertex nw = add_vertex_cached(base);
+        const Vertex ne = add_vertex_cached(base + sim::TerrainVector(size-1, 0, 0));
+        const Vertex sw = add_vertex_cached(base + sim::TerrainVector(0, size-1, 0));
+        const Vertex se = add_vertex_cached(base + sim::TerrainVector(size-1, size-1, 0));
 
-        sim::QuadNode *neigh_west = subtree_root->neighbour(sim::QuadNode::WEST);
-        sim::QuadNode *neigh_north = subtree_root->neighbour(sim::QuadNode::NORTH);
-        sim::QuadNode *neigh_south = subtree_root->neighbour(sim::QuadNode::SOUTH);
-        sim::QuadNode *neigh_east = subtree_root->neighbour(sim::QuadNode::EAST);
-
-        if (neigh_west && neigh_west->size() == size) {
-            // for west, this is sufficient; west would be responsible for
-            // making faces with us if we are at the same subdivision level
-            neigh_west = nullptr;
-        }
-        if (neigh_north && neigh_north->size() == size) {
-            // for north, this is sufficient; north would be responsible for
-            // making faces with us if we are at the same subdivision level
-            neigh_north = nullptr;
+        if (size > 1) {
+            // inner quad
+            make_quad(nw, ne, sw, se);
         }
 
-        if (neigh_south
-                && neigh_south->size() == size
-                && neigh_south->type() != sim::QuadNode::Type::LEAF)
+        // eastern seam
+
+        root->sample_line(m_tmp_terrain_vectors,
+                          subtree_root->x0()+size,
+                          subtree_root->y0(),
+                          sim::QuadNode::SAMPLE_SOUTH,
+                          size);
+        if (!m_tmp_terrain_vectors.empty())
         {
-            // south neighbour has higher resolution than we have, removing
-            // it.
-            neigh_south = nullptr;
-        }
-
-        if (neigh_east
-                && neigh_east->size() == size
-                && neigh_east->type() != sim::QuadNode::Type::LEAF)
-        {
-            // east neighbour has higher resolution than we have, removing
-            // it.
-            neigh_east = nullptr;
-        }
-
-        nw = base;
-        ne = base + sim::TerrainVector(size-1, 0, 0);
-        sw = base + sim::TerrainVector(0, size-1, 0);
-        se = sw + sim::TerrainVector(size-1, 0, 0);
-
-        if (neigh_south && neigh_south->height() == height)
-        {
-            // extend geometry if neighbour has same height
-            sw[eY] += 1;
-            se[eY] += 1;
-            neigh_south = nullptr;
-        }
-
-        if (neigh_east && neigh_east->height() == height)
-        {
-            // extend geometry if neighbour has same height
-            se[eX] += 1;
-            ne[eX] += 1;
-            neigh_east = nullptr;
-        }
-
-        std::array<surface_mesh::Surface_mesh::Vertex, 4> verticies(
+            Vertex prev = add_vertex_cached(m_tmp_terrain_vectors[0]);
+            for (auto iter = m_tmp_terrain_vectors.begin()+1;
+                 iter != m_tmp_terrain_vectors.end();
+                 ++iter)
             {
-                add_vertex_cached(nw),
-                add_vertex_cached(ne),
-                add_vertex_cached(sw),
-                add_vertex_cached(se),
-            });
+                Vertex curr = add_vertex_cached(*iter);
 
-        if (nw[eX] != se[eX] && nw[eY] != se[eY]) {
-            // size = 1 has no interior face
-            make_quad(verticies[0], verticies[1], verticies[2], verticies[3]);
-        }
+                make_quad(ne, prev, se, curr);
 
-        if (neigh_east && ne[eY] != se[eY]) {
-            const Vertex vert_nw = verticies[1];
-            const Vertex vert_sw = verticies[3];
-            const Vertex vert_ne(
-                        add_vertex_cached(
-                            sim::TerrainVector(ne[eX]+1, ne[eY], neigh_east->height())
-                            ));
-            const Vertex vert_se(
-                        add_vertex_cached(
-                            sim::TerrainVector(se[eX]+1, se[eY], neigh_east->height())
-                            ));
-
-            make_quad(vert_nw, vert_ne, vert_sw, vert_se);
-        }
-
-        if (neigh_south && sw[eX] != se[eX]) {
-            const Vertex vert_nw = verticies[2];
-            const Vertex vert_ne = verticies[3];
-            const Vertex vert_sw(
-                        add_vertex_cached(
-                            sim::TerrainVector(sw[eX], sw[eY]+1, neigh_south->height()
-                                          )));
-            const Vertex vert_se(
-                        add_vertex_cached(
-                            sim::TerrainVector(se[eX], se[eY]+1, neigh_south->height()
-                                          )));
-
-            make_quad(vert_nw, vert_ne, vert_sw, vert_se);
-        }
-
-        if (neigh_south && neigh_east) {
-            sim::QuadNode *neigh_southeast = subtree_root->neighbour(sim::QuadNode::SOUTHEAST);
-            const Vertex vert_nw = verticies[3];
-            const Vertex vert_ne(
-                        add_vertex_cached(
-                            sim::TerrainVector(se[eX]+1, se[eY], neigh_east->height())
-                            ));
-            const Vertex vert_sw(
-                        add_vertex_cached(
-                            sim::TerrainVector(se[eX], se[eY]+1, neigh_south->height())
-                            ));
-            const Vertex vert_se(
-                        add_vertex_cached(
-                            sim::TerrainVector(se[eX]+1, se[eY]+1, neigh_southeast->height())
-                            ));
-
-            make_quad(vert_nw, vert_ne, vert_sw, vert_se);
+                prev = curr;
+            }
+            m_tmp_terrain_vectors.clear();
         }
 
         break;
@@ -173,6 +88,7 @@ void QuadTerrainChunk::build_from_quadtree(
     {
         for (unsigned int i = 0; i < 4; i++) {
             build_from_quadtree(
+                        root,
                         subtree_root->child(i),
                         lod,
                         neighbour_lod);
@@ -191,14 +107,16 @@ void QuadTerrainChunk::make_quad(surface_mesh::Surface_mesh::Vertex v1,
     m_mesh.add_triangle(v2, v3, v4);
 }
 
-void QuadTerrainChunk::update(sim::QuadNode *subtree_root,
-                              unsigned int lod,
-                              const std::array<unsigned int, 4> &neighbour_lod)
+void QuadTerrainChunk::update(
+        sim::QuadNode *root,
+        sim::QuadNode *subtree_root,
+        unsigned int lod,
+        const std::array<unsigned int, 4> &neighbour_lod)
 {
     m_mesh.clear();
     m_vertex_cache.clear();
     m_mesh.garbage_collection();
-    build_from_quadtree(subtree_root, lod, neighbour_lod);
+    build_from_quadtree(root, subtree_root, lod, neighbour_lod);
 }
 
 void QuadTerrainChunk::update(const sim::terrain_coord_t x0,
@@ -220,6 +138,13 @@ void QuadTerrainChunk::update(const sim::terrain_coord_t x0,
                                        m_mesh.add_vertex(surface_mesh::Point(x0+size, y0+size, height))
                                    });
     make_quad(vertices[0], vertices[1], vertices[2], vertices[3]);
+}
+
+void QuadTerrainChunk::release_buffers()
+{
+    m_pos_alloc = nullptr;
+    m_normal_alloc = nullptr;
+    m_ialloc = nullptr;
 }
 
 void QuadTerrainChunk::mesh_to_buffers()
@@ -374,7 +299,7 @@ void QuadTerrainNode::update()
             } else {
                 log.logf(io::LOG_DEBUG, "chunk %u,%u from quadtree",
                          x, y);
-                m_chunks[y*m_ychunks+x]->update(node, 1, neighbour_lods);
+                m_chunks[y*m_ychunks+x]->update(m_root, node, 1, neighbour_lods);
             }
         }
     }
@@ -406,6 +331,9 @@ void QuadTerrainNode::render(RenderContext &context)
 void QuadTerrainNode::sync()
 {
     log.log(io::LOG_DEBUG, "sync()");
+    for (auto &chunk: m_chunks) {
+        chunk->release_buffers();
+    }
     for (auto &chunk: m_chunks)
     {
         log.log(io::LOG_DEBUG, "synchronizing chunk");

@@ -34,7 +34,8 @@ private:
 
 protected:
     surface_mesh::Surface_mesh::Vertex add_vertex_cached(const sim::TerrainVector &vec);
-    void build_from_quadtree(sim::QuadNode *subtree_root,
+    void build_from_quadtree(sim::QuadNode *root,
+                             sim::QuadNode *subtree_root,
                              unsigned int lod,
                              const std::array<unsigned int, 4> &neighbour_lod);
     void make_quad(surface_mesh::Surface_mesh::Vertex v1,
@@ -61,7 +62,8 @@ public:
      * the LOD grid is equal or greater than locally, the smooth edge is
      * created by this chunk.
      */
-    void update(sim::QuadNode *subtree_root,
+    void update(sim::QuadNode *root,
+                sim::QuadNode *subtree_root,
                 unsigned int lod,
                 const std::array<unsigned int, 4> &neighbour_lod);
 
@@ -77,6 +79,7 @@ public:
                 const sim::terrain_coord_t size,
                 const sim::terrain_height_t height);
 
+    void release_buffers();
     void mesh_to_buffers();
 
     inline unsigned int base()

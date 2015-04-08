@@ -568,6 +568,34 @@ TEST_CASE("sim/quadterrain/QuadNode/sample_line/small_to_large")
     CHECK(points == ref);
 }
 
+TEST_CASE("sim/quadterrain/QuadNode/sample_line/small_to_small")
+{
+    std::unique_ptr<QuadNode> tree_guard(new_test_tree());
+    QuadNode *tree = tree_guard.get();
+    QuadNode *bottom = tree->child(QuadNode::NORTHWEST)     // 64
+            ->child(QuadNode::SOUTHEAST) // 32
+            ->child(QuadNode::SOUTHEAST) // 16
+            ->child(QuadNode::SOUTHEAST) //  8
+            ->child(QuadNode::SOUTHEAST) //  4
+            ->child(QuadNode::SOUTHEAST) //  2
+            ->child(QuadNode::SOUTHEAST); //  1
+
+    QuadNode *bottom_neighbour = bottom->parent()->child(QuadNode::NORTHWEST);
+
+    std::vector<TerrainVector> points;
+    tree->sample_line(points,
+                      bottom_neighbour->x0()+1,
+                      bottom_neighbour->y0(),
+                      QuadNode::SAMPLE_SOUTH,
+                      bottom->size());
+
+    std::vector<TerrainVector> ref({
+                                       TerrainVector(63, 62, 0),
+                                       TerrainVector(63, 63, 1)
+                                   });
+    CHECK(points == ref);
+}
+
 TEST_CASE("sim/quadterrain/QuadNode/sample_line/large_to_small_along_x")
 {
     std::unique_ptr<QuadNode> tree_guard(new_test_tree());

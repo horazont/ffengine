@@ -445,7 +445,6 @@ void QuadNode::sample_line(std::vector<TerrainVector> &dest,
             if (node->size() > 1 && i < n) {
                 dest.emplace_back(x, node->y0()+node->size()-1, node->height());
             }
-            std::cout << node->size() << std::endl;
             i += node->size()-1;
         }
         break;
@@ -463,7 +462,6 @@ void QuadNode::sample_line(std::vector<TerrainVector> &dest,
             if (node->size() > 1 && i < n) {
                 dest.emplace_back(node->x0()+node->size()-1, y, node->height());
             }
-            std::cout << node->size() << std::endl;
             i += node->size()-1;
         }
         break;
