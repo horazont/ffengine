@@ -35,6 +35,7 @@ set(ENGINE_HEADERS
   engine/math/variadic_initializer.inc.hpp
   engine/math/vector.hpp
   engine/render/camera.hpp
+  engine/render/fancyterrain.hpp
   engine/render/grid.hpp
   engine/render/pointer.hpp
   engine/render/quadterrain.hpp
@@ -75,6 +76,7 @@ set(ENGINE_SRC
   src/math/shapes.cpp
   src/math/vector.cpp
   src/render/camera.cpp
+  src/render/fancyterrain.cpp
   src/render/grid.cpp
   src/render/pointer.cpp
   src/render/quadterrain.cpp
