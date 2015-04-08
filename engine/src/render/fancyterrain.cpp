@@ -202,12 +202,12 @@ void FancyTerrainNode::render(RenderContext &context)
                     scale);
         glUniform2f(m_material.shader().uniform_location("chunk_translation"),
                     x, y);
-        std::cout << "rendering" << std::endl;
+        /* std::cout << "rendering" << std::endl;
         std::cout << "  xtex          = " << xtex << std::endl;
         std::cout << "  ytex          = " << ytex << std::endl;
         std::cout << "  translationx  = " << x << std::endl;
         std::cout << "  translationy  = " << y << std::endl;
-        std::cout << "  scale         = " << scale << std::endl;
+        std::cout << "  scale         = " << scale << std::endl; */
         context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_allocation);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -250,7 +250,9 @@ void FancyTerrainNode::sync()
 
             if (lods->size() <= lod_index)
             {
-                std::cout << "cannot upload slice (no such LOD index: " << lod_index << " (lod_size=" << lod_size << "))" << std::endl;
+                logger.logf(io::LOG_WARNING,
+                            "cannot upload slice (no such LOD index: %u)",
+                            lod_index);
                 continue;
             }
 
@@ -261,7 +263,7 @@ void FancyTerrainNode::sync()
             const unsigned int xtex = (slot_index % m_texture_cache_size)*m_grid_size;
             const unsigned int ytex = (slot_index / m_texture_cache_size)*m_grid_size;
 
-            std::cout << "uploading slice" << std::endl;
+            /* std::cout << "uploading slice" << std::endl;
             std::cout << "  lod_size   = " << lod_size << std::endl;
             std::cout << "  lod_index  = " << lod_index << std::endl;
             std::cout << "  xlod       = " << xlod << std::endl;
@@ -271,7 +273,7 @@ void FancyTerrainNode::sync()
             std::cout << "  ytex       = " << ytex << std::endl;
             std::cout << "  src_size   = " << (((m_terrain.size()-1) >> lod_index)+1) << std::endl;
             std::cout << "  dest_size  = " << m_grid_size << std::endl;
-            std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl;
+            std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl; */
 
             sim::copy_heightfield_rect(
                         (*lods)[lod_index],
