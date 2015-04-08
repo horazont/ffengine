@@ -47,6 +47,7 @@ set(ENGINE_HEADERS
 
 set(ENGINE_SRC
   src/common/resource.cpp
+  src/common/utils.cpp
   src/gl/2darray.cpp
   src/gl/array.cpp
   src/gl/fbo.cpp

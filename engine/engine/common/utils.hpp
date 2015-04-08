@@ -15,6 +15,9 @@ static inline void raise_last_os_error()
     }
 }
 
+bool is_power_of_two(unsigned int n);
+unsigned int log2_of_pot(unsigned int n);
+
 }
 
 #endif // SCC_ENGINE_COMMON_UTILS_HPP
