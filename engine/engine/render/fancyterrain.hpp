@@ -75,6 +75,7 @@ class FancyTerrainNode: public scenegraph::Node
 {
 public:
     typedef unsigned int SlotIndex;
+    typedef sim::FieldLODifier<sim::Terrain::height_t, sim::Terrain> HeightFieldLODifier;
 
 public:
     /**
@@ -90,14 +91,22 @@ public:
     FancyTerrainNode(sim::Terrain &terrain,
                      const unsigned int grid_size,
                      const unsigned int texture_cache_size);
+    ~FancyTerrainNode();
 
 private:
+    static constexpr float lod_range_base = 127;
+
     const unsigned int m_grid_size;
     const unsigned int m_texture_cache_size;
-    const unsigned int m_max_lod;
     const unsigned int m_min_lod;
+    const unsigned int m_max_depth;
 
     sim::Terrain &m_terrain;
+    HeightFieldLODifier m_terrain_lods;
+    sim::MinMaxMapGenerator m_terrain_minmax;
+    sigc::connection m_terrain_lods_conn;
+    sigc::connection m_terrain_minmax_conn;
+
     Texture2D m_heightmap;
 
     VBO m_vbo;
@@ -121,15 +130,18 @@ private:
 protected:
     void collect_slices_recurse(
             std::vector<HeightmapSliceMeta> &requested_slices,
-            const Vector<unsigned int, 2> &center,
-            unsigned int lod,
-            const Vector3f &viewpoint);
+            const unsigned int depth,
+            const unsigned int relative_x,
+            const unsigned int relative_y,
+            const Vector3f &viewpoint,
+            const sim::MinMaxMapGenerator::MinMaxFieldLODs &minmaxfields);
     void collect_slices(
             std::vector<HeightmapSliceMeta> &requested_slices,
             const Vector3f &viewpoint);
     void compute_heightmap_lod(unsigned int basex,
                                unsigned int basey,
                                unsigned int lod);
+    void render_all(RenderContext &context);
 
 public:
     void render(RenderContext &context) override;

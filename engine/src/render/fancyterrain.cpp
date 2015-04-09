@@ -1,6 +1,7 @@
 #include "engine/render/fancyterrain.hpp"
 
 #include "engine/common/utils.hpp"
+#include "engine/math/intersect.hpp"
 #include "engine/io/log.hpp"
 
 namespace engine {
@@ -18,9 +19,17 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                                    const unsigned int texture_cache_size):
     m_grid_size(grid_size),
     m_texture_cache_size(texture_cache_size),
-    m_max_lod(terrain.size()-1),
     m_min_lod(grid_size-1),
+    m_max_depth(log2_of_pot((terrain.size()-1) / m_min_lod)),
     m_terrain(terrain),
+    m_terrain_lods(terrain),
+    m_terrain_minmax(terrain, m_min_lod+1),
+    m_terrain_lods_conn(terrain.terrain_changed().connect(
+                            std::bind(&HeightFieldLODifier::notify,
+                                      &m_terrain_lods))),
+    m_terrain_minmax_conn(terrain.terrain_changed().connect(
+                              std::bind(&sim::MinMaxMapGenerator::notify,
+                                        &m_terrain_minmax))),
     m_heightmap(GL_R32F,
                 texture_cache_size*grid_size,
                 texture_cache_size*grid_size,
@@ -33,6 +42,9 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     m_vbo_allocation(m_vbo.allocate(grid_size*grid_size)),
     m_ibo_allocation(m_ibo.allocate((grid_size-1)*(grid_size-1)*6))
 {
+    m_terrain_lods.notify();
+    m_terrain_minmax.notify();
+
     if (!is_power_of_two(grid_size-1)) {
         throw std::runtime_error("grid_size must be power-of-two plus one");
     }
@@ -72,14 +84,35 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                 "uniform vec2 chunk_translation;"
                 "uniform vec2 heightmap_base;"
                 "uniform sampler2D heightmap;"
-                "const float heightmap_factor = " + std::to_string(float(m_grid_size-1) / (m_grid_size*m_texture_cache_size)) + ";"
+                "const float heightmap_factor = " + std::to_string(float(m_grid_size-1) / (m_grid_size*m_texture_cache_size)) +
+                ";"
+                "const float grid_size = " + std::to_string(m_grid_size-1) +
+                ";"
+                "const float scale_to_radius = " + std::to_string(lod_range_base / (m_grid_size-1)) +
+                ";"
                 "in vec2 position;"
                 "out vec2 tc0;"
+                "vec2 morph_vertex(vec2 grid_pos, vec2 vertex, float morph_k)"
+                "{"
+                "   vec2 frac_part = fract(grid_pos.xy * grid_size * 0.5) * 2.0 / grid_size;"
+                "   if (grid_pos.x == 1.0) { frac_part.x = 0; }"
+                "   if (grid_pos.y == 1.0) { frac_part.y = 0; }"
+                "   return vertex.xy - frac_part * chunk_size * morph_k;"
+                "}"
+                "float morph_k(vec3 viewpoint, vec2 world_pos)"
+                "{"
+                "   float dist = length(viewpoint - vec3(world_pos, 0)) - chunk_size*scale_to_radius/2.f;"
+                "   float normdist = dist/(scale_to_radius*chunk_size);"
+                "   return clamp((normdist - 0.6) * 2.5, 0, 1);"
+                "}"
                 "void main() {"
-                "   tc0 = position.xy / 5.0;"
-                "   float height = textureLod(heightmap, heightmap_base + position.xy * heightmap_factor, 0).r;"
+                "   vec2 model_vertex = position * chunk_size + chunk_translation;"
+                "   tc0 = model_vertex.xy / 5.0;"
+                "   vec2 morphed = morph_vertex(position, model_vertex, morph_k(vec3(0, 0, 0), model_vertex));"
+                "   vec2 morphed_object = (morphed - chunk_translation) / chunk_size;"
+                "   float height = textureLod(heightmap, heightmap_base + morphed_object.xy * heightmap_factor, 0).r;"
                 "   gl_Position = mats.proj * mats.view * mats.model * vec4("
-                "       position * chunk_size + chunk_translation, height, 1.f);"
+                "       morphed, height, 1.f);"
                 "}");
     success = success && m_material.shader().attach(
                 GL_FRAGMENT_SHADER,
@@ -88,7 +121,7 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                 "in vec2 tc0;"
                 "uniform sampler2D heightmap;"
                 "void main() {"
-                "   color = vec4(0.5, 0.5, 0.5, 1.0);"
+                "   color = vec4(0.5, 0.5, 0.5, 0.4);"
                 "}");
     success = success && m_material.shader().link();
 
@@ -105,7 +138,7 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
 
     m_heightmap.bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     ArrayDeclaration decl;
     decl.declare_attribute("position", m_vbo, 0);
@@ -134,59 +167,80 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     }
 }
 
+FancyTerrainNode::~FancyTerrainNode()
+{
+    m_terrain_lods_conn.disconnect();
+}
+
 void FancyTerrainNode::collect_slices(
         std::vector<HeightmapSliceMeta> &requested_slices,
         const Vector3f &viewpoint)
 {
+    const sim::MinMaxMapGenerator::MinMaxFieldLODs *minmaxfields = nullptr;
+    auto lock = m_terrain_minmax.readonly_lods(minmaxfields);
+
     collect_slices_recurse(requested_slices,
-                           Vector<unsigned int, 2>(m_max_lod / 2, m_max_lod / 2),
-                           m_max_lod,
-                           viewpoint);
+                           m_max_depth,
+                           0,
+                           0,
+                           viewpoint,
+                           *minmaxfields);
 }
 
 void FancyTerrainNode::collect_slices_recurse(
         std::vector<HeightmapSliceMeta> &requested_slices,
-        const Vector<unsigned int, 2> &center,
-        unsigned int lod,
-        const Vector3f &viewpoint)
+        const unsigned int lod,
+        const unsigned int relative_x,
+        const unsigned int relative_y,
+        const Vector3f &viewpoint,
+        const sim::MinMaxMapGenerator::MinMaxFieldLODs &minmaxfields)
 {
-    if (lod <= m_min_lod) {
+    float min = 0;
+    float max = 100.;
+    if (minmaxfields.size() > lod)
+    {
+        const unsigned int field_width = ((m_terrain.size()-1) / m_min_lod) >> lod;
+        std::cout << field_width << std::endl;
+        std::tie(min, max) = minmaxfields[lod][relative_y*field_width+relative_x];
+        std::cout << min << " " << max << std::endl;
+    }
+
+    const unsigned int size = (m_min_lod << lod);
+
+    const unsigned int absolute_x = relative_x * size;
+    const unsigned int absolute_y = relative_y * size;
+
+    AABB box{Vector3f(absolute_x, absolute_y, min),
+             Vector3f(absolute_x+size, absolute_y+size, max)};
+
+    const float next_range_radius = lod_range_base * (1<<lod);
+    if (lod == 0 ||
+            !isect_aabb_sphere(box, Sphere{viewpoint, next_range_radius}))
+    {
+        // next LOD not required, insert node
         requested_slices.push_back(
-                    HeightmapSliceMeta{center[eX]-lod/2, center[eY]-lod/2, lod}
+                    HeightmapSliceMeta{absolute_x, absolute_y, m_min_lod * (1<<lod)}
                     );
         return;
     }
-    typedef Vector<unsigned int, 2> center_t;
 
-    collect_slices_recurse(requested_slices,
-                           center_t(
-                               center[eX]-lod/4,
-                               center[eY]-lod/4),
-                           lod/2,
-                           viewpoint);
-    collect_slices_recurse(requested_slices,
-                           center_t(
-                               center[eX]-lod/4,
-                               center[eY]+lod/4),
-                           lod/2,
-                           viewpoint);
-    collect_slices_recurse(requested_slices,
-                           center_t(
-                               center[eX]+lod/4,
-                               center[eY]-lod/4),
-                           lod/2,
-                           viewpoint);
-    collect_slices_recurse(requested_slices,
-                           center_t(
-                               center[eX]+lod/4,
-                               center[eY]+lod/4),
-                           lod/2,
-                           viewpoint);
+    // some children will need higher LOD
+
+    for (unsigned int offsy = 0; offsy < 2; offsy++) {
+        for (unsigned int offsx = 0; offsx < 2; offsx++) {
+            collect_slices_recurse(
+                        requested_slices,
+                        lod-1,
+                        relative_x*2+offsx,
+                        relative_y*2+offsy,
+                        viewpoint,
+                        minmaxfields);
+        }
+    }
 }
 
-void FancyTerrainNode::render(RenderContext &context)
+void FancyTerrainNode::render_all(RenderContext &context)
 {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     for (auto &slice: m_render_slices) {
         const float x = std::get<0>(slice).basex;
         const float y = std::get<0>(slice).basey;
@@ -210,7 +264,16 @@ void FancyTerrainNode::render(RenderContext &context)
         std::cout << "  scale         = " << scale << std::endl; */
         context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_allocation);
     }
+}
+
+void FancyTerrainNode::render(RenderContext &context)
+{
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDisable(GL_BLEND);
+    render_all(context);
+    glEnable(GL_BLEND);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    render_all(context);
 }
 
 void FancyTerrainNode::sync()
@@ -239,8 +302,8 @@ void FancyTerrainNode::sync()
     }
 
     {
-        const sim::Terrain::HeightFieldLODs *lods = nullptr;
-        auto lock = m_terrain.readonly_lods(lods);
+        const HeightFieldLODifier::FieldLODs *lods = nullptr;
+        auto lock = m_terrain_lods.readonly_lods(lods);
 
         sim::Terrain::HeightField tmp_heightfield(m_grid_size*m_grid_size);
         for (auto &new_slice: m_render_slices)

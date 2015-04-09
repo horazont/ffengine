@@ -103,3 +103,20 @@ TEST_CASE("math/intersect/isect_plane_ray/parallel",
     CHECK(!success);
     CHECK(isnan(t));
 }
+
+TEST_CASE("math/intersect/isect_aabb_sphere/intersection")
+{
+    Sphere sphere{Vector3f(1, 2, 3), 2};
+
+    CHECK(isect_aabb_sphere(AABB{Vector3f(0, 0, 0), Vector3f(3, 3, 3)}, sphere));
+    CHECK(isect_aabb_sphere(AABB{Vector3f(1, 2, 3), Vector3f(4, 5, 6)}, sphere));
+}
+
+TEST_CASE("math/intersect/isect_aabb_sphere/non_intersection")
+{
+    Sphere sphere{Vector3f(1, 2, 3), 2};
+
+    CHECK_FALSE(isect_aabb_sphere(AABB{Vector3f(-4, -4, -4), Vector3f(-1, -1, -1)}, sphere));
+    CHECK_FALSE(isect_aabb_sphere(AABB{Vector3f(10, 10, 10), Vector3f(11, 11, 11)}, sphere));
+}
+

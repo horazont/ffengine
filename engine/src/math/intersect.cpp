@@ -2,6 +2,12 @@
 
 #include <tuple>
 
+template <typename Ta>
+Ta sqr(Ta v)
+{
+    return v*v;
+}
+
 
 const float EPSILON = 0.00001;
 
@@ -58,4 +64,20 @@ std::tuple<float, bool> isect_plane_ray(
     const float t = (plane_origin*plane_normal - plane_normal*ray.origin) / normal_dir;
 
     return std::make_tuple(t, t >= 0);
+}
+
+bool isect_aabb_sphere(const AABB &aabb, const Sphere &sphere)
+{
+    /* Jim Arvo, A Simple Method for Box-Sphere Intersection Testing, Graphics Gems, pp. 247-250 */
+
+    float dmin = 0;
+    for (unsigned int i = 0; i < 3; i++) {
+        const float Ci = sphere.center.as_array[i];
+        if (Ci < aabb.min.as_array[i]) {
+            dmin += sqr(Ci - aabb.min.as_array[i]);
+        } else if (Ci > aabb.max.as_array[i]) {
+            dmin += sqr(Ci - aabb.max.as_array[i]);
+        }
+    }
+    return dmin <= sqr(sphere.radius);
 }

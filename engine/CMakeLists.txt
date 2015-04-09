@@ -31,8 +31,10 @@ set(ENGINE_HEADERS
   engine/io/stream.hpp
   engine/io/stream_operators.inc.hpp
   engine/io/utils.hpp
+  engine/math/algo.hpp
   engine/math/intersect.hpp
   engine/math/matrix.hpp
+  engine/math/perlin.hpp
   engine/math/rect.hpp
   engine/math/shapes.hpp
   engine/math/variadic_initializer.inc.hpp
@@ -74,8 +76,10 @@ set(ENGINE_SRC
   src/io/stream.cpp
   src/io/stream_operators.inc.cpp
   src/io/utils.cpp
+  src/math/algo.cpp
   src/math/intersect.cpp
   src/math/matrix.cpp
+  src/math/perlin.cpp
   src/math/rect.cpp
   src/math/shapes.cpp
   src/math/vector.cpp

@@ -16,4 +16,8 @@ std::tuple<float, bool> isect_plane_ray(
         const Vector3f &plane_normal,
         const Ray &ray);
 
+bool isect_aabb_sphere(
+        const AABB &aabb,
+        const Sphere &sphere);
+
 #endif
