@@ -59,35 +59,3 @@ std::tuple<float, bool> isect_plane_ray(
 
     return std::make_tuple(t, t >= 0);
 }
-
-PlaneSide planeside_aabb_fast(
-        const Vector3f &plane_origin,
-        const Vector3f &plane_normal,
-        const Vector3f &min,
-        const Vector3f &max)
-{
-    Vector3f center = (max+min) / 2;
-    float radius = (max - center).length();
-    return planeside_sphere(plane_origin, plane_normal,
-                            center,
-                            radius);
-}
-
-PlaneSide planeside_sphere(
-        const Vector3f &plane_origin,
-        const Vector3f &plane_normal,
-        const Vector3f &center,
-        const float radius)
-{
-    const float d = plane_origin * plane_normal;
-    const float normal_projected_center = center*plane_normal;
-    if (abs(normal_projected_center - d) <= radius) {
-        return PlaneSide::BOTH;
-    } else {
-        if (normal_projected_center > 0) {
-            return PlaneSide::POSITIVE_NORMAL;
-        } else {
-            return PlaneSide::NEGATIVE_NORMAL;
-        }
-    }
-}
