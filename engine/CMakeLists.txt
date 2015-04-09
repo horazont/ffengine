@@ -1,5 +1,7 @@
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
+find_package(SIGC++ REQUIRED)
+
 set(ENGINE_HEADERS
   engine/common/resource.hpp
   engine/common/types.hpp
@@ -93,6 +95,7 @@ include_directories(${INCLUDE_DIRS})
 
 add_library(engine STATIC ${ENGINE_SRC})
 target_link_libraries(engine surface_mesh)
+target_link_libraries(engine sigc++)
 set_property(
   TARGET engine
   PROPERTY INTERFACE_INCLUDE_DIRECTORIES

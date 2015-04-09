@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 
+#include <sigc++/sigc++.h>
 
 namespace sim {
 
