@@ -29,8 +29,9 @@ set(ENGINE_HEADERS
   engine/io/stream.hpp
   engine/io/stream_operators.inc.hpp
   engine/io/utils.hpp
+  engine/math/intersect.hpp
   engine/math/matrix.hpp
-  engine/math/ray.hpp
+  engine/math/rect.hpp
   engine/math/shapes.hpp
   engine/math/variadic_initializer.inc.hpp
   engine/math/vector.hpp
@@ -71,8 +72,9 @@ set(ENGINE_SRC
   src/io/stream.cpp
   src/io/stream_operators.inc.cpp
   src/io/utils.cpp
+  src/math/intersect.cpp
   src/math/matrix.cpp
-  src/math/ray.cpp
+  src/math/rect.cpp
   src/math/shapes.cpp
   src/math/vector.cpp
   src/render/camera.cpp

@@ -1,11 +1,11 @@
 #include <catch.hpp>
 
-#include "engine/math/shapes.hpp"
+#include "engine/math/rect.hpp"
 
 typedef GenericRect<unsigned int> Rect;
 
 
-TEST_CASE("math/shapes/Rect/init_with_vectors")
+TEST_CASE("math/rect/Rect/init_with_vectors")
 {
     Rect::point_t p0(0, 1);
     Rect::point_t p1(2, 3);
@@ -33,7 +33,7 @@ TEST_CASE("math/shapes/Rect/init_with_vectors")
     }
 }
 
-TEST_CASE("math/shapes/Rect/xy01")
+TEST_CASE("math/rect/Rect/xy01")
 {
     Rect r(0, 1, 2, 3);
     CHECK(r.x0() == 0);
@@ -48,7 +48,7 @@ TEST_CASE("math/shapes/Rect/xy01")
     CHECK_FALSE(r.is_a_rect());
 }
 
-TEST_CASE("math/shapes/Rect/is_a_rect")
+TEST_CASE("math/rect/Rect/is_a_rect")
 {
     CHECK(Rect(0, 0, 1, 1).is_a_rect());
     CHECK_FALSE(Rect(2, 2, 1, 1).is_a_rect());
@@ -56,7 +56,7 @@ TEST_CASE("math/shapes/Rect/is_a_rect")
     CHECK_FALSE(Rect(2, 0, 1, 1).is_a_rect());
 }
 
-TEST_CASE("math/shapes/Rect/copy_construct")
+TEST_CASE("math/rect/Rect/copy_construct")
 {
     const Rect r1(0, 1, 2, 3);
     Rect r2(r1);
@@ -67,7 +67,7 @@ TEST_CASE("math/shapes/Rect/copy_construct")
     CHECK(r2.y1() == 3);
 }
 
-TEST_CASE("math/shapes/Rect/copy_assign")
+TEST_CASE("math/rect/Rect/copy_assign")
 {
     const Rect r1(0, 1, 2, 3);
     Rect r2;
@@ -79,7 +79,7 @@ TEST_CASE("math/shapes/Rect/copy_assign")
     CHECK(r2.y1() == 3);
 }
 
-TEST_CASE("math/shapes/Rect/equality")
+TEST_CASE("math/rect/Rect/equality")
 {
     const Rect r1(0, 1, 2, 3);
     SECTION ("not equal")
@@ -102,13 +102,13 @@ TEST_CASE("math/shapes/Rect/equality")
 
 }
 
-TEST_CASE("math/shapes/Rect/area")
+TEST_CASE("math/rect/Rect/area")
 {
     CHECK(Rect(0, 1, 2, 3).area() == 4);
     CHECK(Rect(0, 0, 10, 10).area() == 100);
 }
 
-TEST_CASE("math/shapes/Rect/NotARect")
+TEST_CASE("math/rect/Rect/NotARect")
 {
     SECTION("copy into rect")
     {
@@ -148,7 +148,7 @@ TEST_CASE("math/shapes/Rect/NotARect")
     }
 }
 
-TEST_CASE("math/shapes/Rect/intersection")
+TEST_CASE("math/rect/Rect/intersection")
 {
     const Rect r1(0, 0, 4, 4);
     SECTION("case subquad")
@@ -169,7 +169,7 @@ TEST_CASE("math/shapes/Rect/intersection")
     }
 }
 
-TEST_CASE("math/shapes/Rect/empty")
+TEST_CASE("math/rect/Rect/empty")
 {
     CHECK(Rect(0, 0, 0, 0).empty());
     CHECK(Rect(1, 1, 1, 1).empty());

@@ -2,9 +2,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/catch/include)
 
 set(TEST_SRC
   engine/io/utils.cpp
+  engine/math/intersect.cpp
   engine/math/matrix.cpp
-  engine/math/ray.cpp
-  engine/math/shapes.cpp
+  engine/math/rect.cpp
   engine/math/vector.cpp
   engine/render/quadterrain.cpp
   engine/sim/quadterrain.cpp

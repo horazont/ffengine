@@ -3,7 +3,7 @@
 
 #include "engine/common/types.hpp"
 
-#include "engine/math/ray.hpp"
+#include "engine/math/shapes.hpp"
 
 #include "engine/render/rendergraph.hpp"
 

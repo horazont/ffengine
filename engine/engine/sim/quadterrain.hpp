@@ -5,8 +5,8 @@
 #include <cstdint>
 #include <string>
 
-#include "engine/math/ray.hpp"
 #include "engine/math/shapes.hpp"
+#include "engine/math/rect.hpp"
 
 
 namespace sim {

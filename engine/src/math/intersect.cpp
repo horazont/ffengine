@@ -1,10 +1,11 @@
-#include "engine/math/ray.hpp"
+#include "engine/math/intersect.hpp"
 
-#include <iostream>
+#include <tuple>
+
 
 const float EPSILON = 0.00001;
 
-std::tuple<float, bool> intersect_triangle(
+std::tuple<float, bool> isect_ray_triangle(
         const Ray &ray,
         const Vector3f &p0,
         const Vector3f &p1,
@@ -42,9 +43,10 @@ std::tuple<float, bool> intersect_triangle(
     return std::make_tuple(t, t >= 0);
 }
 
-std::tuple<float, bool> intersect_plane(const Ray &ray,
-                                        const Vector3f &plane_origin,
-                                        const Vector3f &plane_normal)
+std::tuple<float, bool> isect_plane_ray(
+        const Vector3f &plane_origin,
+        const Vector3f &plane_normal,
+        const Ray &ray)
 {
     const float normal_dir = ray.direction * plane_normal;
 
@@ -56,4 +58,36 @@ std::tuple<float, bool> intersect_plane(const Ray &ray,
     const float t = (plane_origin*plane_normal - plane_normal*ray.origin) / normal_dir;
 
     return std::make_tuple(t, t >= 0);
+}
+
+PlaneSide planeside_aabb_fast(
+        const Vector3f &plane_origin,
+        const Vector3f &plane_normal,
+        const Vector3f &min,
+        const Vector3f &max)
+{
+    Vector3f center = (max+min) / 2;
+    float radius = (max - center).length();
+    return planeside_sphere(plane_origin, plane_normal,
+                            center,
+                            radius);
+}
+
+PlaneSide planeside_sphere(
+        const Vector3f &plane_origin,
+        const Vector3f &plane_normal,
+        const Vector3f &center,
+        const float radius)
+{
+    const float d = plane_origin * plane_normal;
+    const float normal_projected_center = center*plane_normal;
+    if (abs(normal_projected_center - d) <= radius) {
+        return PlaneSide::BOTH;
+    } else {
+        if (normal_projected_center > 0) {
+            return PlaneSide::POSITIVE_NORMAL;
+        } else {
+            return PlaneSide::NEGATIVE_NORMAL;
+        }
+    }
 }
