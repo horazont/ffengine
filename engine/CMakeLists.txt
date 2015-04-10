@@ -43,11 +43,8 @@ set(ENGINE_HEADERS
   engine/render/fancyterrain.hpp
   engine/render/grid.hpp
   engine/render/pointer.hpp
-  engine/render/quadterrain.hpp
   engine/render/rendergraph.hpp
   engine/render/scenegraph.hpp
-  engine/render/terrain.hpp
-  engine/sim/quadterrain.hpp
   engine/sim/terrain.hpp
   )
 
@@ -87,11 +84,8 @@ set(ENGINE_SRC
   src/render/fancyterrain.cpp
   src/render/grid.cpp
   src/render/pointer.cpp
-  src/render/quadterrain.cpp
   src/render/rendergraph.cpp
   src/render/scenegraph.cpp
-  src/render/terrain.cpp
-  src/sim/quadterrain.cpp
   src/sim/terrain.cpp
   )
 
