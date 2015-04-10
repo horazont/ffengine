@@ -3,4 +3,4 @@
 	url = https://github.com/philsquared/Catch/
 [submodule "surface_mesh"]
 	path = surface_mesh
-	url = https://opensource.cit-ec.de/git/surface_mesh
+	url = ssh://git.sotecware.net/surface_mesh
