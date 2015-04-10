@@ -76,6 +76,7 @@ class FancyTerrainNode: public scenegraph::Node
 public:
     typedef unsigned int SlotIndex;
     typedef sim::FieldLODifier<sim::Terrain::height_t, sim::Terrain> HeightFieldLODifier;
+    typedef sim::FieldLODifier<sim::NTMapGenerator::element_t, sim::NTMapGenerator> NTMapLODifier;
 
 public:
     /**
@@ -104,10 +105,15 @@ private:
     sim::Terrain &m_terrain;
     HeightFieldLODifier m_terrain_lods;
     sim::MinMaxMapGenerator m_terrain_minmax;
+    sim::NTMapGenerator m_terrain_nt;
+    NTMapLODifier m_terrain_nt_lods;
     sigc::connection m_terrain_lods_conn;
     sigc::connection m_terrain_minmax_conn;
+    sigc::connection m_terrain_nt_conn;
+    sigc::connection m_terrain_nt_lods_conn;
 
     Texture2D m_heightmap;
+    Texture2D m_normalt;
 
     VBO m_vbo;
     IBO m_ibo;

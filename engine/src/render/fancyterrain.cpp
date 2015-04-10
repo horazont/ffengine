@@ -24,16 +24,29 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     m_terrain(terrain),
     m_terrain_lods(terrain),
     m_terrain_minmax(terrain, m_min_lod+1),
+    m_terrain_nt(terrain),
+    m_terrain_nt_lods(m_terrain_nt),
     m_terrain_lods_conn(terrain.terrain_changed().connect(
                             std::bind(&HeightFieldLODifier::notify,
                                       &m_terrain_lods))),
     m_terrain_minmax_conn(terrain.terrain_changed().connect(
                               std::bind(&sim::MinMaxMapGenerator::notify,
                                         &m_terrain_minmax))),
+    m_terrain_nt_conn(terrain.terrain_changed().connect(
+                          std::bind(&sim::NTMapGenerator::notify,
+                                    &m_terrain_nt))),
+    m_terrain_nt_lods_conn(m_terrain_nt.field_changed().connect(
+                               std::bind(&NTMapLODifier::notify,
+                                         &m_terrain_nt_lods))),
     m_heightmap(GL_R32F,
                 texture_cache_size*grid_size,
                 texture_cache_size*grid_size,
                 GL_RED,
+                GL_FLOAT),
+    m_normalt(GL_RGBA32F,
+                texture_cache_size*grid_size,
+                texture_cache_size*grid_size,
+                GL_RGBA,
                 GL_FLOAT),
     m_vbo(VBOFormat({
                         VBOAttribute(2)
@@ -44,6 +57,7 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
 {
     m_terrain_lods.notify();
     m_terrain_minmax.notify();
+    m_terrain_nt.notify();
 
     if (!is_power_of_two(grid_size-1)) {
         throw std::runtime_error("grid_size must be power-of-two plus one");
@@ -71,59 +85,12 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
 
     bool success = true;
 
-    success = success && m_material.shader().attach(
+    success = success && m_material.shader().attach_resource(
                 GL_VERTEX_SHADER,
-                "#version 330\n"
-                "layout(std140) uniform MatrixBlock {"
-                "   layout(row_major) mat4 proj;"
-                "   layout(row_major) mat4 view;"
-                "   layout(row_major) mat4 model;"
-                "   layout(row_major) mat3 normal;"
-                "} mats;"
-                "uniform float chunk_size;"
-                "uniform vec2 chunk_translation;"
-                "uniform vec2 heightmap_base;"
-                "uniform sampler2D heightmap;"
-                "uniform vec3 lod_viewpoint;"
-                "const float heightmap_factor = " + std::to_string(float(m_grid_size-1) / (m_grid_size*m_texture_cache_size)) +
-                ";"
-                "const float grid_size = " + std::to_string(m_grid_size-1) +
-                ";"
-                "const float scale_to_radius = " + std::to_string(lod_range_base / (m_grid_size-1)) +
-                ";"
-                "in vec2 position;"
-                "out vec2 tc0;"
-                "vec2 morph_vertex(vec2 grid_pos, vec2 vertex, float morph_k)"
-                "{"
-                "   vec2 frac_part = fract(grid_pos.xy * grid_size * 0.5) * 2.0 / grid_size;"
-                "   if (grid_pos.x == 1.0) { frac_part.x = 0; }"
-                "   if (grid_pos.y == 1.0) { frac_part.y = 0; }"
-                "   return vertex.xy - frac_part * chunk_size * morph_k;"
-                "}"
-                "float morph_k(vec3 viewpoint, vec2 world_pos)"
-                "{"
-                "   float dist = length(viewpoint - vec3(world_pos, 0)) - chunk_size*scale_to_radius/2.f;"
-                "   float normdist = dist/(scale_to_radius*chunk_size);"
-                "   return clamp((normdist - 0.6) * 2.5, 0, 1);"
-                "}"
-                "void main() {"
-                "   vec2 model_vertex = position * chunk_size + chunk_translation;"
-                "   tc0 = model_vertex.xy / 5.0;"
-                "   vec2 morphed = morph_vertex(position, model_vertex, morph_k(lod_viewpoint, model_vertex));"
-                "   vec2 morphed_object = (morphed - chunk_translation) / chunk_size;"
-                "   float height = textureLod(heightmap, heightmap_base + morphed_object.xy * heightmap_factor, 0).r;"
-                "   gl_Position = mats.proj * mats.view * mats.model * vec4("
-                "       morphed, height, 1.f);"
-                "}");
-    success = success && m_material.shader().attach(
+                ":/shaders/terrain/main.vert");
+    success = success && m_material.shader().attach_resource(
                 GL_FRAGMENT_SHADER,
-                "#version 330\n"
-                "out vec4 color;"
-                "in vec2 tc0;"
-                "uniform sampler2D heightmap;"
-                "void main() {"
-                "   color = vec4(0.5, 0.5, 0.5, 0.4);"
-                "}");
+                ":/shaders/terrain/main.frag");
     success = success && m_material.shader().link();
 
     if (!success) {
@@ -136,8 +103,13 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     glUniform2f(m_material.shader().uniform_location("heightmap_base"),
                 0.0, 0.0);
     m_material.attach_texture("heightmap", &m_heightmap);
+    m_material.attach_texture("normalt", &m_normalt);
 
     m_heightmap.bind();
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    m_normalt.bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -171,6 +143,9 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
 FancyTerrainNode::~FancyTerrainNode()
 {
     m_terrain_lods_conn.disconnect();
+    m_terrain_minmax_conn.disconnect();
+    m_terrain_nt_conn.disconnect();
+    m_terrain_nt_lods_conn.disconnect();
 }
 
 void FancyTerrainNode::collect_slices(
@@ -201,9 +176,7 @@ void FancyTerrainNode::collect_slices_recurse(
     if (minmaxfields.size() > lod)
     {
         const unsigned int field_width = ((m_terrain.size()-1) / m_min_lod) >> lod;
-        std::cout << field_width << std::endl;
         std::tie(min, max) = minmaxfields[lod][relative_y*field_width+relative_x];
-        std::cout << min << " " << max << std::endl;
     }
 
     const unsigned int size = (m_min_lod << lod);
@@ -271,11 +244,11 @@ void FancyTerrainNode::render(RenderContext &context)
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, m_render_viewpoint.as_array);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    /*glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDisable(GL_BLEND);
     render_all(context);
     glEnable(GL_BLEND);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
     render_all(context);
 }
 
@@ -285,7 +258,7 @@ void FancyTerrainNode::sync()
 
     m_heightmap.bind();
     m_tmp_slices.clear();
-    m_render_viewpoint = Vector3f(m_terrain.size()/2.f, m_terrain.size()/2.f, 0);
+    m_render_viewpoint = Vector3f(0, 0, 0);
     collect_slices(m_tmp_slices, m_render_viewpoint);
     m_render_slices.clear();
 
@@ -311,7 +284,6 @@ void FancyTerrainNode::sync()
         auto hf_lods_lock = m_terrain_lods.readonly_lods(lods);
         auto hf_lock = m_terrain.readonly_field(lod0);
 
-        sim::Terrain::HeightField tmp_heightfield(m_grid_size*m_grid_size);
         for (auto &new_slice: m_render_slices)
         {
             const unsigned int lod_size = std::get<0>(new_slice).lod;
@@ -345,33 +317,86 @@ void FancyTerrainNode::sync()
             std::cout << "  dest_size  = " << m_grid_size << std::endl;
             std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl; */
 
-            const sim::Terrain::HeightField &field = (
-                        lod_index == 0
-                        ? *lod0
-                        : (*lods)[lod_index-1]);
+            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
+            const sim::Terrain::HeightField &heightfield =
+                    (lod_index == 0
+                     ? *lod0
+                     : (*lods)[lod_index-1]);
 
-            sim::copy_heightfield_rect(
-                        field,
-                        xlod,
-                        ylod,
-                        ((m_terrain.size()-1) >> lod_index)+1,
-                        tmp_heightfield,
-                        m_grid_size,
-                        m_grid_size);
-
-            glTexSubImage2D(
-                        GL_TEXTURE_2D,
-                        0,
-                        xtex,
-                        ytex,
-                        m_grid_size,
-                        m_grid_size,
-                        GL_RED,
-                        GL_FLOAT,
-                        tmp_heightfield.data()
-                        );
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
+            glTexSubImage2D(GL_TEXTURE_2D,
+                            0,
+                            xtex,
+                            ytex,
+                            m_grid_size,
+                            m_grid_size,
+                            GL_RED,
+                            GL_FLOAT,
+                            &heightfield.data()[ylod*src_size+xlod]);
         }
     }
+
+    m_normalt.bind();
+    {
+        const sim::NTMapGenerator::NTField *nt_lod0 = nullptr;
+        const NTMapLODifier::FieldLODs *nt_lods = nullptr;
+        auto nt_lods_lock = m_terrain_nt_lods.readonly_lods(nt_lods);
+        auto nt_lock = m_terrain_nt.readonly_field(nt_lod0);
+
+        for (auto &new_slice: m_render_slices)
+        {
+            const unsigned int lod_size = std::get<0>(new_slice).lod;
+            const unsigned int lod_index = log2_of_pot(lod_size / (m_grid_size-1));
+
+            // index zero is handled elsewhere
+            if ((nt_lods->size()+1) <= lod_index
+                    || (lod_index == 0 && nt_lod0->size() == 0))
+            {
+                logger.logf(io::LOG_WARNING,
+                            "cannot upload NT slice (no such LOD index: %u)",
+                            lod_index);
+                continue;
+            }
+
+            const unsigned int xlod = std::get<0>(new_slice).basex >> lod_index;
+            const unsigned int ylod = std::get<0>(new_slice).basey >> lod_index;
+            const unsigned int slot_index = std::get<1>(new_slice);
+
+            const unsigned int xtex = (slot_index % m_texture_cache_size)*m_grid_size;
+            const unsigned int ytex = (slot_index / m_texture_cache_size)*m_grid_size;
+
+            /* std::cout << "uploading slice" << std::endl;
+            std::cout << "  lod_size   = " << lod_size << std::endl;
+            std::cout << "  lod_index  = " << lod_index << std::endl;
+            std::cout << "  xlod       = " << xlod << std::endl;
+            std::cout << "  ylod       = " << ylod << std::endl;
+            std::cout << "  slot_index = " << slot_index << std::endl;
+            std::cout << "  xtex       = " << xtex << std::endl;
+            std::cout << "  ytex       = " << ytex << std::endl;
+            std::cout << "  src_size   = " << (((m_terrain.size()-1) >> lod_index)+1) << std::endl;
+            std::cout << "  dest_size  = " << m_grid_size << std::endl;
+            std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl; */
+
+            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
+            const sim::NTMapGenerator::NTField &ntfield =
+                    (lod_index == 0
+                     ? *nt_lod0
+                     : (*nt_lods)[lod_index-1]);
+
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
+            glTexSubImage2D(GL_TEXTURE_2D,
+                            0,
+                            xtex,
+                            ytex,
+                            m_grid_size,
+                            m_grid_size,
+                            GL_RGBA,
+                            GL_FLOAT,
+                            &ntfield.data()[ylod*src_size+xlod]);
+        }
+    }
+
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     m_vao->sync();
 

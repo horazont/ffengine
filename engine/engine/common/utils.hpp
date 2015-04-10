@@ -14,7 +14,7 @@ class NotifiableWorker
 {
 public:
     NotifiableWorker();
-    ~NotifiableWorker();
+    virtual ~NotifiableWorker();
 
 private:
     std::mutex m_state_mutex;

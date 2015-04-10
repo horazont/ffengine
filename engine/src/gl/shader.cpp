@@ -5,6 +5,8 @@
 #include <iostream>
 #include <unordered_set>
 
+#include <QFile>
+
 #include "engine/gl/util.hpp"
 
 #include "engine/io/log.hpp"
@@ -46,6 +48,73 @@ ShaderProgram::ShaderProgram():
     GLObject<GL_CURRENT_PROGRAM>()
 {
     m_glid = glCreateProgram();
+}
+
+bool ShaderProgram::compile(GLint shader_object,
+                            const char *source,
+                            const GLint source_len,
+                            const QString &filename)
+{
+    glShaderSource(shader_object, 1, &source, &source_len);
+    raise_last_gl_error();
+    glCompileShader(shader_object);
+    raise_last_gl_error();
+
+    GLint status = 0;
+    glGetShaderiv(shader_object, GL_COMPILE_STATUS, &status);
+    raise_last_gl_error();
+
+    GLint len = 0;
+    glGetShaderiv(shader_object, GL_INFO_LOG_LENGTH, &len);
+    raise_last_gl_error();
+    if (len > 1) {
+        const io::LogLevel level = (status != GL_TRUE ? io::LOG_ERROR : io::LOG_WARNING);
+        if (status != GL_TRUE) {
+            shader_logger.log(level) << m_glid << ": " << filename.toStdString()
+                                     << ": shader failed to compile"
+                                     << io::submit;
+        } else {
+            shader_logger.log(level) << m_glid << ": " << filename.toStdString()
+                                     << ": shader compiled with warnings"
+                                     << io::submit;
+        }
+
+        std::string log;
+        log.resize(len);
+        glGetShaderInfoLog(shader_object, log.size(), &len, &log.front());
+        // FIXME: split the output into lines and submit each line individually
+        shader_logger.log(level) << m_glid << ": " << filename.toStdString()
+                                 << ": "
+                                 << log
+                                 << io::submit;
+    } else {
+        shader_logger.log(io::LOG_INFO) << m_glid << ": " << filename.toStdString()
+                                        << ": shader compiled successfully"
+                                        << io::submit;
+    }
+
+    return status == GL_TRUE;
+}
+
+bool ShaderProgram::create_and_compile_and_attach(
+        GLenum type,
+        const char *source,
+        const GLint source_len,
+        const QString &filename)
+{
+    const GLenum shader = glCreateShader(type);
+    if (!compile(shader, source, source_len, filename))
+    {
+        glDeleteShader(shader);
+        return false;
+    }
+
+    glAttachShader(m_glid, shader);
+    raise_last_gl_error();
+    glDeleteShader(shader);
+    raise_last_gl_error();
+
+    return true;
 }
 
 void ShaderProgram::delete_globject()
@@ -229,49 +298,25 @@ void ShaderProgram::introspect_uniforms()
 
 bool ShaderProgram::attach(GLenum shader_type, const std::string &source)
 {
-    const GLenum shader = glCreateShader(shader_type);
-    const char *source_ptr = source.data();
-    const GLint source_size = source.size();
-    glShaderSource(shader, 1, &source_ptr, &source_size);
-    raise_last_gl_error();
-    glCompileShader(shader);
-    raise_last_gl_error();
+    return create_and_compile_and_attach(shader_type,
+                                         source.c_str(),
+                                         source.size()+1,
+                                         "<memory>");
+}
 
-    GLint status = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-    raise_last_gl_error();
-
-    GLint len = 0;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-    raise_last_gl_error();
-    if (len > 1) {
-        const io::LogLevel level = (status != GL_TRUE ? io::LOG_ERROR : io::LOG_WARNING);
-        if (status != GL_TRUE) {
-            shader_logger.log(level, "shader failed to compile");
-        } else {
-            shader_logger.log(level, "shader compiled with warnings");
-        }
-
-        std::string log;
-        log.resize(len);
-        glGetShaderInfoLog(shader, log.size(), &len, &log.front());
-        shader_logger.log(level, log);
-    } else {
-        shader_logger.log(io::LOG_INFO, "shader compiled successfully");
-    }
-
-    if (status != GL_TRUE)
+bool ShaderProgram::attach_resource(GLenum shader_type, const QString &filename)
+{
+    QFile source_file(filename);
+    if (!source_file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        glDeleteShader(shader);
-        return false;
+        throw std::runtime_error("failed to open shader resource: "+filename.toStdString());
     }
-
-    glAttachShader(m_glid, shader);
-    raise_last_gl_error();
-    glDeleteShader(shader);
-    raise_last_gl_error();
-
-    return true;
+    QByteArray data = source_file.readAll();
+    data.append("\0");
+    return create_and_compile_and_attach(shader_type,
+                                         data.constData(),
+                                         data.size(),
+                                         filename);
 }
 
 GLint ShaderProgram::attrib_location(const std::string &name) const
@@ -299,17 +344,29 @@ void ShaderProgram::bind_uniform_block(const std::string &name,
 bool ShaderProgram::link()
 {
     glLinkProgram(m_glid);
+    GLint status = 0;
+    glGetProgramiv(m_glid, GL_LINK_STATUS, &status);
+
     GLint len = 0;
     glGetProgramiv(m_glid, GL_INFO_LOG_LENGTH, &len);
     if (len > 1) {
+        io::LogLevel level = io::LOG_DEBUG;
+        if (status == GL_TRUE) {
+            level = io::LOG_WARNING;
+            shader_logger.log(level) << m_glid << ": program linked with warnings"
+                                     << io::submit;
+        } else {
+            level = io::LOG_ERROR;
+            shader_logger.log(level) << m_glid << ": program failed to link"
+                                     << io::submit;
+        }
+
         std::string log;
         log.resize(len);
         glGetProgramInfoLog(m_glid, log.size(), &len, &log.front());
-        std::cout << log << std::endl;
+        shader_logger.log(level) << m_glid << ": \n" << log << io::submit;
     }
 
-    GLint status = 0;
-    glGetProgramiv(m_glid, GL_LINK_STATUS, &status);
     if (status != GL_TRUE) {
         return false;
     }

@@ -65,7 +65,12 @@ MinMaxMapGenerator::MinMaxMapGenerator(
     m_max_size((source.size()-1) / (m_min_lod-1)),
     m_lod_count(engine::log2_of_pot(m_max_size))
 {
+    start();
+}
 
+MinMaxMapGenerator::~MinMaxMapGenerator()
+{
+    tear_down();
 }
 
 void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
@@ -76,9 +81,9 @@ void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
     const Terrain::HeightField *input = nullptr;
     auto lock = m_source.readonly_field(input);
 
-    for (unsigned int ybase = 0, ychk = 0; ybase < input_size; ybase += (m_min_lod-1), ychk++)
+    for (unsigned int ybase = 0, ychk = 0; ybase < input_size-1; ybase += (m_min_lod-1), ychk++)
     {
-        for (unsigned int xbase = 0, xchk = 0; xbase < input_size; xbase += (m_min_lod-1), xchk++)
+        for (unsigned int xbase = 0, xchk = 0; xbase < input_size-1; xbase += (m_min_lod-1), xchk++)
         {
             Terrain::height_t min = std::numeric_limits<Terrain::height_t>::max();
             Terrain::height_t max = std::numeric_limits<Terrain::height_t>::min();
@@ -153,6 +158,237 @@ std::shared_lock<std::shared_timed_mutex> MinMaxMapGenerator::readonly_lods(
         const MinMaxMapGenerator::MinMaxFieldLODs *&fields) const
 {
     fields = &m_lods;
+    return std::shared_lock<std::shared_timed_mutex>(m_data_mutex);
+}
+
+
+NTMapGenerator::NTMapGenerator(Terrain &source):
+    m_source(source)
+{
+    start();
+}
+
+NTMapGenerator::~NTMapGenerator()
+{
+    tear_down();
+}
+
+bool NTMapGenerator::worker_impl()
+{
+    const Terrain::HeightField *heightmap = nullptr;
+    const unsigned int size = m_source.size();
+
+    std::unique_lock<std::shared_timed_mutex> lock(m_data_mutex);
+    m_field.resize(size*size);
+
+    auto source_lock = m_source.readonly_field(heightmap);
+
+    // first the corners
+
+    // top left corner
+    {
+        const Terrain::height_t y0x0 = (*heightmap)[0];
+        const Terrain::height_t y0xp = (*heightmap)[1];
+        const Terrain::height_t ypx0 = (*heightmap)[size];
+
+        const Vector3f tangent_x(1, 0, y0xp - y0x0);
+        const Vector3f tangent_y(0, 1, ypx0 - y0x0);
+
+        m_field[0] = Vector4f((tangent_x % tangent_y).normalized(),
+                              tangent_x[eZ]);
+    }
+
+    // top right corner
+    {
+        const Terrain::height_t y0x0 = (*heightmap)[size-1];
+        const Terrain::height_t y0xm = (*heightmap)[size-2];
+        const Terrain::height_t ypx0 = (*heightmap)[size+size-1];
+
+        const Vector3f tangent_x(1, 0, y0x0 - y0xm);
+        const Vector3f tangent_y(0, 1, ypx0 - y0x0);
+
+        m_field[size-1] = Vector4f((tangent_x % tangent_y).normalized(),
+                                   tangent_x[eZ]);
+    }
+
+    // bottom left corner
+    {
+        const Terrain::height_t y0x0 = (*heightmap)[(size-1)*size];
+        const Terrain::height_t y0xp = (*heightmap)[(size-1)*size+1];
+        const Terrain::height_t ymx0 = (*heightmap)[(size-2)*size];
+
+        const Vector3f tangent_x(1, 0, y0xp - y0x0);
+        const Vector3f tangent_y(0, 1, y0x0 - ymx0);
+
+        m_field[(size-1)*size] = Vector4f((tangent_x % tangent_y).normalized(),
+                                          tangent_x[eZ]);
+    }
+
+    // bottom right corner
+    {
+        const Terrain::height_t y0x0 = (*heightmap)[(size-1)*size+size-1];
+        const Terrain::height_t y0xm = (*heightmap)[(size-1)*size+size-2];
+        const Terrain::height_t ymx0 = (*heightmap)[(size-2)*size+size-1];
+
+        const Vector3f tangent_x(1, 0, y0x0 - y0xm);
+        const Vector3f tangent_y(0, 1, y0x0 - ymx0);
+
+        m_field[(size-1)*size+size-1] = Vector4f((tangent_x % tangent_y).normalized(),
+                                                 tangent_x[eZ]);
+    }
+
+    // then the borders
+
+    // top border
+    for (unsigned int x = 1; x < size-1; x++) {
+        Vector3f normal(0, 0, 0);
+
+        const Terrain::height_t y0x0 = (*heightmap)[x];
+        const Terrain::height_t ypx0 = (*heightmap)[size+x];
+        const Terrain::height_t y0xp = (*heightmap)[x+1];
+        const Terrain::height_t y0xm = (*heightmap)[x-1];
+
+        const Vector3f tangent_x1(1, 0, y0x0 - y0xm);
+        const Vector3f tangent_x2(1, 0, y0xp - y0x0);
+
+        const Vector3f tangent_y(0, 1, ypx0 - y0x0);
+
+        // below left face
+        normal += tangent_x1 % tangent_y;
+        // below right face
+        normal += tangent_x2 % tangent_y;
+
+        normal.normalize();
+
+        Vector3f tangent = tangent_x1 + tangent_x2;
+        tangent.normalize();
+
+        m_field[x] = Vector4f(normal, tangent[eZ]);
+    }
+
+    // bottom border
+    for (unsigned int x = 1; x < size-1; x++) {
+        Vector3f normal(0, 0, 0);
+
+        const Terrain::height_t y0x0 = (*heightmap)[(size-1)*size+x];
+        const Terrain::height_t ymx0 = (*heightmap)[(size-2)*size+x];
+        const Terrain::height_t y0xp = (*heightmap)[(size-1)*size+x+1];
+        const Terrain::height_t y0xm = (*heightmap)[(size-1)*size+x-1];
+
+        const Vector3f tangent_x1(1, 0, y0x0 - y0xm);
+        const Vector3f tangent_x2(1, 0, y0xp - y0x0);
+
+        const Vector3f tangent_y(0, 1, y0x0 - ymx0);
+
+        // above left face
+        normal += tangent_x1 % tangent_y;
+        // above right face
+        normal += tangent_x2 % tangent_y;
+
+        normal.normalize();
+
+        Vector3f tangent = tangent_x1 + tangent_x2;
+        tangent.normalize();
+
+        m_field[(size-1)*size+x] = Vector4f(normal, tangent[eZ]);
+    }
+
+    // left border
+    for (unsigned int y = 1; y < size-1; y++) {
+        Vector3f normal(0, 0, 0);
+
+        const Terrain::height_t y0x0 = (*heightmap)[y*size];
+        const Terrain::height_t ypx0 = (*heightmap)[(y+1)*size];
+        const Terrain::height_t ymx0 = (*heightmap)[(y-1)*size];
+        const Terrain::height_t y0xp = (*heightmap)[y*size+1];
+
+        const Vector3f tangent_x(1, 0, y0xp - y0x0);
+
+        const Vector3f tangent_y1(0, 1, y0x0 - ymx0);
+        const Vector3f tangent_y2(0, 1, ypx0 - y0x0);
+
+        // above right face
+        normal += tangent_x % tangent_y1;
+        // below right face
+        normal += tangent_x % tangent_y2;
+
+        normal.normalize();
+
+        m_field[y*size] = Vector4f(normal, tangent_x[eZ]);
+    }
+
+    // right border
+    for (unsigned int y = 1; y < size-1; y++) {
+        Vector3f normal(0, 0, 0);
+
+        const Terrain::height_t y0x0 = (*heightmap)[y*size+(size-1)];
+        const Terrain::height_t ypx0 = (*heightmap)[(y+1)*size+(size-1)];
+        const Terrain::height_t ymx0 = (*heightmap)[(y-1)*size+(size-1)];
+        const Terrain::height_t y0xm = (*heightmap)[y*size+(size-2)];
+
+        const Vector3f tangent_x(1, 0, y0x0 - y0xm);
+
+        const Vector3f tangent_y1(0, 1, y0x0 - ymx0);
+        const Vector3f tangent_y2(0, 1, ypx0 - y0x0);
+
+        // above right face
+        normal += tangent_x % tangent_y1;
+        // below right face
+        normal += tangent_x % tangent_y2;
+
+        normal.normalize();
+
+        m_field[y*size+size-1] = Vector4f(normal, tangent_x[eZ]);
+    }
+
+
+    // now the interior
+    for (unsigned int y = 1; y < size-1; y++) {
+        for (unsigned int x = 1; x < size-1; x++) {
+            Vector3f normal(0, 0, 0);
+
+            const Terrain::height_t y0x0 = (*heightmap)[y*size+x];
+            const Terrain::height_t ymx0 = (*heightmap)[(y-1)*size+x];
+            const Terrain::height_t ypx0 = (*heightmap)[(y+1)*size+x];
+            const Terrain::height_t y0xm = (*heightmap)[y*size+x-1];
+            const Terrain::height_t y0xp = (*heightmap)[y*size+x+1];
+
+            const Vector3f tangent_x1(1, 0, y0x0 - y0xm);
+            const Vector3f tangent_x2(1, 0, y0xp - y0x0);
+
+            const Vector3f tangent_y1(0, 1, y0x0 - ymx0);
+            const Vector3f tangent_y2(0, 1, ypx0 - y0x0);
+
+            // above left face
+            normal += tangent_x1 % tangent_y1;
+            // above right face
+            normal += tangent_x2 % tangent_y1;
+
+            // below left face
+            normal += tangent_x1 % tangent_y2;
+            // below right face
+            normal += tangent_x2 % tangent_y2;
+
+            normal.normalize();
+
+            const Vector3f tangent = tangent_x1 + tangent_x2;
+
+            m_field[y*size+x] = Vector4f(normal, tangent[eZ]);
+        }
+    }
+
+    source_lock.unlock();
+    lock.unlock();
+
+    m_field_changed.emit();
+
+    return false;
+}
+
+std::shared_lock<std::shared_timed_mutex> NTMapGenerator::readonly_field(
+        const NTField *&field) const
+{
+    field = &m_field;
     return std::shared_lock<std::shared_timed_mutex>(m_data_mutex);
 }
 

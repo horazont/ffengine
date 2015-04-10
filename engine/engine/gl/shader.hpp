@@ -1,10 +1,14 @@
 #ifndef SCC_ENGINE_GL_SHADER_H
 #define SCC_ENGINE_GL_SHADER_H
 
+#include <sigc++/sigc++.h>
+
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <QString>
 
 #include "engine/gl/object.hpp"
 #include "engine/gl/ubo.hpp"
@@ -124,6 +128,14 @@ private:
     std::unordered_map<std::string, ShaderUniformBlock> m_uniform_blocks;
 
 protected:
+    bool compile(GLint shader_object,
+                 const char *source,
+                 const GLint source_len,
+                 const QString &filename);
+    bool create_and_compile_and_attach(GLenum type,
+                                       const char *source,
+                                       const GLint source_len,
+                                       const QString &filename);
     void delete_globject() override;
     void introspect();
     void introspect_vertex_attributes();
@@ -150,6 +162,7 @@ protected:
 
 public:
     bool attach(GLenum shader_type, const std::string &source);
+    bool attach_resource(GLenum shader_type, const QString &filename);
     GLint attrib_location(const std::string &name) const;
     void bind_uniform_block(const std::string &name, const GLuint index);
     bool link();

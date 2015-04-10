@@ -107,6 +107,7 @@ public:
 
 public:
     MinMaxMapGenerator(Terrain &source, const unsigned int min_lod);
+    ~MinMaxMapGenerator() override;
 
 private:
     Terrain &m_source;
@@ -125,6 +126,44 @@ public:
     void notify_changed();
     std::shared_lock<std::shared_timed_mutex> readonly_lods(
             const MinMaxFieldLODs *&fields) const;
+
+};
+
+
+class NTMapGenerator: public engine::NotifiableWorker
+{
+public:
+    typedef Vector4f element_t;
+    typedef std::vector<element_t> NTField;
+
+public:
+    NTMapGenerator(Terrain &source);
+    ~NTMapGenerator() override;
+
+private:
+    Terrain &m_source;
+
+    mutable std::shared_timed_mutex m_data_mutex;
+    NTField m_field;
+
+    sigc::signal<void> m_field_changed;
+
+protected:
+    bool worker_impl() override;
+
+public:
+    inline sigc::signal<void> &field_changed()
+    {
+        return m_field_changed;
+    }
+
+    std::shared_lock<std::shared_timed_mutex> readonly_field(
+            const NTField *&field) const;
+
+    inline unsigned int size() const
+    {
+        return m_source.size();
+    }
 
 };
 
