@@ -115,7 +115,6 @@ private:
     const unsigned int m_lod_count;
 
     mutable std::shared_timed_mutex m_data_mutex;
-    Terrain::HeightField m_input;
     MinMaxFieldLODs m_lods;
 
 protected:
@@ -162,25 +161,19 @@ private:
 protected:
     bool worker_impl() override
     {
-        std::shared_lock<std::shared_timed_mutex> read_lock(m_data_mutex,
-                                                            std::defer_lock);
-        std::unique_lock<std::shared_timed_mutex> write_lock(m_data_mutex);
-        // we are holding the write lock for copying the LOD 0 terrain
+        std::shared_lock<std::shared_timed_mutex> read_lock(m_data_mutex);
+        std::unique_lock<std::shared_timed_mutex> write_lock(m_data_mutex,
+                                                             std::defer_lock);
 
-        {
-            const Field *source_field = nullptr;
-            auto lock = m_source.readonly_field(source_field);
-            if (m_lods.size() == 0) {
-                m_lods.emplace_back(*source_field);
-            } else {
-                m_lods[0] = *source_field;
-            }
+        const Field *source_field = nullptr;
+        auto source_lock = m_source.readonly_field(source_field);
+        if (m_lods.size() == 0) {
+            m_lods.emplace_back(*source_field);
+        } else {
+            m_lods[0] = *source_field;
         }
 
-        // switch to the read lock
-        write_lock.unlock();
-        read_lock.lock();
-        Field *prev_heightfield = &m_lods[0];
+        const Field *prev_heightfield = source_field;
         Field next_heightfield;
         unsigned int prev_size = m_size;
 
@@ -200,6 +193,13 @@ protected:
                 }
             }
             lod_logger.logf(io::LOG_DEBUG, "generated LOD %d, saving", i);
+
+            if (source_field) {
+                source_field = nullptr;
+                source_lock.unlock();
+                prev_heightfield = nullptr;
+            }
+
             read_lock.unlock();
             // give other threads the chance to acquire the read lock right now
             std::this_thread::yield();

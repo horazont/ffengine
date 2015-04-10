@@ -306,8 +306,10 @@ void FancyTerrainNode::sync()
     }
 
     {
+        const sim::Terrain::HeightField *lod0 = nullptr;
         const HeightFieldLODifier::FieldLODs *lods = nullptr;
-        auto lock = m_terrain_lods.readonly_lods(lods);
+        auto hf_lods_lock = m_terrain_lods.readonly_lods(lods);
+        auto hf_lock = m_terrain.readonly_field(lod0);
 
         sim::Terrain::HeightField tmp_heightfield(m_grid_size*m_grid_size);
         for (auto &new_slice: m_render_slices)
@@ -315,7 +317,8 @@ void FancyTerrainNode::sync()
             const unsigned int lod_size = std::get<0>(new_slice).lod;
             const unsigned int lod_index = log2_of_pot(lod_size / (m_grid_size-1));
 
-            if (lods->size() <= lod_index)
+            // index zero is handled elsewhere
+            if ((lods->size()+1) <= lod_index)
             {
                 logger.logf(io::LOG_WARNING,
                             "cannot upload slice (no such LOD index: %u)",
@@ -342,8 +345,13 @@ void FancyTerrainNode::sync()
             std::cout << "  dest_size  = " << m_grid_size << std::endl;
             std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl; */
 
+            const sim::Terrain::HeightField &field = (
+                        lod_index == 0
+                        ? *lod0
+                        : (*lods)[lod_index-1]);
+
             sim::copy_heightfield_rect(
-                        (*lods)[lod_index],
+                        field,
                         xlod,
                         ylod,
                         ((m_terrain.size()-1) >> lod_index)+1,

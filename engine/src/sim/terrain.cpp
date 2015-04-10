@@ -73,6 +73,9 @@ void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
     const unsigned int input_size = m_source.size();
     const unsigned int output_size = m_max_size;
 
+    const Terrain::HeightField *input = nullptr;
+    auto lock = m_source.readonly_field(input);
+
     for (unsigned int ybase = 0, ychk = 0; ybase < input_size; ybase += (m_min_lod-1), ychk++)
     {
         for (unsigned int xbase = 0, xchk = 0; xbase < input_size; xbase += (m_min_lod-1), xchk++)
@@ -82,7 +85,7 @@ void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
 
             for (unsigned int y = ybase; y < ybase+m_min_lod; y++) {
                 for (unsigned int x = xbase; x < xbase+m_min_lod; x++) {
-                    const Terrain::height_t value = m_input[y*input_size+x];
+                    const Terrain::height_t value = (*input)[y*input_size+x];
                     min = std::min(min, value);
                     max = std::max(max, value);
                 }
@@ -95,13 +98,6 @@ void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
 
 bool MinMaxMapGenerator::worker_impl()
 {
-    // copy input map
-    {
-        const Terrain::HeightField *heightmap = nullptr;
-        auto lock = m_source.readonly_field(heightmap);
-        m_input = *heightmap;
-    }
-
     std::shared_lock<std::shared_timed_mutex> read_lock(m_data_mutex,
                                                         std::defer_lock);
     std::unique_lock<std::shared_timed_mutex> write_lock(m_data_mutex,
