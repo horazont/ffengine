@@ -126,6 +126,7 @@ private:
     std::vector<HeightmapSliceMeta> m_tmp_slices;
 
     std::vector<std::tuple<HeightmapSliceMeta, unsigned int> > m_render_slices;
+    Vector3f m_render_viewpoint;
 
 protected:
     void collect_slices_recurse(

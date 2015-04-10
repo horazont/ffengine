@@ -84,6 +84,7 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                 "uniform vec2 chunk_translation;"
                 "uniform vec2 heightmap_base;"
                 "uniform sampler2D heightmap;"
+                "uniform vec3 lod_viewpoint;"
                 "const float heightmap_factor = " + std::to_string(float(m_grid_size-1) / (m_grid_size*m_texture_cache_size)) +
                 ";"
                 "const float grid_size = " + std::to_string(m_grid_size-1) +
@@ -108,7 +109,7 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                 "void main() {"
                 "   vec2 model_vertex = position * chunk_size + chunk_translation;"
                 "   tc0 = model_vertex.xy / 5.0;"
-                "   vec2 morphed = morph_vertex(position, model_vertex, morph_k(vec3(0, 0, 0), model_vertex));"
+                "   vec2 morphed = morph_vertex(position, model_vertex, morph_k(lod_viewpoint, model_vertex));"
                 "   vec2 morphed_object = (morphed - chunk_translation) / chunk_size;"
                 "   float height = textureLod(heightmap, heightmap_base + morphed_object.xy * heightmap_factor, 0).r;"
                 "   gl_Position = mats.proj * mats.view * mats.model * vec4("
@@ -249,7 +250,6 @@ void FancyTerrainNode::render_all(RenderContext &context)
         const float xtex = (float(slot_index % m_texture_cache_size) + 0.5/m_grid_size) / m_texture_cache_size;
         const float ytex = (float(slot_index / m_texture_cache_size) + 0.5/m_grid_size) / m_texture_cache_size;
 
-        m_material.shader().bind();
         glUniform2f(m_material.shader().uniform_location("heightmap_base"),
                     xtex, ytex);
         glUniform1f(m_material.shader().uniform_location("chunk_size"),
@@ -268,6 +268,9 @@ void FancyTerrainNode::render_all(RenderContext &context)
 
 void FancyTerrainNode::render(RenderContext &context)
 {
+    m_material.shader().bind();
+    glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
+                 1, m_render_viewpoint.as_array);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDisable(GL_BLEND);
     render_all(context);
@@ -282,7 +285,8 @@ void FancyTerrainNode::sync()
 
     m_heightmap.bind();
     m_tmp_slices.clear();
-    collect_slices(m_tmp_slices, Vector3f(0, 0, 0));
+    m_render_viewpoint = Vector3f(m_terrain.size()/2.f, m_terrain.size()/2.f, 0);
+    collect_slices(m_tmp_slices, m_render_viewpoint);
     m_render_slices.clear();
 
     unsigned int slot_index = 0;
