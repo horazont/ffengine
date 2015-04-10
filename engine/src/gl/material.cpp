@@ -34,18 +34,22 @@ GLint Material::attach_texture(const std::string &name, Texture2D *tex)
         throw std::runtime_error("texture name already bound: "+name);
     }
 
-    const ShaderUniform &uniform_info = m_shader.uniform(name);
-    if (uniform_info.type != tex->shader_uniform_type()) {
-        throw std::runtime_error("incompatible types (uniform vs. texture)");
-    }
-
     GLint unit = get_next_texture_unit();
     m_texture_bindings.emplace(
                 name,
                 TextureAttachment{name, unit, tex});
 
-    m_shader.bind();
-    glUniform1i(uniform_info.loc, unit);
+
+    if (m_shader.uniform_location(name) >= 0) {
+        const ShaderUniform &uniform_info = m_shader.uniform(name);
+        if (uniform_info.type != tex->shader_uniform_type()) {
+            m_texture_bindings.erase(m_texture_bindings.find(name));
+            throw std::runtime_error("incompatible types (uniform vs. texture)");
+        }
+
+        m_shader.bind();
+        glUniform1i(uniform_info.loc, unit);
+    }
     return unit;
 }
 

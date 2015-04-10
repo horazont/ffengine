@@ -151,6 +151,9 @@ protected:
     void render_all(RenderContext &context);
 
 public:
+    void attach_grass_texture(Texture2D *tex);
+
+public:
     void render(RenderContext &context) override;
     void sync() override;
 

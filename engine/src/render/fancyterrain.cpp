@@ -72,11 +72,11 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
         for (unsigned int x = 0; x < grid_size-1; x++) {
             const unsigned int curr_base = y*grid_size + x;
             *dest++ = curr_base + grid_size;
-            *dest++ = curr_base + grid_size + 1;
             *dest++ = curr_base;
+            *dest++ = curr_base + grid_size + 1;
 
-            *dest++ = curr_base;
             *dest++ = curr_base + grid_size + 1;
+            *dest++ = curr_base;
             *dest++ = curr_base + 1;
         }
     }
@@ -239,17 +239,19 @@ void FancyTerrainNode::render_all(RenderContext &context)
     }
 }
 
+void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
+{
+    m_material.attach_texture("grass", tex);
+}
+
 void FancyTerrainNode::render(RenderContext &context)
 {
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, m_render_viewpoint.as_array);
-    /*glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDisable(GL_BLEND);
+    /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
     render_all(context);
-    glEnable(GL_BLEND);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
-    render_all(context);
+    /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 }
 
 void FancyTerrainNode::sync()
@@ -365,6 +367,12 @@ void FancyTerrainNode::sync()
             const unsigned int xtex = (slot_index % m_texture_cache_size)*m_grid_size;
             const unsigned int ytex = (slot_index / m_texture_cache_size)*m_grid_size;
 
+            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
+            const sim::NTMapGenerator::NTField &ntfield =
+                    (lod_index == 0
+                     ? *nt_lod0
+                     : (*nt_lods)[lod_index-1]);
+
             /* std::cout << "uploading slice" << std::endl;
             std::cout << "  lod_size   = " << lod_size << std::endl;
             std::cout << "  lod_index  = " << lod_index << std::endl;
@@ -373,15 +381,10 @@ void FancyTerrainNode::sync()
             std::cout << "  slot_index = " << slot_index << std::endl;
             std::cout << "  xtex       = " << xtex << std::endl;
             std::cout << "  ytex       = " << ytex << std::endl;
-            std::cout << "  src_size   = " << (((m_terrain.size()-1) >> lod_index)+1) << std::endl;
+            std::cout << "  src_size   = " << src_size << std::endl;
             std::cout << "  dest_size  = " << m_grid_size << std::endl;
-            std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl; */
-
-            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
-            const sim::NTMapGenerator::NTField &ntfield =
-                    (lod_index == 0
-                     ? *nt_lod0
-                     : (*nt_lods)[lod_index-1]);
+            std::cout << "  top left   = " << ntfield[0] << std::endl;
+            std::cout << "  vec size   = " << ntfield.size() << std::endl; */
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
             glTexSubImage2D(GL_TEXTURE_2D,

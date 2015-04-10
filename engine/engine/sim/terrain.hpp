@@ -1,6 +1,7 @@
 #ifndef SCC_SIM_TERRAIN_H
 #define SCC_SIM_TERRAIN_H
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <shared_mutex>
@@ -15,6 +16,7 @@
 
 #include "engine/math/perlin.hpp"
 #include "engine/math/vector.hpp"
+#include "engine/math/rect.hpp"
 
 
 namespace sim {
@@ -24,6 +26,8 @@ namespace {
 static io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
 
 }
+
+typedef GenericRect<unsigned int> TerrainRect;
 
 
 class Terrain
@@ -46,9 +50,6 @@ private:
     HeightField m_heightmap;
 
     sigc::signal<void> m_terrain_changed;
-
-protected:
-    void notify_heightmap_changed();
 
 public:
     inline height_t get(unsigned int x, unsigned int y) const
@@ -87,6 +88,7 @@ public:
     }
 
 public:
+    void notify_heightmap_changed();
     std::shared_lock<std::shared_timed_mutex> readonly_field(
             const HeightField *&heightmap) const;
     std::unique_lock<std::shared_timed_mutex> writable_field(
@@ -94,6 +96,7 @@ public:
 
 public:
     void from_perlin(const PerlinNoiseGenerator &gen);
+    void from_sincos(const Vector3f scale);
 
 };
 
@@ -206,11 +209,6 @@ protected:
 
         const Field *source_field = nullptr;
         auto source_lock = m_source.readonly_field(source_field);
-        if (m_lods.size() == 0) {
-            m_lods.emplace_back(*source_field);
-        } else {
-            m_lods[0] = *source_field;
-        }
 
         const Field *prev_heightfield = source_field;
         Field next_heightfield;
@@ -244,10 +242,10 @@ protected:
             std::this_thread::yield();
             write_lock.lock();
 
-            if (m_lods.size() <= i) {
+            if ((m_lods.size()+1) <= i) {
                 m_lods.emplace_back(std::move(next_heightfield));
             } else {
-                m_lods[i].swap(next_heightfield);
+                m_lods[i-1].swap(next_heightfield);
             }
 
             write_lock.unlock();
@@ -256,7 +254,7 @@ protected:
             read_lock.lock();
 
             lod_logger.logf(io::LOG_DEBUG, "generated and saved LOD %d", i);
-            prev_heightfield = &m_lods[i];
+            prev_heightfield = &m_lods[i-1];
             prev_size = this_size;
         }
 
