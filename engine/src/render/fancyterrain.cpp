@@ -112,6 +112,17 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                 ":/shaders/terrain/main.frag");
     success = success && m_material.shader().link();
 
+    success = success && m_normal_debug_material.shader().attach_resource(
+                GL_VERTEX_SHADER,
+                ":/shaders/terrain/main.vert");
+    success = success && m_normal_debug_material.shader().attach_resource(
+                GL_GEOMETRY_SHADER,
+                ":/shaders/terrain/normal_debug.geom");
+    success = success && m_normal_debug_material.shader().attach_resource(
+                GL_FRAGMENT_SHADER,
+                ":/shaders/generic/normal_debug.frag");
+    success = success && m_normal_debug_material.shader().link();
+
     if (!success) {
         throw std::runtime_error("failed to compile or link shader");
     }
@@ -123,6 +134,18 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                 0.0, 0.0);
     m_material.attach_texture("heightmap", &m_heightmap);
     m_material.attach_texture("normalt", &m_normalt);
+    RenderContext::configure_shader(m_material.shader());
+
+    m_normal_debug_material.shader().bind();
+    glUniform2f(m_normal_debug_material.shader().uniform_location("chunk_translation"),
+                0.0, 0.0);
+    glUniform2f(m_normal_debug_material.shader().uniform_location("heightmap_base"),
+                0.0, 0.0);
+    m_normal_debug_material.attach_texture("heightmap", &m_heightmap);
+    m_normal_debug_material.attach_texture("normalt", &m_normalt);
+    glUniform1f(m_normal_debug_material.shader().uniform_location("normal_length"),
+                2.);
+    RenderContext::configure_shader(m_normal_debug_material.shader());
 
     m_heightmap.bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -137,6 +160,7 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     decl.set_ibo(&m_ibo);
 
     m_vao = decl.make_vao(m_material.shader(), true);
+    m_nd_vao = decl.make_vao(m_normal_debug_material.shader(), true);
 
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
@@ -224,7 +248,7 @@ void FancyTerrainNode::collect_slices_recurse(
     }
 }
 
-void FancyTerrainNode::render_all(RenderContext &context)
+void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &material)
 {
     for (auto &slice: m_render_slices) {
         const float x = std::get<0>(slice).basex;
@@ -234,11 +258,11 @@ void FancyTerrainNode::render_all(RenderContext &context)
         const float xtex = (float(slot_index % m_texture_cache_size) + 0.5/m_grid_size) / m_texture_cache_size;
         const float ytex = (float(slot_index / m_texture_cache_size) + 0.5/m_grid_size) / m_texture_cache_size;
 
-        glUniform2f(m_material.shader().uniform_location("heightmap_base"),
+        glUniform2f(material.shader().uniform_location("heightmap_base"),
                     xtex, ytex);
-        glUniform1f(m_material.shader().uniform_location("chunk_size"),
+        glUniform1f(material.shader().uniform_location("chunk_size"),
                     scale);
-        glUniform2f(m_material.shader().uniform_location("chunk_translation"),
+        glUniform2f(material.shader().uniform_location("chunk_translation"),
                     x, y);
         /* std::cout << "rendering" << std::endl;
         std::cout << "  xtex          = " << xtex << std::endl;
@@ -246,22 +270,27 @@ void FancyTerrainNode::render_all(RenderContext &context)
         std::cout << "  translationx  = " << x << std::endl;
         std::cout << "  translationy  = " << y << std::endl;
         std::cout << "  scale         = " << scale << std::endl; */
-        context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_allocation);
+        context.draw_elements(GL_TRIANGLES, vao, material, m_ibo_allocation);
     }
 }
 
 void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
 {
     m_material.attach_texture("grass", tex);
+    m_normal_debug_material.attach_texture("grass", tex);
 }
 
 void FancyTerrainNode::render(RenderContext &context)
 {
+    /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, context.viewpoint().as_array);
-    /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
-    render_all(context);
+    render_all(context, *m_vao, m_material);
+    m_normal_debug_material.shader().bind();
+    glUniform3fv(m_normal_debug_material.shader().uniform_location("lod_viewpoint"),
+                 1, context.viewpoint().as_array);
+    render_all(context, *m_nd_vao, m_normal_debug_material);
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 }
 

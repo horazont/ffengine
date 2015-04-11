@@ -186,11 +186,13 @@ private:
     IBO m_ibo;
 
     Material m_material;
+    Material m_normal_debug_material;
 
     VBOAllocation m_vbo_allocation;
     IBOAllocation m_ibo_allocation;
 
     std::unique_ptr<VAO> m_vao;
+    std::unique_ptr<VAO> m_nd_vao;
 
     std::unordered_map<HeightmapSliceMeta, SlotIndex> m_allocated_slices;
     std::vector<SlotIndex> m_unused_slots;
@@ -214,7 +216,7 @@ protected:
     void compute_heightmap_lod(unsigned int basex,
                                unsigned int basey,
                                unsigned int lod);
-    void render_all(RenderContext &context);
+    void render_all(RenderContext &context, VAO &vao, Material &material);
 
 public:
     void attach_grass_texture(Texture2D *tex);
