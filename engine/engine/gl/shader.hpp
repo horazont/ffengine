@@ -164,7 +164,18 @@ public:
     bool attach(GLenum shader_type, const std::string &source);
     bool attach_resource(GLenum shader_type, const QString &filename);
     GLint attrib_location(const std::string &name) const;
+
+    /**
+     * Bind a uniform block index to a declaration.
+     *
+     * The shader does not need to be bound for this operation and this
+     * operation does not change GL_CURRENT_PROGRAM.
+     *
+     * @param name Name of the uniform block declaration in the shader source.
+     * @param index Index of the Uniform Block Binding.
+     */
     void bind_uniform_block(const std::string &name, const GLuint index);
+
     bool link();
     GLint uniform_location(const std::string &name) const;
     GLint uniform_block_location(const std::string &name) const;
@@ -180,12 +191,7 @@ public:
     template <typename ubo_t>
     inline void check_uniform_block(const std::string &block_name, const ubo_t &ubo)
     {
-        auto iter = m_uniform_blocks.find(block_name);
-        if (iter == m_uniform_blocks.end()) {
-            throw std::invalid_argument("no such uniform block: "+block_name);
-        }
-
-        check_uniform_block_impl<ubo_t>(iter->second);
+        check_uniform_block<ubo_t>(block_name);
     }
 
     template <typename ubo_t>

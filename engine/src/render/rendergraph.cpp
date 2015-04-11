@@ -75,4 +75,14 @@ void RenderContext::set_view(const Matrix4f &view)
     m_matrix_ubo.set<1>(view);
 }
 
+void RenderContext::configure_shader(ShaderProgram &shader)
+{
+    if (shader.uniform_block_location("MatrixBlock") >= 0) {
+        shader.check_uniform_block<MatrixUBO>("MatrixBlock");
+        shader.bind_uniform_block(
+                    "MatrixBlock",
+                    MATRIX_BLOCK_UBO_SLOT);
+    }
+}
+
 }

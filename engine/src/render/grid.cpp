@@ -73,12 +73,7 @@ GridNode::GridNode(const unsigned int xcells,
 
     m_vao = decl.make_vao(m_material.shader(), true);
 
-    m_material.shader().bind();
-    m_material.shader().check_uniform_block<RenderContext::MatrixUBO>(
-                "MatrixBlock");
-    m_material.shader().bind_uniform_block(
-                "MatrixBlock",
-                RenderContext::MATRIX_BLOCK_UBO_SLOT);
+    RenderContext::configure_shader(m_material.shader());
 }
 
 void GridNode::render(RenderContext &context)

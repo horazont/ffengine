@@ -68,6 +68,18 @@ public:
     void set_projection(const Matrix4f &proj);
     void set_view(const Matrix4f &view);
 
+public:
+    /**
+     * Configure a linked shader for use with RenderContext instances.
+     *
+     * This introspects the shaders uniform blocks and binds the UBOs of
+     * RenderContexts which match the declarations to the corresponding
+     * variables.
+     *
+     * @param shader A shader program to configure.
+     */
+    static void configure_shader(ShaderProgram &shader);
+
 };
 
 }
