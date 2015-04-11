@@ -87,6 +87,7 @@ public:
 protected:
     Matrix4f m_render_projection;
     Matrix4f m_render_view;
+    Matrix4f m_render_inv_view;
 
 public:
     virtual void advance(TimeInterval seconds);

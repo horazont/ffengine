@@ -138,6 +138,7 @@ void Camera::configure_context(RenderContext &context)
 {
     context.set_projection(m_render_projection);
     context.set_view(m_render_view);
+    context.set_viewpoint(Vector3f(m_render_inv_view * Vector4f(0, 0, 0, 1)));
 }
 
 
@@ -317,7 +318,6 @@ void PerspectivalCamera::sync()
 {
     camera_logger.log(io::LOG_DEBUG, "synchronizing camera");
 
-    // put 0, 0, 0 into the viewports center
     m_render_projection = m_projection;
 
     /* m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.f))
@@ -326,6 +326,7 @@ void PerspectivalCamera::sync()
             * translation4(Vector3f(0, 0, -distance)); */
 
     m_render_view = calc_view();
+    m_render_inv_view = calc_inv_view();
 
     camera_logger.log(io::LOG_DEBUG)
             << "view = " << m_render_view
