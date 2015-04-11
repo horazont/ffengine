@@ -14,16 +14,12 @@ bool HeightmapSliceMeta::operator<(const HeightmapSliceMeta &other) const
 }
 
 
-FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
-                                   const unsigned int grid_size,
-                                   const unsigned int texture_cache_size):
+FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
+                                             const unsigned int grid_size):
     m_grid_size(grid_size),
-    m_texture_cache_size(texture_cache_size),
-    m_min_lod(grid_size-1),
-    m_max_depth(log2_of_pot((terrain.size()-1) / m_min_lod)),
     m_terrain(terrain),
     m_terrain_lods(terrain),
-    m_terrain_minmax(terrain, m_min_lod+1),
+    m_terrain_minmax(terrain, m_grid_size),
     m_terrain_nt(terrain),
     m_terrain_nt_lods(m_terrain_nt),
     m_terrain_lods_conn(terrain.terrain_changed().connect(
@@ -37,23 +33,7 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
                                     &m_terrain_nt))),
     m_terrain_nt_lods_conn(m_terrain_nt.field_changed().connect(
                                std::bind(&NTMapLODifier::notify,
-                                         &m_terrain_nt_lods))),
-    m_heightmap(GL_R32F,
-                texture_cache_size*grid_size,
-                texture_cache_size*grid_size,
-                GL_RED,
-                GL_FLOAT),
-    m_normalt(GL_RGBA32F,
-                texture_cache_size*grid_size,
-                texture_cache_size*grid_size,
-                GL_RGBA,
-                GL_FLOAT),
-    m_vbo(VBOFormat({
-                        VBOAttribute(2)
-                    })),
-    m_ibo(),
-    m_vbo_allocation(m_vbo.allocate(grid_size*grid_size)),
-    m_ibo_allocation(m_ibo.allocate((grid_size-1)*(grid_size-1)*6))
+                                         &m_terrain_nt_lods)))
 {
     m_terrain_lods.notify();
     m_terrain_minmax.notify();
@@ -66,16 +46,55 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     {
         throw std::runtime_error("grid_size-1 must divide terrain size-1 evenly");
     }
+}
 
+FancyTerrainInterface::~FancyTerrainInterface()
+{
+    m_terrain_nt_lods_conn.disconnect();
+    m_terrain_nt_conn.disconnect();
+    m_terrain_minmax_conn.disconnect();
+    m_terrain_lods_conn.disconnect();
+}
+
+
+FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
+                                   const unsigned int texture_cache_size):
+    m_terrain_interface(terrain_interface),
+    m_grid_size(terrain_interface.grid_size()),
+    m_texture_cache_size(texture_cache_size),
+    m_min_lod(m_grid_size-1),
+    m_max_depth(log2_of_pot((terrain_interface.size()-1) / m_min_lod)),
+    m_terrain(terrain_interface.terrain()),
+    m_terrain_lods(terrain_interface.heightmap_lods()),
+    m_terrain_minmax(terrain_interface.heightmap_minmax()),
+    m_terrain_nt(terrain_interface.ntmap()),
+    m_terrain_nt_lods(terrain_interface.ntmap_lods()),
+    m_heightmap(GL_R32F,
+                texture_cache_size*m_grid_size,
+                texture_cache_size*m_grid_size,
+                GL_RED,
+                GL_FLOAT),
+    m_normalt(GL_RGBA32F,
+                texture_cache_size*m_grid_size,
+                texture_cache_size*m_grid_size,
+                GL_RGBA,
+                GL_FLOAT),
+    m_vbo(VBOFormat({
+                        VBOAttribute(2)
+                    })),
+    m_ibo(),
+    m_vbo_allocation(m_vbo.allocate(m_grid_size*m_grid_size)),
+    m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*6))
+{
     uint16_t *dest = m_ibo_allocation.get();
-    for (unsigned int y = 0; y < grid_size-1; y++) {
-        for (unsigned int x = 0; x < grid_size-1; x++) {
-            const unsigned int curr_base = y*grid_size + x;
-            *dest++ = curr_base + grid_size;
+    for (unsigned int y = 0; y < m_grid_size-1; y++) {
+        for (unsigned int x = 0; x < m_grid_size-1; x++) {
+            const unsigned int curr_base = y*m_grid_size + x;
+            *dest++ = curr_base + m_grid_size;
             *dest++ = curr_base;
-            *dest++ = curr_base + grid_size + 1;
+            *dest++ = curr_base + m_grid_size + 1;
 
-            *dest++ = curr_base + grid_size + 1;
+            *dest++ = curr_base + m_grid_size + 1;
             *dest++ = curr_base;
             *dest++ = curr_base + 1;
         }
@@ -122,9 +141,9 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
         unsigned int index = 0;
-        for (unsigned int y = 0; y < grid_size; y++) {
-            for (unsigned int x = 0; x < grid_size; x++) {
-                slice[index++] = Vector2f(x, y) / (grid_size-1);
+        for (unsigned int y = 0; y < m_grid_size; y++) {
+            for (unsigned int x = 0; x < m_grid_size; x++) {
+                slice[index++] = Vector2f(x, y) / (m_grid_size-1);
             }
         }
     }
@@ -138,14 +157,6 @@ FancyTerrainNode::FancyTerrainNode(sim::Terrain &terrain,
     {
         m_unused_slots.emplace_back(i);
     }
-}
-
-FancyTerrainNode::~FancyTerrainNode()
-{
-    m_terrain_lods_conn.disconnect();
-    m_terrain_minmax_conn.disconnect();
-    m_terrain_nt_conn.disconnect();
-    m_terrain_nt_lods_conn.disconnect();
 }
 
 void FancyTerrainNode::collect_slices(
@@ -281,7 +292,7 @@ void FancyTerrainNode::sync(RenderContext &context)
 
     {
         const sim::Terrain::HeightField *lod0 = nullptr;
-        const HeightFieldLODifier::FieldLODs *lods = nullptr;
+        const FancyTerrainInterface::HeightFieldLODifier::FieldLODs *lods = nullptr;
         auto hf_lods_lock = m_terrain_lods.readonly_lods(lods);
         auto hf_lock = m_terrain.readonly_field(lod0);
 
@@ -306,6 +317,12 @@ void FancyTerrainNode::sync(RenderContext &context)
             const unsigned int xtex = (slot_index % m_texture_cache_size)*m_grid_size;
             const unsigned int ytex = (slot_index / m_texture_cache_size)*m_grid_size;
 
+            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
+            const sim::Terrain::HeightField &heightfield =
+                    (lod_index == 0
+                     ? *lod0
+                     : (*lods)[lod_index-1]);
+
             /* std::cout << "uploading slice" << std::endl;
             std::cout << "  lod_size   = " << lod_size << std::endl;
             std::cout << "  lod_index  = " << lod_index << std::endl;
@@ -314,15 +331,10 @@ void FancyTerrainNode::sync(RenderContext &context)
             std::cout << "  slot_index = " << slot_index << std::endl;
             std::cout << "  xtex       = " << xtex << std::endl;
             std::cout << "  ytex       = " << ytex << std::endl;
-            std::cout << "  src_size   = " << (((m_terrain.size()-1) >> lod_index)+1) << std::endl;
+            std::cout << "  src_size   = " << src_size << std::endl;
             std::cout << "  dest_size  = " << m_grid_size << std::endl;
-            std::cout << "  top left   = " << (*lods)[lod_index][0] << std::endl; */
-
-            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
-            const sim::Terrain::HeightField &heightfield =
-                    (lod_index == 0
-                     ? *lod0
-                     : (*lods)[lod_index-1]);
+            std::cout << "  top left   = " << heightfield[0] << std::endl;
+            std::cout << "  vec size   = " << heightfield.size() << std::endl; */
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
             glTexSubImage2D(GL_TEXTURE_2D,
@@ -340,7 +352,7 @@ void FancyTerrainNode::sync(RenderContext &context)
     m_normalt.bind();
     {
         const sim::NTMapGenerator::NTField *nt_lod0 = nullptr;
-        const NTMapLODifier::FieldLODs *nt_lods = nullptr;
+        const FancyTerrainInterface::NTMapLODifier::FieldLODs *nt_lods = nullptr;
         auto nt_lods_lock = m_terrain_nt_lods.readonly_lods(nt_lods);
         auto nt_lock = m_terrain_nt.readonly_field(nt_lod0);
 

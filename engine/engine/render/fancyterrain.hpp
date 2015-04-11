@@ -52,6 +52,81 @@ public:
 
 namespace engine {
 
+
+/**
+ * A helper class to provide data which is derived from the main heightmap in
+ * near realtime.
+ *
+ * It makes sure that the data providers get notified about heightmap changes
+ * and update as soon as possible.
+ *
+ * A main usecase is with FancyTerrainNode, which requires an instance of this
+ * class to render the terrain.
+ */
+class FancyTerrainInterface
+{
+public:
+    typedef sim::FieldLODifier<sim::Terrain::height_t, sim::Terrain> HeightFieldLODifier;
+    typedef sim::FieldLODifier<sim::NTMapGenerator::element_t, sim::NTMapGenerator> NTMapLODifier;
+
+public:
+    FancyTerrainInterface(sim::Terrain &terrain,
+                          const unsigned int grid_size);
+    ~FancyTerrainInterface();
+
+private:
+    const unsigned int m_grid_size;
+
+    sim::Terrain &m_terrain;
+    HeightFieldLODifier m_terrain_lods;
+    sim::MinMaxMapGenerator m_terrain_minmax;
+    sim::NTMapGenerator m_terrain_nt;
+    NTMapLODifier m_terrain_nt_lods;
+
+    sigc::connection m_terrain_lods_conn;
+    sigc::connection m_terrain_minmax_conn;
+    sigc::connection m_terrain_nt_conn;
+    sigc::connection m_terrain_nt_lods_conn;
+
+public:
+    inline unsigned int size() const
+    {
+        return m_terrain.size();
+    }
+
+    inline unsigned int grid_size() const
+    {
+        return m_grid_size;
+    }
+
+    inline sim::Terrain &terrain()
+    {
+        return m_terrain;
+    }
+
+    inline HeightFieldLODifier &heightmap_lods()
+    {
+        return m_terrain_lods;
+    }
+
+    inline sim::MinMaxMapGenerator &heightmap_minmax()
+    {
+        return m_terrain_minmax;
+    }
+
+    inline sim::NTMapGenerator &ntmap()
+    {
+        return m_terrain_nt;
+    }
+
+    inline NTMapLODifier &ntmap_lods()
+    {
+        return m_terrain_nt_lods;
+    }
+
+};
+
+
 /**
  * Scenegraph node which renders a terrain using the CDLOD algorithm by
  * Strugar.
@@ -75,27 +150,23 @@ class FancyTerrainNode: public scenegraph::Node
 {
 public:
     typedef unsigned int SlotIndex;
-    typedef sim::FieldLODifier<sim::Terrain::height_t, sim::Terrain> HeightFieldLODifier;
-    typedef sim::FieldLODifier<sim::NTMapGenerator::element_t, sim::NTMapGenerator> NTMapLODifier;
 
 public:
     /**
      * Construct a fancy terrain node.
      *
-     * @param terrain The terrain to render.
-     * @param grid_size The length of an edge of the smallest square tile
-     * to render. Must divide the size of the terrain with a power of two.
+     * @param terrain_interface The nice interface to the terrain to render.
      * @param texture_cache_size The square root of the number of tiles which
      * will be cached on the GPU. This will create a square texture with
      * grid_size*texture_cache_size texels on each edge.
      */
-    FancyTerrainNode(sim::Terrain &terrain,
-                     const unsigned int grid_size,
+    FancyTerrainNode(FancyTerrainInterface &terrain,
                      const unsigned int texture_cache_size);
-    ~FancyTerrainNode();
 
 private:
     static constexpr float lod_range_base = 127;
+
+    FancyTerrainInterface &m_terrain_interface;
 
     const unsigned int m_grid_size;
     const unsigned int m_texture_cache_size;
@@ -103,14 +174,10 @@ private:
     const unsigned int m_max_depth;
 
     sim::Terrain &m_terrain;
-    HeightFieldLODifier m_terrain_lods;
-    sim::MinMaxMapGenerator m_terrain_minmax;
-    sim::NTMapGenerator m_terrain_nt;
-    NTMapLODifier m_terrain_nt_lods;
-    sigc::connection m_terrain_lods_conn;
-    sigc::connection m_terrain_minmax_conn;
-    sigc::connection m_terrain_nt_conn;
-    sigc::connection m_terrain_nt_lods_conn;
+    FancyTerrainInterface::HeightFieldLODifier &m_terrain_lods;
+    sim::MinMaxMapGenerator &m_terrain_minmax;
+    sim::NTMapGenerator &m_terrain_nt;
+    FancyTerrainInterface::NTMapLODifier &m_terrain_nt_lods;
 
     Texture2D m_heightmap;
     Texture2D m_normalt;
