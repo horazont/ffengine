@@ -65,6 +65,7 @@ void Terrain::from_sincos(const Vector3f scale)
         }
     }
     lock.unlock();
+    notify_heightmap_changed();
 }
 
 
