@@ -1,36 +1,16 @@
 #ifndef SCC_ENGINE_RENDERGRAPH_H
 #define SCC_ENGINE_RENDERGRAPH_H
 
-#include <stack>
+#include <vector>
 
 #include "engine/gl/vao.hpp"
 #include "engine/gl/material.hpp"
 
 namespace engine {
 
-class DrawRequest
-{
-public:
-    DrawRequest(VAO &arrays, Material &material);
-
-protected:
-    VAO &m_arrays;
-    Material &m_material;
-
-public:
-    VAO &arrays();
-    Material &material();
-
-};
-
-
-class BasicDrawRequest
-{
-public:
-    BasicDrawRequest(VAO &arrays, Material &material);
-};
-
-
+/**
+ * Track the environment in which a render takes place.
+ */
 class RenderContext
 {
 public:
@@ -42,8 +22,10 @@ public:
 
 private:
     MatrixUBO m_matrix_ubo;
-    std::stack<Matrix4f> m_model_stack;
-    Matrix4 m_current_transformation;
+    std::vector<Matrix4f> m_model_stack;
+    Matrix4f m_current_transformation;
+
+    Vector3f m_viewpoint;
 
 protected:
     void prepare_draw();
@@ -61,12 +43,20 @@ public:
 
     void push_transformation(const Matrix4f &mat);
 
+    void reset();
+
 public:
     Matrix4f projection();
     Matrix4f view();
 
+    inline const Vector3f &viewpoint() const
+    {
+        return m_viewpoint;
+    }
+
     void set_projection(const Matrix4f &proj);
     void set_view(const Matrix4f &view);
+    void set_viewpoint(const Vector3f &viewpoint);
 
 public:
     /**
@@ -81,6 +71,7 @@ public:
     static void configure_shader(ShaderProgram &shader);
 
 };
+
 
 }
 

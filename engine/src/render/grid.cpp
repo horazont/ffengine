@@ -81,7 +81,7 @@ void GridNode::render(RenderContext &context)
     context.draw_elements(GL_LINES, *m_vao, m_material, m_ibo_alloc);
 }
 
-void GridNode::sync()
+void GridNode::sync(RenderContext &)
 {
     m_vao->sync();
 }

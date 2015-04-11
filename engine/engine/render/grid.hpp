@@ -23,7 +23,7 @@ private:
 
 public:
     void render(RenderContext &context) override;
-    void sync() override;
+    void sync(RenderContext &context) override;
 
 };
 

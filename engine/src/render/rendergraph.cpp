@@ -45,14 +45,25 @@ void RenderContext::draw_elements_base_vertex(
 
 void RenderContext::push_transformation(const Matrix4f &mat)
 {
-    m_model_stack.push(m_current_transformation);
+    m_model_stack.push_back(m_current_transformation);
     m_current_transformation *= mat;
 }
 
 void RenderContext::pop_transformation()
 {
-    m_current_transformation = m_model_stack.top();
-    m_model_stack.pop();
+    m_current_transformation = m_model_stack.back();
+    m_model_stack.pop_back();
+}
+
+void RenderContext::reset()
+{
+    m_model_stack.clear();
+    m_current_transformation = Matrix4f(Identity);
+    m_matrix_ubo.set<0>(Matrix4f(Identity));
+    m_matrix_ubo.set<1>(Matrix4f(Identity));
+    m_matrix_ubo.set<2>(Matrix4f(Identity));
+    m_matrix_ubo.set<3>(Matrix3f(Identity));
+    m_viewpoint = Vector3f(0, 0, 0);
 }
 
 Matrix4f RenderContext::projection()
@@ -73,6 +84,11 @@ void RenderContext::set_projection(const Matrix4f &proj)
 void RenderContext::set_view(const Matrix4f &view)
 {
     m_matrix_ubo.set<1>(view);
+}
+
+void RenderContext::set_viewpoint(const Vector3f &viewpoint)
+{
+    m_viewpoint = viewpoint;
 }
 
 void RenderContext::configure_shader(ShaderProgram &shader)

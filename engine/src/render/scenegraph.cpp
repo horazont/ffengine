@@ -92,14 +92,14 @@ void Group::render(RenderContext &context)
     }
 }
 
-void Group::sync()
+void Group::sync(RenderContext &context)
 {
     m_to_render.clear();
     m_locked_children.clear();
     for (auto &child: m_children)
     {
         m_to_render.push_back(child.get());
-        child->sync();
+        child->sync(context);
     }
 }
 
@@ -133,7 +133,7 @@ void InvisibleGroup::render(RenderContext &)
 
 }
 
-void InvisibleGroup::sync()
+void InvisibleGroup::sync(RenderContext &)
 {
 
 }
@@ -186,12 +186,12 @@ void ParentNode::render(RenderContext &context)
     }
 }
 
-void ParentNode::sync()
+void ParentNode::sync(RenderContext &context)
 {
     m_locked_child = nullptr;
     m_child_to_render = m_child.get();
     if (m_child_to_render) {
-        m_child_to_render->sync();
+        m_child_to_render->sync(context);
     }
 }
 
@@ -219,10 +219,10 @@ void Transformation::render(RenderContext &context)
     context.pop_transformation();
 }
 
-void Transformation::sync()
+void Transformation::sync(RenderContext &context)
 {
     m_render_transform = m_transform;
-    ParentNode::sync();
+    ParentNode::sync(context);
 }
 
 
@@ -236,10 +236,8 @@ SceneGraph::SceneGraph():
 
 }
 
-void SceneGraph::render(Camera &camera)
+void SceneGraph::render()
 {
-    scenegraph_logger.log(io::LOG_DEBUG, "preparing context...");
-    camera.configure_context(m_render_context);
     scenegraph_logger.log(io::LOG_DEBUG)
             << "view = " << m_render_context.view()
             << io::submit;
@@ -247,6 +245,16 @@ void SceneGraph::render(Camera &camera)
             << "proj = " << m_render_context.projection()
             << io::submit;
     m_root.render(m_render_context);
+}
+
+void SceneGraph::sync(Camera &camera)
+{
+    camera.sync();
+    scenegraph_logger.log(io::LOG_DEBUG, "preparing context...");
+    m_render_context.reset();
+    camera.configure_context(m_render_context);
+
+    m_root.sync(m_render_context);
 }
 
 

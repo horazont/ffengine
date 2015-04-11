@@ -81,10 +81,19 @@ public:
     /**
      * Synchronize the node state to GPU-only data storage.
      *
+     * @param context The render context which will be used to call render()
+     * later.
+     *
+     * Calling methods which do drawcalls here has undefined effects,
+     * most likely they won’t appear anywhere because clearing of the buffers
+     * happens *after* sync(). The RenderContext is already filled with
+     * camera-related information, such as the projection and the view
+     * matrices, as well as the viewpoint.
+     *
      * When this method is called, it is legal to access all memory available
      * to the view.
      */
-    virtual void sync() = 0;
+    virtual void sync(RenderContext &context) = 0;
 
 };
 
@@ -313,8 +322,10 @@ public:
     /**
      * Synchronize all children currently in the group for the next call to
      * render().
+     *
+     * @param context The context which will be used for rendering.
      */
-    void sync() override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -360,8 +371,10 @@ public:
 
     /**
      * Do nothing
+     *
+     * @param context Ignored.
      */
-    void sync() override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -453,8 +466,10 @@ public:
      *
      * Calls sync() on the child and synchronizes its pointer into GPU-only
      * data storage.
+     *
+     * @param context The context which will be used for rendering.
      */
-    void sync() override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -506,8 +521,10 @@ public:
     /**
      * Synchronize the current transformation for rendering into GPU-only data
      * storage.
+     *
+     * @param context The context which will be used for rendering.
      */
-    void sync() override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -551,12 +568,8 @@ public:
         m_root.advance(seconds);
     }
 
-    void render(Camera &camera);
-
-    inline void sync()
-    {
-        m_root.sync();
-    }
+    void render();
+    void sync(Camera &camera);
 
 };
 
