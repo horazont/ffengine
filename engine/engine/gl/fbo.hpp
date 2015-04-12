@@ -21,6 +21,10 @@ public:
     Renderbuffer(const GLenum internal_format,
                  const GLsizei width,
                  const GLsizei height);
+    ~Renderbuffer() override;
+
+protected:
+    void delete_globject() override;
 
 public:
     void bind() override;
@@ -30,11 +34,12 @@ public:
 
 public:
     void attach_to_fbo(const GLenum target, const GLenum attachment) override;
+    void resize(const GLsizei width, const GLsizei height);
 
 };
 
 
-class FBO: public Resource
+class RenderTarget
 {
 public:
     enum class Usage {
@@ -44,28 +49,70 @@ public:
     };
 
 public:
+    RenderTarget(GLsizei width, GLsizei height);
+    virtual ~RenderTarget();
+
+protected:
+    bool m_bound;
+    GLenum m_current_primary_target;
+
+    GLsizei m_height;
+    GLsizei m_width;
+
+    static RenderTarget *m_draw_bound;
+    static RenderTarget *m_read_bound;
+
+public:
+    inline GLsizei height() const
+    {
+        return m_height;
+    }
+
+    inline GLsizei width() const
+    {
+        return m_width;
+    }
+
+public:
+    virtual void bind(Usage usage = Usage::BOTH);
+    virtual void bound(Usage usage);
+    void unbound(Usage usage);
+
+};
+
+
+class WindowRenderTarget: public RenderTarget
+{
+public:
+    WindowRenderTarget();
+    WindowRenderTarget(GLsizei width, GLsizei height);
+
+public:
+    void set_size(const GLsizei width, const GLsizei height);
+
+public:
+    void bind(Usage usage = Usage::BOTH) override;
+    void bound(Usage usage) override;
+
+};
+
+
+class FBO: public Resource, public RenderTarget
+{
+public:
     FBO(const GLsizei width, const GLsizei height);
     FBO(const FBO&) = delete;
     FBO &operator=(const FBO&) = delete;
-    FBO(const FBO&&) = delete;
-    FBO &operator=(const FBO&&) = delete;
+    FBO &operator=(FBO&&);
     ~FBO();
 
 private:
     GLuint m_glid;
-    bool m_bound;
-    GLenum m_current_primary_target;
-
-    const GLsizei m_height;
-    const GLsizei m_width;
 
     std::vector<std::unique_ptr<Renderbuffer> > m_owned_renderbuffers;
     std::unordered_map<GLenum, GL2DArray*> m_attachments;
 
     bool m_dirty;
-
-    static FBO *m_draw_bound;
-    static FBO *m_read_bound;
 
 protected:
     void delete_globject();
@@ -75,7 +122,6 @@ protected:
     void mark_dirty_or_attach(const GLenum attachment, GL2DArray *obj);
     void reconfigure();
     void require_unused_attachment(const GLenum which);
-    void unbound(Usage usage);
 
 public:
     void attach(const GLenum to_attachment, GL2DArray *rb);
@@ -85,6 +131,8 @@ public:
             const GLenum internal_format);
     Renderbuffer *make_depth_buffer(
             const GLenum internal_format = GL_DEPTH_COMPONENT32);
+
+    void resize(GLsizei width, GLsizei height);
 
 public:
     inline GL2DArray *attachment(const GLenum attachment) const
@@ -97,20 +145,9 @@ public:
         return iter->second;
     }
 
-    inline GLsizei height() const
-    {
-        return m_height;
-    }
-
-    inline GLsizei width() const
-    {
-        return m_width;
-    }
-
 public:
-    void bind(Usage usage = Usage::BOTH);
-    void bound(Usage usage);
-    void unbind(Usage usage = Usage::BOTH);
+    void bind(Usage usage = Usage::BOTH) override;
+    void bound(Usage usage) override;
 
 };
 

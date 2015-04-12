@@ -134,15 +134,8 @@ void Camera::advance(TimeInterval)
 
 }
 
-void Camera::configure_context(RenderContext &context)
-{
-    context.set_projection(m_render_projection);
-    context.set_view(m_render_view);
-    context.set_viewpoint(Vector3f(m_render_inv_view * Vector4f(0, 0, 0, 1)));
-}
 
-
-OrthogonalCamera::OrthogonalCamera(
+/* OrthogonalCamera::OrthogonalCamera(
         float viewport_width,
         float viewport_height):
     Camera(),
@@ -211,18 +204,15 @@ void OrthogonalCamera::sync()
     camera_logger.log(io::LOG_DEBUG)
             << "proj = " << m_render_projection
             << io::submit;
-}
+} */
 
 
 PerspectivalCamera::PerspectivalCamera():
     Camera(),
     m_controller(),
-    m_viewport_width(0),
-    m_viewport_height(0),
     m_znear(1.0),
     m_zfar(100),
-    m_fovy(45.0),
-    m_projection(Identity)
+    m_fovy(45.0)
 {
 
 }
@@ -251,19 +241,13 @@ Matrix4f PerspectivalCamera::calc_inv_view() const
             * translation4(Vector3f(0, 0, distance));
 }
 
-void PerspectivalCamera::update_projection()
-{
-    m_projection = proj_perspective(m_fovy,
-                                    m_viewport_width/m_viewport_height,
-                                    m_znear, m_zfar);
-}
-
-Ray PerspectivalCamera::ray(const Vector2f viewport_pos) const
+Ray PerspectivalCamera::ray(const Vector2f &viewport_pos,
+                            const ViewportSize &viewport_size) const
 {
     const float f = tan(M_PI_2 - m_fovy/2.);
 
     const Matrix3f inv_proj_partial(
-                m_viewport_width/m_viewport_height/f, 0, 0,
+                float(viewport_size[eX])/viewport_size[eY]/f, 0, 0,
                 0, 1/f, 0,
                 0, 0, 1);
 
@@ -273,8 +257,8 @@ Ray PerspectivalCamera::ray(const Vector2f viewport_pos) const
     const Vector3f pos(pos4[eX], pos4[eY], pos4[eZ]);
 
     const Vector3f on_view_plane = inv_proj_partial*Vector3f(
-                2*viewport_pos[eX]/m_viewport_width-1.0,
-                1.0-2*viewport_pos[eY]/m_viewport_height,
+                2*viewport_pos[eX]/viewport_size[eX]-1.0,
+                1.0-2*viewport_pos[eY]/viewport_size[eY],
                 -1.0);
 
     const Vector4f direction = inv_view * Vector4f(on_view_plane, 0.);
@@ -287,26 +271,16 @@ Ray PerspectivalCamera::ray(const Vector2f viewport_pos) const
 void PerspectivalCamera::set_fovy(const float fovy)
 {
     m_fovy = fovy;
-    update_projection();
-}
-
-void PerspectivalCamera::set_viewport(const float width, const float height)
-{
-    m_viewport_width = width;
-    m_viewport_height = height;
-    update_projection();
 }
 
 void PerspectivalCamera::set_znear(const float znear)
 {
     m_znear = znear;
-    update_projection();
 }
 
 void PerspectivalCamera::set_zfar(const float zfar)
 {
     m_zfar = zfar;
-    update_projection();
 }
 
 void PerspectivalCamera::advance(TimeInterval seconds)
@@ -314,11 +288,20 @@ void PerspectivalCamera::advance(TimeInterval seconds)
     m_controller.advance(seconds);
 }
 
+Matrix4f PerspectivalCamera::render_projection(GLsizei viewport_width, GLsizei viewport_height)
+{
+    return proj_perspective(m_render_fovy,
+                            float(viewport_width)/viewport_height,
+                            m_render_znear, m_render_zfar);
+}
+
 void PerspectivalCamera::sync()
 {
     camera_logger.log(io::LOG_DEBUG, "synchronizing camera");
 
-    m_render_projection = m_projection;
+    m_render_fovy = m_fovy;
+    m_render_zfar = m_zfar;
+    m_render_znear = m_znear;
 
     /* m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.f))
             * rotation4(eX, -rot[eX])
@@ -327,13 +310,6 @@ void PerspectivalCamera::sync()
 
     m_render_view = calc_view();
     m_render_inv_view = calc_inv_view();
-
-    camera_logger.log(io::LOG_DEBUG)
-            << "view = " << m_render_view
-            << io::submit;
-    camera_logger.log(io::LOG_DEBUG)
-            << "proj = " << m_render_projection
-            << io::submit;
 }
 
 }

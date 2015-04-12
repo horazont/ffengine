@@ -21,7 +21,7 @@ private:
 
 public:
     void render(RenderContext &context) override;
-    void sync(RenderContext &context) override;
+    void sync(Scene &scene) override;
 
 };
 

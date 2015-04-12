@@ -2,10 +2,14 @@
 
 #include <cassert>
 
+#include "engine/io/log.hpp"
+
 #include "engine/gl/util.hpp"
 
 
 namespace engine {
+
+static io::Logger &logger = io::logging().get_logger("engine.gl.fbo");
 
 Renderbuffer::Renderbuffer(const GLenum internal_format,
                            const GLsizei width,
@@ -14,12 +18,27 @@ Renderbuffer::Renderbuffer(const GLenum internal_format,
     GL2DArray(internal_format, width, height)
 {
     glGenRenderbuffers(1, &m_glid);
+    std::cout << "creating rbo " << m_glid << std::endl;
     glBindRenderbuffer(GL_RENDERBUFFER, m_glid);
     glRenderbufferStorage(GL_RENDERBUFFER, m_internal_format,
                           m_width, m_height);
     raise_last_gl_error();
     bound();
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+}
+
+Renderbuffer::~Renderbuffer()
+{
+    if (m_glid != 0) {
+        delete_globject();
+    }
+}
+
+void Renderbuffer::delete_globject()
+{
+    std::cout << "deleting rbo " << m_glid << std::endl;
+    glDeleteRenderbuffers(1, &m_glid);
+    m_glid = 0;
 }
 
 void Renderbuffer::bind()
@@ -31,12 +50,14 @@ void Renderbuffer::bind()
 void Renderbuffer::bound()
 {
     // some sanity checks for debug mode
-    assert(static_cast<GLenum>(gl_get_integer(GL_RENDERBUFFER_INTERNAL_FORMAT)) ==
-           m_internal_format);
+    /* assert(static_cast<GLenum>(gl_get_integer(GL_RENDERBUFFER_INTERNAL_FORMAT)) ==
+           m_internal_format); */
+    /* std::cout << gl_get_integer(GL_RENDERBUFFER_WIDTH) << std::endl;
+    std::cout << gl_get_integer(GL_RENDERBUFFER_HEIGHT) << std::endl;
     assert(gl_get_integer(GL_RENDERBUFFER_WIDTH) ==
            m_width);
     assert(gl_get_integer(GL_RENDERBUFFER_HEIGHT) ==
-           m_height);
+           m_height); */
 }
 
 void Renderbuffer::sync()
@@ -54,16 +75,144 @@ void Renderbuffer::attach_to_fbo(const GLenum target, const GLenum attachment)
     glFramebufferRenderbuffer(target, attachment, GL_RENDERBUFFER, m_glid);
 }
 
+void Renderbuffer::resize(const GLsizei width, const GLsizei height)
+{
+    bind();
+    glRenderbufferStorage(GL_RENDERBUFFER, m_internal_format,
+                          m_width, m_height);
+    raise_last_gl_error();
+    m_width = width;
+    m_height = height;
+}
 
-FBO::FBO(const GLsizei width, const GLsizei height):
-    m_glid(0),
+
+RenderTarget::RenderTarget(GLsizei width, GLsizei height):
     m_bound(false),
     m_current_primary_target(0),
     m_height(height),
-    m_width(width),
+    m_width(width)
+{
+
+}
+
+RenderTarget::~RenderTarget()
+{
+
+}
+
+void RenderTarget::bind(Usage usage)
+{
+    if (usage == Usage::DRAW || usage == Usage::BOTH) {
+        if (m_draw_bound) {
+            m_draw_bound->unbound(Usage::DRAW);
+        }
+        m_draw_bound = this;
+    }
+    if (usage == Usage::READ || usage == Usage::BOTH) {
+        if (m_read_bound) {
+            m_read_bound->unbound(Usage::READ);
+        }
+        m_read_bound = this;
+    }
+    bound(usage);
+}
+
+void RenderTarget::bound(Usage usage)
+{
+    if (m_bound) {
+        return;
+    }
+
+    if (usage == Usage::READ) {
+        m_current_primary_target = GL_READ_FRAMEBUFFER;
+    } else {
+        m_current_primary_target = GL_DRAW_FRAMEBUFFER;
+    }
+
+    m_bound = true;
+}
+
+void RenderTarget::unbound(Usage usage)
+{
+    if (!m_bound) {
+        return;
+    }
+
+    if (usage == Usage::DRAW && m_read_bound == this) {
+        m_current_primary_target = GL_READ_FRAMEBUFFER;
+    } else if (usage == Usage::READ && m_draw_bound == this) {
+        m_current_primary_target = GL_DRAW_FRAMEBUFFER;
+    } else {
+        m_current_primary_target = 0;
+        m_bound = false;
+    }
+}
+
+
+WindowRenderTarget::WindowRenderTarget():
+    RenderTarget(0, 0)
+{
+
+}
+
+WindowRenderTarget::WindowRenderTarget(GLsizei width, GLsizei height):
+    RenderTarget(width, height)
+{
+
+}
+
+void WindowRenderTarget::set_size(const GLsizei width, const GLsizei height)
+{
+    assert(width >= 0 && height >= 0);
+    m_width = width;
+    m_height = height;
+}
+
+void WindowRenderTarget::bind(Usage usage)
+{
+    glBindFramebuffer(int(usage), 0);
+    raise_last_gl_error();
+    RenderTarget::bind(usage);
+}
+
+void WindowRenderTarget::bound(Usage usage)
+{
+    RenderTarget::bound(usage);
+    if (m_draw_bound == this) {
+        glDrawBuffer(GL_BACK);
+    }
+    if (m_read_bound == this) {
+        glReadBuffer(GL_BACK);
+    }
+}
+
+
+FBO::FBO(const GLsizei width, const GLsizei height):
+    RenderTarget(width, height),
+    m_glid(0),
     m_dirty(false)
 {
     glGenFramebuffers(1, &m_glid);
+}
+
+FBO &FBO::operator =(FBO &&ref)
+{
+    std::cout << "moving (" << m_owned_renderbuffers.size() << ")" << std::endl;
+    if (m_glid != 0) {
+        delete_globject();
+    }
+    m_glid = ref.m_glid;
+    m_dirty = ref.m_dirty;
+    m_attachments = std::move(ref.m_attachments);
+    m_owned_renderbuffers = std::move(ref.m_owned_renderbuffers);
+    m_width = ref.m_width;
+    m_height = ref.m_height;
+    std::cout << "moved (" << m_owned_renderbuffers.size() << ")" << std::endl;
+    ref.m_glid = 0;
+    ref.m_dirty = false;
+    ref.m_height = 0;
+    ref.m_width = 0;
+    return *this;
 }
 
 FBO::~FBO()
@@ -81,8 +230,12 @@ FBO::~FBO()
 
 void FBO::delete_globject()
 {
+    if (m_bound) {
+        unbound(Usage::BOTH);
+    }
     glDeleteFramebuffers(1, &m_glid);
     m_glid = 0;
+    m_owned_renderbuffers.clear();
 }
 
 Renderbuffer *FBO::make_renderbuffer(
@@ -113,7 +266,40 @@ void FBO::reconfigure()
     for (auto &attachment: m_attachments)
     {
         attachment.second->attach_to_fbo(m_current_primary_target, attachment.first);
+        raise_last_gl_error();
     }
+    GLenum status = glCheckFramebufferStatus(m_current_primary_target);
+    switch (status)
+    {
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+    {
+        logger.log(io::LOG_ERROR, "FBO has incomplete attachment");
+        break;
+    }
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+    {
+        logger.log(io::LOG_ERROR, "FBO has missing attachment");
+        break;
+    }
+    case GL_FRAMEBUFFER_UNSUPPORTED:
+    {
+        logger.log(io::LOG_ERROR, "FBO configuration is unsupported");
+        break;
+    }
+    case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+    {
+        logger.log(io::LOG_ERROR, "FBO multisampling is incorrectly configured");
+        break;
+    }
+    case GL_FRAMEBUFFER_COMPLETE:
+    {
+        logger.log(io::LOG_INFO, "FBO is valid");
+        break;
+    }
+    default:
+        logger.logf(io::LOG_WARNING, "FBO status is unknown (%d)", status);
+    }
+
     m_dirty = false;
 }
 
@@ -144,61 +330,38 @@ Renderbuffer *FBO::make_depth_buffer(const GLenum internal_format)
     return make_renderbuffer(GL_DEPTH_ATTACHMENT, internal_format);
 }
 
-void FBO::unbound(Usage usage)
+void FBO::resize(GLsizei width, GLsizei height)
 {
-    if (!m_bound) {
-        return;
+    std::cout << "FBO::resize(" << width << ", " << height << ")" << std::endl;
+    m_width = width;
+    m_height = height;
+    for (auto &rb: m_owned_renderbuffers)
+    {
+        std::cout << "resizing rbo " << rb.get() << std::endl;
+        rb->resize(width, height);
     }
-
-    if (usage == Usage::DRAW && m_read_bound == this) {
-        m_current_primary_target = GL_READ_FRAMEBUFFER;
-    } else if (usage == Usage::READ && m_draw_bound == this) {
-        m_current_primary_target = GL_DRAW_FRAMEBUFFER;
-    } else {
-        m_current_primary_target = 0;
-        m_bound = false;
-    }
+    bind();
+    reconfigure();
 }
 
 void FBO::bind(Usage usage)
 {
+    raise_last_gl_error();
     glBindFramebuffer(int(usage), m_glid);
     raise_last_gl_error();
-    if (usage == Usage::DRAW || usage == Usage::BOTH) {
-        if (m_draw_bound) {
-            m_draw_bound->unbound(Usage::DRAW);
-        }
-        m_draw_bound = this;
-    }
-    if (usage == Usage::READ || usage == Usage::BOTH) {
-        if (m_read_bound) {
-            m_read_bound->unbound(Usage::READ);
-        }
-        m_read_bound = this;
-    }
-    bound(usage);
+    RenderTarget::bind(usage);
 }
 
 void FBO::bound(Usage usage)
 {
-    if (m_bound) {
-        return;
-    }
-
-    if (usage == Usage::READ) {
-        m_current_primary_target = GL_READ_FRAMEBUFFER;
-    } else {
-        m_current_primary_target = GL_DRAW_FRAMEBUFFER;
-    }
+    RenderTarget::bound(usage);
 
     if (m_dirty) {
         reconfigure();
     }
-
-    m_bound = true;
 }
 
-void FBO::unbind(Usage usage)
+/* void FBO::unbind(Usage usage)
 {
     if (!m_bound) {
         return;
@@ -225,10 +388,10 @@ void FBO::unbind(Usage usage)
         m_read_bound = nullptr;
     }
     unbound(usage);
-}
+} */
 
 
-FBO *FBO::m_draw_bound = nullptr;
-FBO *FBO::m_read_bound = nullptr;
+RenderTarget *RenderTarget::m_draw_bound = nullptr;
+RenderTarget *RenderTarget::m_read_bound = nullptr;
 
 }

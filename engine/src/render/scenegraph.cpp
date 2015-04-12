@@ -92,14 +92,14 @@ void Group::render(RenderContext &context)
     }
 }
 
-void Group::sync(RenderContext &context)
+void Group::sync(Scene &scene)
 {
     m_to_render.clear();
     m_locked_children.clear();
     for (auto &child: m_children)
     {
         m_to_render.push_back(child.get());
-        child->sync(context);
+        child->sync(scene);
     }
 }
 
@@ -133,7 +133,7 @@ void InvisibleGroup::render(RenderContext &)
 
 }
 
-void InvisibleGroup::sync(RenderContext &)
+void InvisibleGroup::sync(Scene &)
 {
 
 }
@@ -186,12 +186,12 @@ void ParentNode::render(RenderContext &context)
     }
 }
 
-void ParentNode::sync(RenderContext &context)
+void ParentNode::sync(Scene &scene)
 {
     m_locked_child = nullptr;
     m_child_to_render = m_child.get();
     if (m_child_to_render) {
-        m_child_to_render->sync(context);
+        m_child_to_render->sync(scene);
     }
 }
 
@@ -219,10 +219,10 @@ void Transformation::render(RenderContext &context)
     context.pop_transformation();
 }
 
-void Transformation::sync(RenderContext &context)
+void Transformation::sync(Scene &scene)
 {
     m_render_transform = m_transform;
-    ParentNode::sync(context);
+    ParentNode::sync(scene);
 }
 
 
@@ -230,31 +230,19 @@ void Transformation::sync(RenderContext &context)
 
 
 SceneGraph::SceneGraph():
-    m_render_context(),
     m_root()
 {
 
 }
 
-void SceneGraph::render()
+void SceneGraph::render(RenderContext &context)
 {
-    scenegraph_logger.log(io::LOG_DEBUG)
-            << "view = " << m_render_context.view()
-            << io::submit;
-    scenegraph_logger.log(io::LOG_DEBUG)
-            << "proj = " << m_render_context.projection()
-            << io::submit;
-    m_root.render(m_render_context);
+    m_root.render(context);
 }
 
-void SceneGraph::sync(Camera &camera)
+void SceneGraph::sync(Scene &scene)
 {
-    camera.sync();
-    scenegraph_logger.log(io::LOG_DEBUG, "preparing context...");
-    m_render_context.reset();
-    camera.configure_context(m_render_context);
-
-    m_root.sync(m_render_context);
+    m_root.sync(scene);
 }
 
 

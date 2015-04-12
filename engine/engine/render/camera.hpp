@@ -85,19 +85,30 @@ public:
     virtual ~Camera();
 
 protected:
-    Matrix4f m_render_projection;
     Matrix4f m_render_view;
     Matrix4f m_render_inv_view;
 
 public:
+    inline const Matrix4f render_view() const
+    {
+        return m_render_view;
+    }
+
+    inline const Matrix4f render_inv_view() const
+    {
+        return m_render_inv_view;
+    }
+
+public:
     virtual void advance(TimeInterval seconds);
-    void configure_context(RenderContext &context);
+    virtual Matrix4f render_projection(GLsizei viewport_width,
+                                       GLsizei viewport_height) = 0;
     virtual void sync() = 0;
 
 };
 
 
-class OrthogonalCamera: public Camera
+/* class OrthogonalCamera: public Camera
 {
 public:
     OrthogonalCamera(
@@ -152,7 +163,7 @@ public:
     void advance(TimeInterval seconds) override;
     void sync() override;
 
-};
+}; */
 
 
 class PerspectivalCamera: public Camera
@@ -163,31 +174,19 @@ public:
 private:
     CameraController m_controller;
 
-    float m_viewport_width;
-    float m_viewport_height;
     float m_znear;
     float m_zfar;
-
     float m_fovy;
 
-    Matrix4f m_projection;
+    float m_render_znear;
+    float m_render_zfar;
+    float m_render_fovy;
 
 protected:
     Matrix4f calc_view() const;
     Matrix4f calc_inv_view() const;
-    void update_projection();
 
 public:
-    inline float viewport_height() const
-    {
-        return m_viewport_height;
-    }
-
-    inline float viewport_width() const
-    {
-        return m_viewport_width;
-    }
-
     inline float zfar() const
     {
         return m_zfar;
@@ -209,16 +208,18 @@ public:
     }
 
 public:
-    Ray ray(const Vector2f viewport_pos) const;
+    Ray ray(const Vector2f &viewport_pos,
+            const ViewportSize &viewport_size) const;
 
 public:
     void set_fovy(const float fovy);
-    void set_viewport(const float width, const float height);
     void set_znear(const float znear);
     void set_zfar(const float zfar);
 
 public:
     void advance(TimeInterval seconds) override;
+    Matrix4f render_projection(GLsizei viewport_width,
+                               GLsizei viewport_height) override;
     void sync() override;
 
 };

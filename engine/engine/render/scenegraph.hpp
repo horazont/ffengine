@@ -81,8 +81,7 @@ public:
     /**
      * Synchronize the node state to GPU-only data storage.
      *
-     * @param context The render context which will be used to call render()
-     * later.
+     * @param scene The scene for which to synchronize this node.
      *
      * Calling methods which do drawcalls here has undefined effects,
      * most likely they won’t appear anywhere because clearing of the buffers
@@ -92,8 +91,10 @@ public:
      *
      * When this method is called, it is legal to access all memory available
      * to the view.
+     *
+     * @see Scene.get_storage SceneStorage
      */
-    virtual void sync(RenderContext &context) = 0;
+    virtual void sync(Scene &scene) = 0;
 
 };
 
@@ -323,9 +324,9 @@ public:
      * Synchronize all children currently in the group for the next call to
      * render().
      *
-     * @param context The context which will be used for rendering.
+     * @param scene The Scene to synchronize for.
      */
-    void sync(RenderContext &context) override;
+    void sync(Scene &scene) override;
 
 };
 
@@ -372,9 +373,9 @@ public:
     /**
      * Do nothing
      *
-     * @param context Ignored.
+     * @param scene Ignored.
      */
-    void sync(RenderContext &context) override;
+    void sync(Scene &scene) override;
 
 };
 
@@ -467,9 +468,9 @@ public:
      * Calls sync() on the child and synchronizes its pointer into GPU-only
      * data storage.
      *
-     * @param context The context which will be used for rendering.
+     * @param scene The Scene to synchronize for.
      */
-    void sync(RenderContext &context) override;
+    void sync(Scene &scene) override;
 
 };
 
@@ -522,9 +523,9 @@ public:
      * Synchronize the current transformation for rendering into GPU-only data
      * storage.
      *
-     * @param context The context which will be used for rendering.
+     * @param scene The Scene to synchronize for.
      */
-    void sync(RenderContext &context) override;
+    void sync(Scene &scene) override;
 
 };
 
@@ -538,7 +539,6 @@ public:
 
 private:
     Vector4f m_clear_color;
-    RenderContext m_render_context;
     scenegraph::Group m_root;
 
 public:
@@ -552,24 +552,14 @@ public:
         return m_root;
     }
 
-    inline RenderContext &render_context()
-    {
-        return m_render_context;
-    }
-
-    inline const RenderContext &render_context() const
-    {
-        return m_render_context;
-    }
-
 public:
     inline void advance(TimeInterval seconds)
     {
         m_root.advance(seconds);
     }
 
-    void render();
-    void sync(Camera &camera);
+    void render(RenderContext &context);
+    void sync(Scene &scene);
 
 };
 

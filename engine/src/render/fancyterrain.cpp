@@ -285,22 +285,24 @@ void FancyTerrainNode::render(RenderContext &context)
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
-                 1, context.viewpoint().as_array);
+                 1, context.scene().viewpoint().as_array);
     render_all(context, *m_vao, m_material);
     m_normal_debug_material.shader().bind();
     glUniform3fv(m_normal_debug_material.shader().uniform_location("lod_viewpoint"),
-                 1, context.viewpoint().as_array);
+                 1, context.scene().viewpoint().as_array);
     render_all(context, *m_nd_vao, m_normal_debug_material);
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 }
 
-void FancyTerrainNode::sync(RenderContext &context)
+void FancyTerrainNode::sync(Scene &scene)
 {
+    // FIXME: use SceneStorage here!
+
     const unsigned int texture_slots = m_texture_cache_size*m_texture_cache_size;
 
     m_heightmap.bind();
     m_tmp_slices.clear();
-    collect_slices(m_tmp_slices, context.viewpoint());
+    collect_slices(m_tmp_slices, scene.viewpoint());
     m_render_slices.clear();
 
     unsigned int slot_index = 0;

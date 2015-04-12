@@ -14,8 +14,8 @@ public:
 
 protected:
     const GLenum m_internal_format;
-    const GLsizei m_width;
-    const GLsizei m_height;
+    GLsizei m_width;
+    GLsizei m_height;
 
 public:
     inline GLsizei height() const
