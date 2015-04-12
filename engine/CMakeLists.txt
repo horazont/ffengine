@@ -1,7 +1,5 @@
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
-find_package(SIGC++ REQUIRED)
-
 set(ENGINE_HEADERS
   engine/common/resource.hpp
   engine/common/types.hpp
