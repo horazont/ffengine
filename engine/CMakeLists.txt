@@ -102,4 +102,4 @@ set_property(
   TARGET engine
   PROPERTY INTERFACE_COMPILE_DEFINITIONS)
 
-add_custom_target(dummy_engine_includes SOURCES ${ENGINE_HEADERS})
+add_custom_target(dummy_engine_files SOURCES ${ENGINE_HEADERS})
