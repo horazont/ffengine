@@ -32,10 +32,14 @@ std::string awesomef(const char *message, std::va_list args)
 {
     std::string buffer(AWESOME_BUFFER_SIZE, '\0');
 
+    std::va_list tmp;
+    va_copy(tmp, args);
     std::size_t formatted_len = vsnprintf(&buffer.front(),
                                           buffer.size()+1,
                                           message,
-                                          args);
+                                          tmp);
+    va_end(tmp);
+
     if (formatted_len > buffer.size())
     {
         buffer.resize(formatted_len);
