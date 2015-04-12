@@ -313,6 +313,9 @@ bool ShaderProgram::attach_resource(GLenum shader_type, const QString &filename)
     }
     QByteArray data = source_file.readAll();
     data.append("\0");
+    shader_logger.logf(io::LOG_DEBUG, "compiling shader from resource %s: %s",
+                       filename.toStdString().c_str(),
+                       data.constData());
     return create_and_compile_and_attach(shader_type,
                                          data.constData(),
                                          data.size(),
