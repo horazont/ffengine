@@ -144,3 +144,28 @@ TEST_CASE("math/matrix/matrix_vector_product"
 
     CHECK_APPROX_ZERO(((rot3*rot1)*ey) - ex);
 }
+
+TEST_CASE("math/matrix/invert/mat2")
+{
+    Matrix2 m(-1, -2,
+              -1, 0.0);
+
+    invert(m);
+    CHECK(Matrix2(0, -0.5, -1, 0.5) == m);
+}
+
+TEST_CASE("math/matrix/invert_proj_matrix")
+{
+    Matrix4f m(1.34, 0, 0, 0,
+               0, 1.79, 0, 0,
+               0, 0, -1, -2,
+               0, 0, -1, 0);
+
+    invert_proj_matrix(m);
+
+    Matrix4f diff = (Matrix4(0.746268656716418, 0, 0, 0,
+                             0, 0.558659217877095, 0, 0,
+                             0, 0, 0, -1,
+                             0, 0, -0.5, 0.5) - m);
+    CHECK_APPROX_ZERO(diff);
+}

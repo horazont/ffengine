@@ -158,19 +158,20 @@ Matrix4f &invert_proj_matrix(Matrix4f &matrix)
 
     Matrix2f A(matrix.coeff[0], matrix.coeff[1],
                matrix.coeff[4], matrix.coeff[5]);
-    Matrix2f B(matrix.coeff[10], matrix.coeff[11],
-               matrix.coeff[14], matrix.coeff[15]);
     invert(A);
-    invert(B);
 
     matrix.coeff[0] = A.coeff[0];
     matrix.coeff[1] = A.coeff[1];
     matrix.coeff[4] = A.coeff[2];
     matrix.coeff[5] = A.coeff[3];
 
+    Matrix2f B(matrix.coeff[10], matrix.coeff[11],
+               matrix.coeff[14], matrix.coeff[15]);
+    invert(B);
+
     matrix.coeff[10] = B.coeff[0];
-    matrix.coeff[11] = B.coeff[1];
-    matrix.coeff[14] = B.coeff[2];
+    matrix.coeff[11] = B.coeff[2];
+    matrix.coeff[14] = B.coeff[1];
     matrix.coeff[15] = B.coeff[3];
 
     assert(matrix.coeff[2] == 0);
