@@ -129,6 +129,12 @@ public:
         return ubo_storage_utils::get<I>(m_storage);
     }
 
+    template <std::size_t I>
+    inline typename std::tuple_element<I, std::tuple<element_ts...>>::type &get_ref()
+    {
+        return ubo_storage_utils::get_ref<I>(m_storage);
+    }
+
     template <std::size_t I, typename value_t>
     inline void set(value_t &&ref)
     {

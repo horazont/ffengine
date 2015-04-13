@@ -134,6 +134,11 @@ struct ubo_wrap_type<Matrix4f>
         return from;
     }
 
+    static inline type &ref(wrapped_type &from)
+    {
+        return from;
+    }
+
     template <typename value_t>
     static inline type pack(value_t &&ref)
     {
