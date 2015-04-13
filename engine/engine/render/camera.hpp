@@ -88,21 +88,35 @@ protected:
     Matrix4f m_render_view;
     Matrix4f m_render_inv_view;
 
+    float m_render_zfar;
+    float m_render_znear;
+
 public:
-    inline const Matrix4f render_view() const
+    inline const Matrix4f &render_view() const
     {
         return m_render_view;
     }
 
-    inline const Matrix4f render_inv_view() const
+    inline const Matrix4f &render_inv_view() const
     {
         return m_render_inv_view;
     }
 
+    inline float render_zfar() const
+    {
+        return m_render_zfar;
+    }
+
+    inline float render_znear() const
+    {
+        return m_render_znear;
+    }
+
 public:
     virtual void advance(TimeInterval seconds);
-    virtual Matrix4f render_projection(GLsizei viewport_width,
-                                       GLsizei viewport_height) = 0;
+    virtual std::tuple<Matrix4f, Matrix4f> render_projection(
+            GLsizei viewport_width,
+            GLsizei viewport_height) = 0;
     virtual void sync() = 0;
 
 };
@@ -178,8 +192,6 @@ private:
     float m_zfar;
     float m_fovy;
 
-    float m_render_znear;
-    float m_render_zfar;
     float m_render_fovy;
 
 protected:
@@ -218,8 +230,9 @@ public:
 
 public:
     void advance(TimeInterval seconds) override;
-    Matrix4f render_projection(GLsizei viewport_width,
-                               GLsizei viewport_height) override;
+    std::tuple<Matrix4f, Matrix4f> render_projection(
+            GLsizei viewport_width,
+            GLsizei viewport_height) override;
     void sync() override;
 
 };

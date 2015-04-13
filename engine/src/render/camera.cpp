@@ -288,11 +288,17 @@ void PerspectivalCamera::advance(TimeInterval seconds)
     m_controller.advance(seconds);
 }
 
-Matrix4f PerspectivalCamera::render_projection(GLsizei viewport_width, GLsizei viewport_height)
+std::tuple<Matrix4f, Matrix4f> PerspectivalCamera::render_projection(
+        GLsizei viewport_width,
+        GLsizei viewport_height)
 {
-    return proj_perspective(m_render_fovy,
-                            float(viewport_width)/viewport_height,
-                            m_render_znear, m_render_zfar);
+    const Matrix4f proj = proj_perspective(
+                m_render_fovy,
+                float(viewport_width)/viewport_height,
+                m_render_znear, m_render_zfar);
+    Matrix4f inv_proj = proj;
+    invert_proj_matrix(inv_proj);
+    return std::make_tuple(proj, inv_proj);
 }
 
 void PerspectivalCamera::sync()

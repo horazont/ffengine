@@ -103,10 +103,18 @@ void RenderContext::set_viewport_size(GLsizei viewport_width,
 
 void RenderContext::sync()
 {
-    m_matrix_ubo.set<0>(m_scene.camera().render_projection(
-                            m_viewport_width,
-                            m_viewport_height));
+    std::tie(m_matrix_ubo.get_ref<0>(),
+             std::ignore) = m_scene.camera().render_projection(
+                m_viewport_width,
+                m_viewport_height);
+    /* m_matrix_ubo.set<0>(std::get<0>(m_scene.camera().render_projection(
+                                        m_viewport_width,
+                                        m_viewport_height))); */
     m_matrix_ubo.set<1>(m_scene.view());
+    /*std::cout << m_matrix_ubo.get<0>() << std::endl;
+    std::cout << m_matrix_ubo.get<1>() << std::endl;
+    std::cout << m_inv_matrix_ubo.get<0>() << std::endl;
+    std::cout << m_inv_matrix_ubo.get<1>() << std::endl;*/
 }
 
 void RenderContext::configure_shader(ShaderProgram &shader)
