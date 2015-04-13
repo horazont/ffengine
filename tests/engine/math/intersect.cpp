@@ -136,3 +136,126 @@ TEST_CASE("math/intersect/isect_aabb_sphere/non_intersection")
     CHECK_FALSE(isect_aabb_sphere(AABB{Vector3f(10, 10, 10), Vector3f(11, 11, 11)}, sphere));
 }
 
+TEST_CASE("math/intersect/isect_aabb_ray/through_x_planes_only")
+{
+    Ray r{Vector3f(-2, 0, 0), Vector3f(1, 0, 0)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 1);
+    CHECK(t1 == 3);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/through_y_planes_only")
+{
+    Ray r{Vector3f(0, -2, 0), Vector3f(0, 1, 0)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 1);
+    CHECK(t1 == 3);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/through_z_planes_only")
+{
+    Ray r{Vector3f(0, 0, -2), Vector3f(0, 0, 1)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 1);
+    CHECK(t1 == 3);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/through_corner")
+{
+    Ray r{Vector3f(-2, -2, -2), Vector3f(1, 1, 1)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 1);
+    CHECK(t1 == 3);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/through_xy_edge")
+{
+    Ray r{Vector3f(-2, -2, 0), Vector3f(1, 1, 0)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 1);
+    CHECK(t1 == 3);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/general_case")
+{
+    Ray r{Vector3f(-1.5, -2, -2.5), Vector3f(0.3, 0.2, 0.6)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 5);
+    CHECK(fabs(t1 - 5.8333333f) < ISECT_EPSILON);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/x_axis_parallel_outside")
+{
+    Ray r{Vector3f(-2, -10, 0), Vector3f(1, 0, 0)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/x_axis_parallel_on_edge")
+{
+    Ray r{Vector3f(-2, -1, 0), Vector3f(1, 0, 0)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 1);
+    CHECK(t1 == 3);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/general_outside")
+{
+    Ray r{Vector3f(-2, -3, -4), Vector3f(-0.2, 0.3, 0.4)};
+    AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_aabb_ray/general0")
+{
+    Ray r{Vector3f(1034, -1, -0.5), Vector3f(-0.5, 1, 0)};
+    AABB aabb{Vector3f(0, 0, -1), Vector3f(2048, 2048, 1)};
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK(hit);
+}

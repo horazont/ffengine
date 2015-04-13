@@ -1,6 +1,8 @@
 #include "engine/math/intersect.hpp"
 
+#include <limits>
 #include <tuple>
+
 
 template <typename Ta>
 Ta sqr(Ta v)
@@ -79,4 +81,69 @@ bool isect_aabb_sphere(const AABB &aabb, const Sphere &sphere)
         }
     }
     return dmin <= sqr(sphere.radius);
+}
+
+bool isect_aabb_ray(const AABB &aabb, const Ray &ray, float &t0, float &t1)
+{
+    std::array<Plane, 6> sides({
+                                   Plane(aabb.min, Vector3f(-1, 0, 0)),
+                                   Plane(aabb.max, Vector3f(1, 0, 0)),
+                                   Plane(aabb.min, Vector3f(0, -1, 0)),
+                                   Plane(aabb.max, Vector3f(0, 1, 0)),
+                                   Plane(aabb.min, Vector3f(0, 0, -1)),
+                                   Plane(aabb.max, Vector3f(0, 0, 1))
+                               });
+
+    float test_min, test_max;
+    float tmin = std::numeric_limits<float>::min();
+    float tmax = std::numeric_limits<float>::max();
+
+    PlaneSide hit;
+    std::tie(test_min, hit) = isect_plane_ray(sides[0], ray);
+    if (hit == PlaneSide::POSITIVE_NORMAL) {
+        return false;
+    }
+    std::tie(test_max, hit) = isect_plane_ray(sides[1], ray);
+    if (hit == PlaneSide::POSITIVE_NORMAL) {
+        return false;
+    }
+    if (hit == PlaneSide::BOTH && test_min != test_max) {
+        tmin = std::max(std::min(test_min, test_max), tmin);
+        tmax = std::min(std::max(test_max, test_min), tmax);
+    }
+
+    std::tie(test_min, hit) = isect_plane_ray(sides[2], ray);
+    if (hit == PlaneSide::POSITIVE_NORMAL) {
+        return false;
+    }
+    std::tie(test_max, hit) = isect_plane_ray(sides[3], ray);
+    if (hit == PlaneSide::POSITIVE_NORMAL) {
+        return false;
+    }
+    if (hit == PlaneSide::BOTH && test_min != test_max) {
+        tmin = std::max(std::min(test_min, test_max), tmin);
+        tmax = std::min(std::max(test_max, test_min), tmax);
+    }
+
+    std::tie(test_min, hit) = isect_plane_ray(sides[4], ray);
+    if (hit == PlaneSide::POSITIVE_NORMAL) {
+        return false;
+    }
+    std::tie(test_max, hit) = isect_plane_ray(sides[5], ray);
+    if (hit == PlaneSide::POSITIVE_NORMAL) {
+        return false;
+    }
+    if (hit == PlaneSide::BOTH && test_min != test_max) {
+        tmin = std::max(std::min(test_min, test_max), tmin);
+        tmax = std::min(std::max(test_max, test_min), tmax);
+    }
+
+    if (tmin > tmax) {
+        return false;
+    }
+
+    t0 = tmin;
+    t1 = tmax;
+
+    return true;
 }

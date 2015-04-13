@@ -19,6 +19,12 @@ bool isect_aabb_sphere(
         const AABB &aabb,
         const Sphere &sphere);
 
+bool isect_aabb_ray(
+        const AABB &aabb,
+        const Ray &ray,
+        float &t0,
+        float &t1);
+
 extern const float ISECT_EPSILON;
 
 #endif
