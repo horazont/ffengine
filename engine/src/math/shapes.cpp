@@ -1,5 +1,7 @@
 #include "engine/math/shapes.hpp"
 
+#include "engine/math/intersect.hpp"
+
 
 Plane::Plane(const float dist, const Vector3f &normal):
     dist(dist),
@@ -26,5 +28,17 @@ PlaneSide Plane::side_of(const Sphere &other) const
         } else {
             return PlaneSide::NEGATIVE_NORMAL;
         }
+    }
+}
+
+PlaneSide Plane::side_of(const Vector3f &other) const
+{
+    const float ndist = other * normal - dist;
+    if (fabs(ndist) < ISECT_EPSILON) {
+        return PlaneSide::BOTH;
+    } else if (ndist < 0) {
+        return PlaneSide::NEGATIVE_NORMAL;
+    } else {
+        return PlaneSide::POSITIVE_NORMAL;
     }
 }

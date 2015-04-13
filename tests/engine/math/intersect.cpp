@@ -63,10 +63,10 @@ TEST_CASE("math/intersect/isect_plane_ray/intersection",
     plane_normal.normalize();
 
     float t;
-    bool success;
-    std::tie(t, success) = isect_plane_ray(plane_pos, plane_normal, r1);
+    PlaneSide side;
+    std::tie(t, side) = isect_plane_ray(Plane(plane_pos, plane_normal), r1);
 
-    CHECK(success);
+    CHECK(side == PlaneSide::BOTH);
     CHECK(t >= 0);
 }
 
@@ -80,10 +80,10 @@ TEST_CASE("math/intersect/isect_plane_ray/below",
     plane_normal.normalize();
 
     float t;
-    bool success;
-    std::tie(t, success) = isect_plane_ray(plane_pos, plane_normal, r1);
+    PlaneSide side;
+    std::tie(t, side) = isect_plane_ray(Plane(plane_pos, plane_normal), r1);
 
-    CHECK(!success);
+    CHECK(side == PlaneSide::BOTH);
     CHECK(t < 0);
 }
 
@@ -97,11 +97,27 @@ TEST_CASE("math/intersect/isect_plane_ray/parallel",
     plane_normal.normalize();
 
     float t;
-    bool success;
-    std::tie(t, success) = isect_plane_ray(plane_pos, plane_normal, r1);
+    PlaneSide side;
+    std::tie(t, side) = isect_plane_ray(Plane(plane_pos, plane_normal), r1);
 
-    CHECK(!success);
-    CHECK(isnan(t));
+    CHECK(side == PlaneSide::POSITIVE_NORMAL);
+}
+
+TEST_CASE("math/intersect/isect_plane_ray/parallel_on_plane",
+          "Test ray-plane intersection, ray parallel to plane and on plane")
+{
+    Ray r1{Vector3f(-1, 0, 2), Vector3f(0, 0, -1)};
+
+    Vector3f plane_pos(-1, 0, 0);
+    Vector3f plane_normal(1, 0, 0);
+    plane_normal.normalize();
+
+    float t;
+    PlaneSide side;
+    std::tie(t, side) = isect_plane_ray(Plane(plane_pos, plane_normal), r1);
+
+    CHECK(side == PlaneSide::BOTH);
+    CHECK(t == 0);
 }
 
 TEST_CASE("math/intersect/isect_aabb_sphere/intersection")

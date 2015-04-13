@@ -99,6 +99,14 @@ struct Plane
     PlaneSide side_of(const Sphere &other) const;
 
     /**
+     * Check on which side of the plane a Point is.
+     *
+     * @param other The Point to test
+     * @return The side of the plane on which the Point is.
+     */
+    PlaneSide side_of(const Vector3f &other) const;
+
+    /**
      * An alias of side_of() for the sphere.
      *
      * @see \link side_of(const Sphere&) const \endlink

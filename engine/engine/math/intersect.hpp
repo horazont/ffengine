@@ -11,13 +11,14 @@ std::tuple<float, bool> isect_ray_triangle(
         const Vector3f &p1,
         const Vector3f &p2);
 
-std::tuple<float, bool> isect_plane_ray(
-        const Vector3f &plane_origin,
-        const Vector3f &plane_normal,
+std::tuple<float, PlaneSide> isect_plane_ray(
+        const Plane &plane,
         const Ray &ray);
 
 bool isect_aabb_sphere(
         const AABB &aabb,
         const Sphere &sphere);
+
+extern const float ISECT_EPSILON;
 
 #endif

@@ -60,3 +60,20 @@ TEST_CASE("math/shapes/Plane/side_of_fast(AABB)/intersection/true_positive")
     CHECK(plane.side_of_fast(AABB{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)}) == PlaneSide::BOTH);
 }
 
+TEST_CASE("math/shapes/Plane/side_of(Vector3f)/above")
+{
+    Plane plane(0, Vector3f(1, 0, 0));
+    CHECK(plane.side_of(Vector3f(1, 0, 0)) == PlaneSide::POSITIVE_NORMAL);
+}
+
+TEST_CASE("math/shapes/Plane/side_of(Vector3f)/below")
+{
+    Plane plane(0, Vector3f(1, 0, 0));
+    CHECK(plane.side_of(Vector3f(-1, 0, 0)) == PlaneSide::NEGATIVE_NORMAL);
+}
+
+TEST_CASE("math/shapes/Plane/side_of(Vector3f)/on")
+{
+    Plane plane(0, Vector3f(1, 0, 0));
+    CHECK(plane.side_of(Vector3f(0, 0, 0)) == PlaneSide::BOTH);
+}

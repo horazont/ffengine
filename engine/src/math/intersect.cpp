@@ -9,7 +9,7 @@ Ta sqr(Ta v)
 }
 
 
-const float EPSILON = 0.00001;
+const float ISECT_EPSILON = 0.00001;
 
 std::tuple<float, bool> isect_ray_triangle(
         const Ray &ray,
@@ -24,7 +24,7 @@ std::tuple<float, bool> isect_ray_triangle(
 
     const float det = edge1 * pvec;
 
-    if (det > -EPSILON && det < EPSILON) {
+    if (det > -ISECT_EPSILON && det < ISECT_EPSILON) {
         return std::make_tuple(NAN, false);
     }
 
@@ -49,21 +49,20 @@ std::tuple<float, bool> isect_ray_triangle(
     return std::make_tuple(t, t >= 0);
 }
 
-std::tuple<float, bool> isect_plane_ray(
-        const Vector3f &plane_origin,
-        const Vector3f &plane_normal,
+std::tuple<float, PlaneSide> isect_plane_ray(
+        const Plane &plane,
         const Ray &ray)
 {
-    const float normal_dir = ray.direction * plane_normal;
+    const float normal_dir = ray.direction * plane.normal;
 
-    if (normal_dir > -EPSILON && normal_dir < EPSILON) {
+    if (normal_dir > -ISECT_EPSILON && normal_dir < ISECT_EPSILON) {
         // parallel
-        return std::make_tuple(NAN, false);
+        return std::make_tuple(0, plane.side_of(ray.origin));
     }
 
-    const float t = (plane_origin*plane_normal - plane_normal*ray.origin) / normal_dir;
+    const float t = (plane.dist - plane.normal*ray.origin) / normal_dir;
 
-    return std::make_tuple(t, t >= 0);
+    return std::make_tuple(t, PlaneSide::BOTH);
 }
 
 bool isect_aabb_sphere(const AABB &aabb, const Sphere &sphere)
