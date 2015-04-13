@@ -93,6 +93,8 @@ class RenderContext
 public:
     static constexpr GLint MATRIX_BLOCK_UBO_SLOT = 0;
     typedef UBO<Matrix4f, Matrix4f, Matrix4f, Matrix3f> MatrixUBO;
+    static constexpr GLint INV_MATRIX_BLOCK_UBO_SLOT = 1;
+    typedef UBO<Matrix4f, Matrix4f> InvMatrixUBO;
 
 public:
     RenderContext(Scene &scene);
@@ -100,8 +102,10 @@ public:
 private:
     Scene &m_scene;
     GLsizei m_viewport_width, m_viewport_height;
+    GLfloat m_zfar, m_znear;
 
     MatrixUBO m_matrix_ubo;
+    InvMatrixUBO m_inv_matrix_ubo;
     std::vector<Matrix4f> m_model_stack;
     Matrix4f m_current_transformation;
 
@@ -125,10 +129,32 @@ public:
 
     void reset();
 
+    void start();
+
 public:
     inline Scene &scene()
     {
         return m_scene;
+    }
+
+    inline GLsizei viewport_width() const
+    {
+        return m_viewport_width;
+    }
+
+    inline GLsizei viewport_height() const
+    {
+        return m_viewport_height;
+    }
+
+    inline GLfloat znear() const
+    {
+        return m_znear;
+    }
+
+    inline GLfloat zfar() const
+    {
+        return m_zfar;
     }
 
 public:

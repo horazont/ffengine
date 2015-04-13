@@ -30,8 +30,7 @@ RenderContext::RenderContext(Scene &scene):
     m_model_stack(),
     m_current_transformation(Identity)
 {
-    m_matrix_ubo.bind();
-    m_matrix_ubo.bind_at(MATRIX_BLOCK_UBO_SLOT);
+
 }
 
 void RenderContext::prepare_draw()
@@ -94,6 +93,13 @@ void RenderContext::reset()
     m_viewpoint = Vector3f(0, 0, 0);
 }
 
+void RenderContext::start()
+{
+    m_inv_matrix_ubo.bind_at(INV_MATRIX_BLOCK_UBO_SLOT);
+    m_matrix_ubo.bind();
+    m_matrix_ubo.bind_at(MATRIX_BLOCK_UBO_SLOT);
+}
+
 void RenderContext::set_viewport_size(GLsizei viewport_width,
                                       GLsizei viewport_height)
 {
@@ -104,7 +110,7 @@ void RenderContext::set_viewport_size(GLsizei viewport_width,
 void RenderContext::sync()
 {
     std::tie(m_matrix_ubo.get_ref<0>(),
-             std::ignore) = m_scene.camera().render_projection(
+             m_inv_matrix_ubo.get_ref<0>()) = m_scene.camera().render_projection(
                 m_viewport_width,
                 m_viewport_height);
     /* m_matrix_ubo.set<0>(std::get<0>(m_scene.camera().render_projection(
@@ -124,6 +130,12 @@ void RenderContext::configure_shader(ShaderProgram &shader)
         shader.bind_uniform_block(
                     "MatrixBlock",
                     MATRIX_BLOCK_UBO_SLOT);
+    }
+    if (shader.uniform_block_location("InvMatrixBlock") >= 0) {
+        shader.check_uniform_block<MatrixUBO>("InvMatrixBlock");
+        shader.bind_uniform_block(
+                    "InvMatrixBlock",
+                    INV_MATRIX_BLOCK_UBO_SLOT);
     }
 }
 
@@ -194,6 +206,7 @@ void SceneRenderNode::render()
                      m_clear_colour[eW]);
         glClear(m_clear_mask);
     }
+    m_context.start();
     m_scene.scenegraph().render(m_context);
 }
 
