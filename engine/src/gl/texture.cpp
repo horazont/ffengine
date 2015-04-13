@@ -53,6 +53,34 @@ Texture2D::Texture2D(const GLenum internal_format,
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+Texture2D &Texture2D::operator =(Texture2D &&src)
+{
+    if (m_glid) {
+        delete_globject();
+    }
+    m_glid = src.m_glid;
+    m_internal_format = src.m_internal_format;
+    m_width = src.m_width;
+    m_height = src.m_height;
+    src.m_glid = 0;
+    src.m_width = 0;
+    src.m_height = 0;
+    return *this;
+}
+
+Texture2D::~Texture2D()
+{
+    if (m_glid) {
+        delete_globject();
+    }
+}
+
+void Texture2D::delete_globject()
+{
+    glDeleteTextures(1, &m_glid);
+    m_glid = 0;
+}
+
 void Texture2D::bind()
 {
     glBindTexture(GL_TEXTURE_2D, m_glid);

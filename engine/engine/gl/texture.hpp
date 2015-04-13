@@ -30,6 +30,11 @@ public:
               const GLsizei height,
               const GLenum init_format = 0,
               const GLenum init_type = GL_UNSIGNED_BYTE);
+    Texture2D &operator=(Texture2D &&src);
+    ~Texture2D() override;
+
+protected:
+    void delete_globject() override;
 
 public:
     void bind() override;

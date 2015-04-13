@@ -13,7 +13,7 @@ public:
               const GLsizei height);
 
 protected:
-    const GLenum m_internal_format;
+    GLenum m_internal_format;
     GLsizei m_width;
     GLsizei m_height;
 
