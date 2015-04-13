@@ -167,6 +167,7 @@ bool MinMaxMapGenerator::worker_impl()
             m_lods.emplace_back(scratchpad);
         } else {
             m_lods[i].swap(scratchpad);
+            m_lods[i].shrink_to_fit();
         }
 
         write_lock.unlock();

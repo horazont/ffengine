@@ -248,9 +248,10 @@ protected:
             write_lock.lock();
 
             if ((m_lods.size()+1) <= i) {
-                m_lods.emplace_back(std::move(next_heightfield));
+                m_lods.emplace_back(next_heightfield);
             } else {
                 m_lods[i-1].swap(next_heightfield);
+                m_lods[i-1].shrink_to_fit();
             }
 
             write_lock.unlock();
