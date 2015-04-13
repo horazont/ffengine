@@ -41,6 +41,7 @@ set(ENGINE_HEADERS
   engine/render/fancyterrain.hpp
   engine/render/fancyterraindata.hpp
   engine/render/grid.hpp
+  engine/render/overlay.hpp
   engine/render/pointer.hpp
   engine/render/rendergraph.hpp
   engine/render/scenegraph.hpp
@@ -83,6 +84,7 @@ set(ENGINE_SRC
   src/render/fancyterrain.cpp
   src/render/fancyterraindata.cpp
   src/render/grid.cpp
+  src/render/overlay.cpp
   src/render/pointer.cpp
   src/render/rendergraph.cpp
   src/render/scenegraph.cpp
