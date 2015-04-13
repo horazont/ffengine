@@ -69,13 +69,10 @@ void Terrain::from_sincos(const Vector3f scale)
 }
 
 
-MinMaxMapGenerator::MinMaxMapGenerator(
-        Terrain &source,
-        const unsigned int min_lod):
+MinMaxMapGenerator::MinMaxMapGenerator(Terrain &source):
     m_source(source),
-    m_min_lod(min_lod),
-    m_max_size((source.size()-1) / (m_min_lod-1)),
-    m_lod_count(engine::log2_of_pot(m_max_size))
+    m_max_size(source.size()-1),
+    m_lod_count(engine::log2_of_pot(m_max_size)+1)
 {
     start();
 }
@@ -93,22 +90,22 @@ void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
     const Terrain::HeightField *input = nullptr;
     auto lock = m_source.readonly_field(input);
 
-    for (unsigned int ybase = 0, ychk = 0; ybase < input_size-1; ybase += (m_min_lod-1), ychk++)
+    for (unsigned int ybase = 0; ybase < input_size-1; ybase++)
     {
-        for (unsigned int xbase = 0, xchk = 0; xbase < input_size-1; xbase += (m_min_lod-1), xchk++)
+        for (unsigned int xbase = 0; xbase < input_size-1; xbase++)
         {
             Terrain::height_t min = std::numeric_limits<Terrain::height_t>::max();
             Terrain::height_t max = std::numeric_limits<Terrain::height_t>::min();
 
-            for (unsigned int y = ybase; y < ybase+m_min_lod; y++) {
-                for (unsigned int x = xbase; x < xbase+m_min_lod; x++) {
+            for (unsigned int y = ybase; y < ybase+2; y++) {
+                for (unsigned int x = xbase; x < xbase+2; x++) {
                     const Terrain::height_t value = (*input)[y*input_size+x];
                     min = std::min(min, value);
                     max = std::max(max, value);
                 }
             }
 
-            scratchpad[ychk*output_size+xchk] = std::make_tuple(min, max);
+            scratchpad[ybase*output_size+xbase] = std::make_tuple(min, max);
         }
     }
 }
@@ -143,7 +140,23 @@ bool MinMaxMapGenerator::worker_impl()
         element_t *dest_ptr = &scratchpad.front();
         for (unsigned int y = 0; y < this_size; y++) {
             for (unsigned int x = 0; x < this_size; x++) {
-                *dest_ptr++ = (*prev_field)[2*y*prev_size+(2*x)];
+                Terrain::height_t min, max;
+                std::tie(min, max) = (*prev_field)[(2*y)*prev_size+(2*x)];
+
+                Terrain::height_t tmp_min, tmp_max;
+                std::tie(tmp_min, tmp_max) = (*prev_field)[(2*y)*prev_size+(2*x+1)];
+                min = std::min(tmp_min, min);
+                max = std::max(tmp_max, max);
+
+                std::tie(tmp_min, tmp_max) = (*prev_field)[(2*y+1)*prev_size+(2*x+1)];
+                min = std::min(tmp_min, min);
+                max = std::max(tmp_max, max);
+
+                std::tie(tmp_min, tmp_max) = (*prev_field)[(2*y+1)*prev_size+(2*x)];
+                min = std::min(tmp_min, min);
+                max = std::max(tmp_max, max);
+
+                *dest_ptr++ = std::make_tuple(min, max);
             }
         }
 

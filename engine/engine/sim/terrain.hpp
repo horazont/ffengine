@@ -109,12 +109,11 @@ public:
     typedef std::vector<MinMaxField> MinMaxFieldLODs;
 
 public:
-    MinMaxMapGenerator(Terrain &source, const unsigned int min_lod);
+    MinMaxMapGenerator(Terrain &source);
     ~MinMaxMapGenerator() override;
 
 private:
     Terrain &m_source;
-    const unsigned int m_min_lod;
     const unsigned int m_max_size;
     const unsigned int m_lod_count;
 
@@ -124,6 +123,12 @@ private:
 protected:
     void make_zeroth_map(MinMaxField &scratchpad);
     bool worker_impl() override;
+
+public:
+    inline unsigned int lod_count() const
+    {
+        return m_lod_count;
+    }
 
 public:
     void notify_changed();

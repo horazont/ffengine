@@ -14,49 +14,6 @@ bool HeightmapSliceMeta::operator<(const HeightmapSliceMeta &other) const
 }
 
 
-FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
-                                             const unsigned int grid_size):
-    m_grid_size(grid_size),
-    m_terrain(terrain),
-    m_terrain_lods(terrain),
-    m_terrain_minmax(terrain, m_grid_size),
-    m_terrain_nt(terrain),
-    m_terrain_nt_lods(m_terrain_nt),
-    m_terrain_lods_conn(terrain.terrain_changed().connect(
-                            std::bind(&HeightFieldLODifier::notify,
-                                      &m_terrain_lods))),
-    m_terrain_minmax_conn(terrain.terrain_changed().connect(
-                              std::bind(&sim::MinMaxMapGenerator::notify,
-                                        &m_terrain_minmax))),
-    m_terrain_nt_conn(terrain.terrain_changed().connect(
-                          std::bind(&sim::NTMapGenerator::notify,
-                                    &m_terrain_nt))),
-    m_terrain_nt_lods_conn(m_terrain_nt.field_changed().connect(
-                               std::bind(&NTMapLODifier::notify,
-                                         &m_terrain_nt_lods)))
-{
-    m_terrain_lods.notify();
-    m_terrain_minmax.notify();
-    m_terrain_nt.notify();
-
-    if (!is_power_of_two(grid_size-1)) {
-        throw std::runtime_error("grid_size must be power-of-two plus one");
-    }
-    if (((terrain.size()-1) / (m_grid_size-1))*(m_grid_size-1) != terrain.size()-1)
-    {
-        throw std::runtime_error("grid_size-1 must divide terrain size-1 evenly");
-    }
-}
-
-FancyTerrainInterface::~FancyTerrainInterface()
-{
-    m_terrain_nt_lods_conn.disconnect();
-    m_terrain_nt_conn.disconnect();
-    m_terrain_minmax_conn.disconnect();
-    m_terrain_lods_conn.disconnect();
-}
-
-
 FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                                    const unsigned int texture_cache_size):
     m_terrain_interface(terrain_interface),
@@ -287,11 +244,12 @@ void FancyTerrainNode::render(RenderContext &context)
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, context.scene().viewpoint().as_array);
     render_all(context, *m_vao, m_material);
-    m_normal_debug_material.shader().bind();
+    /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
+
+    /* m_normal_debug_material.shader().bind();
     glUniform3fv(m_normal_debug_material.shader().uniform_location("lod_viewpoint"),
                  1, context.scene().viewpoint().as_array);
-    render_all(context, *m_nd_vao, m_normal_debug_material);
-    /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
+    render_all(context, *m_nd_vao, m_normal_debug_material); */
 }
 
 void FancyTerrainNode::sync(Scene &scene)
@@ -444,7 +402,7 @@ void FancyTerrainNode::sync(Scene &scene)
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     m_vao->sync();
-
 }
+
 
 }

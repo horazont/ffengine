@@ -10,6 +10,7 @@ set(TEST_SRC
   engine/math/rect.cpp
   engine/math/shapes.cpp
   engine/math/vector.cpp
+  engine/render/fancyterraindata.cpp
   main.cpp
   )
 

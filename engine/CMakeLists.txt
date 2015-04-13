@@ -39,6 +39,7 @@ set(ENGINE_HEADERS
   engine/math/vector.hpp
   engine/render/camera.hpp
   engine/render/fancyterrain.hpp
+  engine/render/fancyterraindata.hpp
   engine/render/grid.hpp
   engine/render/pointer.hpp
   engine/render/rendergraph.hpp
@@ -80,6 +81,7 @@ set(ENGINE_SRC
   src/math/vector.cpp
   src/render/camera.cpp
   src/render/fancyterrain.cpp
+  src/render/fancyterraindata.cpp
   src/render/grid.cpp
   src/render/pointer.cpp
   src/render/rendergraph.cpp
