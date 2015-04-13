@@ -20,7 +20,7 @@ Plane::Plane(const Vector3f &origin, const Vector3f &normal):
 PlaneSide Plane::side_of(const Sphere &other) const
 {
     const float normal_projected_center = other.center*normal;
-    if (abs(normal_projected_center - dist) <= other.radius) {
+    if (fabs(normal_projected_center - dist) <= other.radius) {
         return PlaneSide::BOTH;
     } else {
         if (normal_projected_center > 0) {

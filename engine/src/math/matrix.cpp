@@ -106,7 +106,7 @@ Matrix4 proj_perspective(const double fovy,
                          const double znear,
                          const double zfar)
 {
-    const double f = tan(M_PI_2 - fovy/2.d);
+    const double f = tan(M_PI_2 - fovy/2.);
     Matrix4 result(
                 f/aspect, 0, 0, 0,
                 0, f, 0, 0,

@@ -43,7 +43,7 @@ struct ubo_wrap_type<float>
     }
 
     template <typename value_t>
-    static inline type pack(value_t &&ref)
+    static inline wrapped_type pack(value_t &&ref)
     {
         return wrapped_type{ref};
     }
@@ -68,7 +68,7 @@ struct ubo_wrap_type<Vector2f>
     }
 
     template <typename value_t>
-    static inline type pack(value_t &&ref)
+    static inline wrapped_type pack(value_t &&ref)
     {
         return wrapped_type{ref};
     }
@@ -93,7 +93,7 @@ struct ubo_wrap_type<Vector3f>
     }
 
     template <typename value_t>
-    static inline type pack(value_t &&ref)
+    static inline wrapped_type pack(value_t &&ref)
     {
         return wrapped_type{ref};
     }
