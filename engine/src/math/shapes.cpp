@@ -42,3 +42,24 @@ PlaneSide Plane::side_of(const Vector3f &other) const
         return PlaneSide::POSITIVE_NORMAL;
     }
 }
+
+
+std::ostream &operator<<(std::ostream &stream, const PlaneSide side)
+{
+    switch (side)
+    {
+    case PlaneSide::BOTH:
+    {
+        return stream << "PlaneSide::BOTH";
+    }
+    case PlaneSide::NEGATIVE_NORMAL:
+    {
+        return stream << "PlaneSide::NEGATIVE_NORMAL";
+    }
+    case PlaneSide::POSITIVE_NORMAL:
+    {
+        return stream << "PlaneSide::POSITIVE_NORMAL";
+    }
+    }
+    return stream << "PlaneSide(" << static_cast<long int>(side) << ")";
+}
