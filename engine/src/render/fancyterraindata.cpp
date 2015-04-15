@@ -246,7 +246,7 @@ std::tuple<Vector3f, bool> isect_terrain_ray(
             return std::make_tuple(ray.origin + ray.direction*t,
                                    true);
         }
-        std::tie(t, hit) = isect_ray_triangle(ray, p3, p1, p2);
+        std::tie(t, hit) = isect_ray_triangle(ray, p2, p0, p3);
         if (hit) {
             return std::make_tuple(ray.origin + ray.direction*t,
                                    true);
