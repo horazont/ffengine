@@ -238,6 +238,8 @@ private:
     mutable std::shared_timed_mutex m_data_mutex;
     FieldLODs m_lods;
 
+    sigc::signal<void, TerrainRect> m_field_updated;
+
 protected:
     void worker_impl(const TerrainRect &updated) override
     {
@@ -318,6 +320,8 @@ protected:
             prev_heightfield = &m_lods[i-1];
             prev_size = this_size;
         }
+
+        m_field_updated.emit(updated);
     }
 
 public:
@@ -326,6 +330,11 @@ public:
     {
         lods = &m_lods;
         return std::shared_lock<std::shared_timed_mutex>(m_data_mutex);
+    }
+
+    inline sigc::signal<void, TerrainRect> &field_updated()
+    {
+        return m_field_updated;
     }
 
 };

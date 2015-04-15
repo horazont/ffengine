@@ -44,6 +44,13 @@ private:
     sigc::connection m_terrain_nt_conn;
     sigc::connection m_terrain_nt_lods_conn;
 
+    std::vector<sigc::connection> m_any_updated_conns;
+
+    sigc::signal<void> m_field_updated;
+
+protected:
+    void any_updated(const sim::TerrainRect &at);
+
 public:
     inline unsigned int size() const
     {
@@ -78,6 +85,11 @@ public:
     inline NTMapLODifier &ntmap_lods()
     {
         return m_terrain_nt_lods;
+    }
+
+    inline sigc::signal<void> &field_updated()
+    {
+        return m_field_updated;
     }
 
     std::tuple<Vector3f, Vector3f, bool> hittest_quadtree(

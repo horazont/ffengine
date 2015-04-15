@@ -48,6 +48,15 @@ FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
                                   m_terrain.size(),
                                   m_terrain.size());
 
+    m_any_updated_conns.emplace_back(
+                m_terrain_nt_lods.field_updated().connect(
+                    sigc::mem_fun(*this,
+                                  &FancyTerrainInterface::any_updated)));
+    m_any_updated_conns.emplace_back(
+                m_terrain_lods.field_updated().connect(
+                    sigc::mem_fun(*this,
+                                  &FancyTerrainInterface::any_updated)));
+
     if (!is_power_of_two(grid_size-1)) {
         throw std::runtime_error("grid_size must be power-of-two plus one");
     }
@@ -63,10 +72,20 @@ FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
 
 FancyTerrainInterface::~FancyTerrainInterface()
 {
+    for (auto &conn: m_any_updated_conns)
+    {
+        conn.disconnect();
+    }
+    m_any_updated_conns.clear();
     m_terrain_nt_lods_conn.disconnect();
     m_terrain_nt_conn.disconnect();
     m_terrain_minmax_conn.disconnect();
     m_terrain_lods_conn.disconnect();
+}
+
+void FancyTerrainInterface::any_updated(const sim::TerrainRect&)
+{
+    m_field_updated.emit();
 }
 
 std::tuple<Vector3f, Vector3f, bool> FancyTerrainInterface::hittest_quadtree(

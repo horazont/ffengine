@@ -24,6 +24,71 @@ bool HeightmapSliceMeta::operator<(const HeightmapSliceMeta &other) const
 }
 
 
+template <typename field_t>
+void upload_slices(
+        const unsigned int terrain_size,
+        const unsigned int grid_size,
+        const unsigned int texture_cache_size,
+        const GLenum format,
+        std::vector<FancyTerrainNode::SlotIndex> &slices,
+        const std::vector<HeightmapSliceMeta> &metadata,
+        const field_t &lod0,
+        const std::vector<field_t> &lods)
+{
+    for (auto slot_index: slices)
+    {
+        const HeightmapSliceMeta &new_slice = metadata[slot_index];
+        const unsigned int lod_size = new_slice.lod;
+        const unsigned int lod_index = log2_of_pot(lod_size / (grid_size-1));
+
+        // index zero is handled elsewhere
+        if ((lods.size()+1) <= lod_index
+                || (lod_index == 0 && lod0.size() == 0))
+        {
+            logger.logf(io::LOG_WARNING,
+                        "cannot upload slice (no such LOD index: %u)",
+                        lod_index);
+            continue;
+        }
+
+        const unsigned int xlod = new_slice.basex >> lod_index;
+        const unsigned int ylod = new_slice.basey >> lod_index;
+
+        const unsigned int xtex = (slot_index % texture_cache_size)*grid_size;
+        const unsigned int ytex = (slot_index / texture_cache_size)*grid_size;
+
+        const unsigned int src_size = ((terrain_size-1) >> lod_index)+1;
+        const field_t &field = (lod_index == 0
+                                ? lod0
+                                : lods[lod_index-1]);
+
+        /* std::cout << "uploading slice" << std::endl;
+        std::cout << "  lod_size   = " << lod_size << std::endl;
+        std::cout << "  lod_index  = " << lod_index << std::endl;
+        std::cout << "  xlod       = " << xlod << std::endl;
+        std::cout << "  ylod       = " << ylod << std::endl;
+        std::cout << "  slot_index = " << slot_index << std::endl;
+        std::cout << "  xtex       = " << xtex << std::endl;
+        std::cout << "  ytex       = " << ytex << std::endl;
+        std::cout << "  src_size   = " << src_size << std::endl;
+        std::cout << "  dest_size  = " << grid_size << std::endl;
+        std::cout << "  vec size   = " << field.size() << std::endl;
+        std::cout << "  top left   = " << field[0] << std::endl; */
+
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
+        glTexSubImage2D(GL_TEXTURE_2D,
+                        0,
+                        xtex,
+                        ytex,
+                        grid_size,
+                        grid_size,
+                        format,
+                        GL_FLOAT,
+                        &field.data()[ylod*src_size+xlod]);
+    }
+}
+
+
 FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                                    const unsigned int texture_cache_size):
     m_terrain_interface(terrain_interface),
@@ -36,6 +101,9 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_terrain_minmax(terrain_interface.heightmap_minmax()),
     m_terrain_nt(terrain_interface.ntmap()),
     m_terrain_nt_lods(terrain_interface.ntmap_lods()),
+    m_clear_cache_conn(terrain_interface.field_updated().connect(
+                           sigc::mem_fun(*this,
+                                         &FancyTerrainNode::clear_cache))),
     m_heightmap(GL_R32F,
                 texture_cache_size*m_grid_size,
                 texture_cache_size*m_grid_size,
@@ -103,6 +171,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_material.attach_texture("normalt", &m_normalt);
     glUniform1f(m_material.shader().uniform_location("zoffset"),
                 0.);
+    glUniform1f(m_material.shader().uniform_location("heightmap_factor"),
+                1./(m_texture_cache_size+0.5));
     RenderContext::configure_shader(m_material.shader());
 
     m_normal_debug_material.shader().bind();
@@ -116,6 +186,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                 2.);
     glUniform1f(m_normal_debug_material.shader().uniform_location("zoffset"),
                 0.);
+    glUniform1f(m_normal_debug_material.shader().uniform_location("heightmap_factor"),
+                1./(m_texture_cache_size+0.5));
     RenderContext::configure_shader(m_normal_debug_material.shader());
 
     m_heightmap.bind();
@@ -144,14 +216,21 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     }
     m_vbo_allocation.mark_dirty();
 
-    m_unused_slots.reserve(m_texture_cache_size*m_texture_cache_size);
+    m_vao->sync();
+    m_nd_vao->sync();
+
+    m_allocated_slices.reserve(m_texture_cache_size*m_texture_cache_size);
+    // we assume that at any given time only one fourth of the texture cache
+    // will be used for rendering. otherwise, realloc :)
+    m_render_slices.reserve(m_texture_cache_size*m_texture_cache_size / 4);
+    m_upload_slices.reserve(m_render_slices.size());
     m_heightmap_slots.resize(m_texture_cache_size*m_texture_cache_size);
-    for (unsigned int i = 0;
-         i < m_texture_cache_size*m_texture_cache_size;
-         i++)
-    {
-        m_unused_slots.emplace_back(i);
-    }
+    m_lowest_unused_slot = 0;
+}
+
+FancyTerrainNode::~FancyTerrainNode()
+{
+    m_clear_cache_conn.disconnect();
 }
 
 void FancyTerrainNode::collect_slices(
@@ -261,11 +340,11 @@ inline void render_slice(RenderContext &context,
 
 void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &material)
 {
-    for (auto &slice: m_render_slices) {
-        const float x = std::get<0>(slice).basex;
-        const float y = std::get<0>(slice).basey;
-        const float scale = std::get<0>(slice).lod;
-        const unsigned int slot_index = std::get<1>(slice);
+    for (auto slot_index: m_render_slices) {
+        const HeightmapSliceMeta &slice = m_heightmap_slots[slot_index];
+        const float x = slice.basex;
+        const float y = slice.basey;
+        const float scale = slice.lod;
 
         render_slice(context, vao, material, m_ibo_allocation,
                      x, y, scale, slot_index,
@@ -309,6 +388,8 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
     mat.attach_texture("normalt", &m_normalt);
     mat.shader().bind();
     glUniform1f(mat.shader().uniform_location("zoffset"), 1.0f);
+    glUniform1f(mat.shader().uniform_location("heightmap_factor"),
+                1./(m_texture_cache_size+0.5));
 
     return true;
 }
@@ -321,6 +402,12 @@ void FancyTerrainNode::remove_overlay(Material &mat)
     }
 
     m_overlays.erase(iter);
+}
+
+void FancyTerrainNode::clear_cache()
+{
+    logger.log(io::LOG_INFO, "GPU terrain data cache invalidated");
+    m_cache_invalidated = true;
 }
 
 void FancyTerrainNode::render(RenderContext &context)
@@ -350,12 +437,12 @@ void FancyTerrainNode::render(RenderContext &context)
         overlay.material->shader().bind();
         glUniform3fv(overlay.material->shader().uniform_location("lod_viewpoint"),
                      1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
-        for (auto &slice: m_render_slices)
+        for (auto slot_index: m_render_slices)
         {
-            const unsigned int x = std::get<0>(slice).basex;
-            const unsigned int y = std::get<0>(slice).basey;
-            const unsigned int scale = std::get<0>(slice).lod;
-            const unsigned int slot_index = std::get<1>(slice);
+            const HeightmapSliceMeta &slice = m_heightmap_slots[slot_index];
+            const unsigned int x = slice.basex;
+            const unsigned int y = slice.basey;
+            const unsigned int scale = slice.lod;
 
             sim::TerrainRect slice_rect(x, y, x+scale, y+scale);
             if (slice_rect.overlaps(overlay.clip_rect)) {
@@ -390,6 +477,9 @@ void FancyTerrainNode::sync(Scene &scene)
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
+        item.first->bind();
+        glUniform1f(item.first->shader().uniform_location("scale_to_radius"),
+                    lod_range_base / (m_grid_size-1));
         m_render_overlays.emplace_back(
                     RenderOverlay{item.first, item.second.clip_rect}
                     );
@@ -403,25 +493,62 @@ void FancyTerrainNode::sync(Scene &scene)
     m_tmp_slices.clear();
     collect_slices(m_tmp_slices, scene.viewpoint());
     m_render_slices.clear();
+    m_upload_slices.clear();
 
-    unsigned int slot_index = 0;
+    if (m_cache_invalidated) {
+        m_allocated_slices.clear();
+        m_lowest_unused_slot = 0;
+        m_cache_invalidated = false;
+    }
+
+    m_material.shader().bind();
+    glUniform1f(m_material.shader().uniform_location("scale_to_radius"),
+                lod_range_base / (m_grid_size-1));
+    m_normal_debug_material.shader().bind();
+    glUniform1f(m_normal_debug_material.shader().uniform_location("scale_to_radius"),
+                lod_range_base / (m_grid_size-1));
 
 #ifdef TIMELOG_SYNC
     t_setup = timelog_clock::now();
 #endif
 
+    bool warned = false;
+    unsigned int reused = 0, newly_allocated = 0;
     for (auto &required_slice: m_tmp_slices)
     {
-        if (slot_index == texture_slots) {
-            logger.logf(io::LOG_ERROR,
-                        "out of heightmap slots! (%u required in total)",
-                        m_tmp_slices.size());
-            break;
+        unsigned int slot_index;
+        // find element in cache
+        auto cache_iter = m_allocated_slices.find(required_slice);
+        if (cache_iter != m_allocated_slices.end()) {
+            slot_index = cache_iter->second;
+            ++reused;
+        } else {
+            if (m_lowest_unused_slot < texture_slots)
+            {
+                slot_index = m_lowest_unused_slot++;
+            } else {
+                if (!warned) {
+                    logger.logf(io::LOG_ERROR,
+                                "out of heightmap slots! (%u required in total)",
+                                m_tmp_slices.size());
+                    warned = true;
+                }
+                continue;
+            }
+            m_allocated_slices[required_slice] = slot_index;
+            m_upload_slices.emplace_back(slot_index);
+            ++newly_allocated;
         }
-        // FIXME: implement caching here!
-        m_render_slices.emplace_back(required_slice, slot_index);
 
-        slot_index++;
+        m_render_slices.emplace_back(slot_index);
+        m_heightmap_slots[slot_index] = required_slice;
+    }
+
+    if (newly_allocated > 0) {
+        logger.logf(io::LOG_DEBUG,
+                    "%u slots newly allocated, %u reused; "
+                    "%u allocated in total",
+                    newly_allocated, reused, m_allocated_slices.size());
     }
 
 #ifdef TIMELOG_SYNC
@@ -434,57 +561,10 @@ void FancyTerrainNode::sync(Scene &scene)
         auto hf_lods_lock = m_terrain_lods.readonly_lods(lods);
         auto hf_lock = m_terrain.readonly_field(lod0);
 
-        for (auto &new_slice: m_render_slices)
-        {
-            const unsigned int lod_size = std::get<0>(new_slice).lod;
-            const unsigned int lod_index = log2_of_pot(lod_size / (m_grid_size-1));
-
-            // index zero is handled elsewhere
-            if ((lods->size()+1) <= lod_index)
-            {
-                logger.logf(io::LOG_WARNING,
-                            "cannot upload slice (no such LOD index: %u)",
-                            lod_index);
-                continue;
-            }
-
-            const unsigned int xlod = std::get<0>(new_slice).basex >> lod_index;
-            const unsigned int ylod = std::get<0>(new_slice).basey >> lod_index;
-            const unsigned int slot_index = std::get<1>(new_slice);
-
-            const unsigned int xtex = (slot_index % m_texture_cache_size)*m_grid_size;
-            const unsigned int ytex = (slot_index / m_texture_cache_size)*m_grid_size;
-
-            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
-            const sim::Terrain::HeightField &heightfield =
-                    (lod_index == 0
-                     ? *lod0
-                     : (*lods)[lod_index-1]);
-
-            /* std::cout << "uploading slice" << std::endl;
-            std::cout << "  lod_size   = " << lod_size << std::endl;
-            std::cout << "  lod_index  = " << lod_index << std::endl;
-            std::cout << "  xlod       = " << xlod << std::endl;
-            std::cout << "  ylod       = " << ylod << std::endl;
-            std::cout << "  slot_index = " << slot_index << std::endl;
-            std::cout << "  xtex       = " << xtex << std::endl;
-            std::cout << "  ytex       = " << ytex << std::endl;
-            std::cout << "  src_size   = " << src_size << std::endl;
-            std::cout << "  dest_size  = " << m_grid_size << std::endl;
-            std::cout << "  top left   = " << heightfield[0] << std::endl;
-            std::cout << "  vec size   = " << heightfield.size() << std::endl; */
-
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
-            glTexSubImage2D(GL_TEXTURE_2D,
-                            0,
-                            xtex,
-                            ytex,
-                            m_grid_size,
-                            m_grid_size,
-                            GL_RED,
-                            GL_FLOAT,
-                            &heightfield.data()[ylod*src_size+xlod]);
-        }
+        upload_slices(
+                    m_terrain.size(), m_grid_size, m_texture_cache_size,
+                    GL_RED,
+                    m_upload_slices, m_heightmap_slots, *lod0, *lods);
     }
 
     m_normalt.bind();
@@ -494,63 +574,14 @@ void FancyTerrainNode::sync(Scene &scene)
         auto nt_lods_lock = m_terrain_nt_lods.readonly_lods(nt_lods);
         auto nt_lock = m_terrain_nt.readonly_field(nt_lod0);
 
-        for (auto &new_slice: m_render_slices)
-        {
-            const unsigned int lod_size = std::get<0>(new_slice).lod;
-            const unsigned int lod_index = log2_of_pot(lod_size / (m_grid_size-1));
-
-            // index zero is handled elsewhere
-            if ((nt_lods->size()+1) <= lod_index
-                    || (lod_index == 0 && nt_lod0->size() == 0))
-            {
-                logger.logf(io::LOG_WARNING,
-                            "cannot upload NT slice (no such LOD index: %u)",
-                            lod_index);
-                continue;
-            }
-
-            const unsigned int xlod = std::get<0>(new_slice).basex >> lod_index;
-            const unsigned int ylod = std::get<0>(new_slice).basey >> lod_index;
-            const unsigned int slot_index = std::get<1>(new_slice);
-
-            const unsigned int xtex = (slot_index % m_texture_cache_size)*m_grid_size;
-            const unsigned int ytex = (slot_index / m_texture_cache_size)*m_grid_size;
-
-            const unsigned int src_size = ((m_terrain.size()-1) >> lod_index)+1;
-            const sim::NTMapGenerator::NTField &ntfield =
-                    (lod_index == 0
-                     ? *nt_lod0
-                     : (*nt_lods)[lod_index-1]);
-
-            /* std::cout << "uploading slice" << std::endl;
-            std::cout << "  lod_size   = " << lod_size << std::endl;
-            std::cout << "  lod_index  = " << lod_index << std::endl;
-            std::cout << "  xlod       = " << xlod << std::endl;
-            std::cout << "  ylod       = " << ylod << std::endl;
-            std::cout << "  slot_index = " << slot_index << std::endl;
-            std::cout << "  xtex       = " << xtex << std::endl;
-            std::cout << "  ytex       = " << ytex << std::endl;
-            std::cout << "  src_size   = " << src_size << std::endl;
-            std::cout << "  dest_size  = " << m_grid_size << std::endl;
-            std::cout << "  top left   = " << ntfield[0] << std::endl;
-            std::cout << "  vec size   = " << ntfield.size() << std::endl; */
-
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, src_size);
-            glTexSubImage2D(GL_TEXTURE_2D,
-                            0,
-                            xtex,
-                            ytex,
-                            m_grid_size,
-                            m_grid_size,
-                            GL_RGBA,
-                            GL_FLOAT,
-                            &ntfield.data()[ylod*src_size+xlod]);
-        }
+        upload_slices(
+                    m_terrain.size(), m_grid_size, m_texture_cache_size,
+                    GL_RGBA,
+                    m_upload_slices, m_heightmap_slots, *nt_lod0, *nt_lods);
     }
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
-    m_vao->sync();
 #ifdef TIMELOG_SYNC
     t_upload = timelog_clock::now();
     logger.logf(io::LOG_DEBUG, "sync: t_overlays = %.2f ms", ms_cast(t_overlays - t0).count());

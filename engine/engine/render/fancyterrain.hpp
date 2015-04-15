@@ -1,7 +1,9 @@
 #ifndef SCC_ENGINE_RENDER_FANCYTERRAIN_H
 #define SCC_ENGINE_RENDER_FANCYTERRAIN_H
 
+#include <atomic>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "engine/render/scenegraph.hpp"
 
@@ -27,7 +29,10 @@ struct HeightmapSliceMeta
     unsigned int lod;
 
     bool operator<(const HeightmapSliceMeta &other) const;
-
+    inline bool operator==(const HeightmapSliceMeta &other) const
+    {
+        return (basex == other.basex) && (basey == other.basey) && (lod == other.lod);
+    }
 };
 
 }
@@ -112,9 +117,10 @@ public:
      */
     FancyTerrainNode(FancyTerrainInterface &terrain,
                      const unsigned int texture_cache_size);
+    ~FancyTerrainNode() override;
 
 private:
-    static constexpr float lod_range_base = 127;
+    static constexpr float lod_range_base = 255;
 
     FancyTerrainInterface &m_terrain_interface;
 
@@ -128,6 +134,8 @@ private:
     sim::MinMaxMapGenerator &m_terrain_minmax;
     sim::NTMapGenerator &m_terrain_nt;
     FancyTerrainInterface::NTMapLODifier &m_terrain_nt_lods;
+
+    sigc::connection m_clear_cache_conn;
 
     Texture2D m_heightmap;
     Texture2D m_normalt;
@@ -144,13 +152,14 @@ private:
     std::unique_ptr<VAO> m_vao;
     std::unique_ptr<VAO> m_nd_vao;
 
+    std::atomic<bool> m_cache_invalidated;
     std::unordered_map<HeightmapSliceMeta, SlotIndex> m_allocated_slices;
-    std::vector<SlotIndex> m_unused_slots;
+    unsigned int m_lowest_unused_slot;
     std::vector<HeightmapSliceMeta> m_heightmap_slots;
 
     std::vector<HeightmapSliceMeta> m_tmp_slices;
-
-    std::vector<std::tuple<HeightmapSliceMeta, unsigned int> > m_render_slices;
+    std::vector<SlotIndex> m_upload_slices;
+    std::vector<SlotIndex> m_render_slices;
 
     std::unordered_map<Material*, OverlayConfig> m_overlays;
     std::vector<RenderOverlay> m_render_overlays;
@@ -175,6 +184,8 @@ public:
     void attach_blend_texture(Texture2D *tex);
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
+
+    void clear_cache();
 
     /**
      * Register and/or configure an overlay for rendering. If an overlay with
