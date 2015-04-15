@@ -6,7 +6,7 @@
 
 namespace engine {
 
-io::Logger &scenegraph_logger = io::logging().get_logger("engine.render.scenegraph");
+static io::Logger &logger = io::logging().get_logger("render.scenegraph");
 
 namespace scenegraph {
 

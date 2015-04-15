@@ -6,7 +6,8 @@
 
 namespace engine {
 
-io::Logger &logger = io::logging().get_logger("engine.render.fancyterrain");
+static io::Logger &logger = io::logging().get_logger("render.fancyterrain");
+
 
 bool HeightmapSliceMeta::operator<(const HeightmapSliceMeta &other) const
 {

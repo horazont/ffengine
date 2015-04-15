@@ -2,7 +2,7 @@
 
 namespace engine {
 
-io::Logger &camera_logger = io::logging().get_logger("engine.render.camera");
+static io::Logger &camera_logger = io::logging().get_logger("engine.render.camera");
 
 
 CameraController::CameraController():
