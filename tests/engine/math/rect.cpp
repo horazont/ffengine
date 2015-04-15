@@ -178,3 +178,21 @@ TEST_CASE("math/rect/Rect/empty")
 
     CHECK(Rect(NotARect).empty());
 }
+
+TEST_CASE("math/rect/Rect/bounds")
+{
+    SECTION("normal rects")
+    {
+        Rect r1(0, 0, 10, 10);
+        Rect r2(5, 0, 13, 5);
+
+        CHECK(bounds(r1, r2) == Rect(0, 0, 13, 10));
+    }
+    SECTION("one operand is NotARect")
+    {
+        Rect r1(0, 0, 10, 10);
+
+        CHECK(bounds(r1, Rect(NotARect)) == r1);
+        CHECK(bounds(Rect(NotARect), r1) == r1);
+    }
+}
