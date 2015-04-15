@@ -188,6 +188,15 @@ std::tuple<Vector3f, Vector3f, bool> isect_terrain_quadtree_ray(
 {
     float tmin, tmax;
     bool hit;
+    if (lods.size() < log2_of_pot(size-1)+1)
+    {
+        logger.log(io::LOG_WARNING, "not enough LOD data for quadtree tracing");
+        hit = isect_aabb_ray(AABB{Vector3f(0, 0, 0), Vector3f(size, size, 1024)},
+                             ray, tmin, tmax);
+        return std::make_tuple(ray.origin+ray.direction*tmin,
+                               ray.origin+ray.direction*tmax,
+                               hit);
+    }
     std::tie(tmin, tmax, hit) = isect_terrain_quadtree_ray_recurse(
                 ray,
                 size,
