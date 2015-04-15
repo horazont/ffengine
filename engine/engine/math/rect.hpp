@@ -56,7 +56,7 @@ public:
 
     }
 
-    GenericRect(const GenericRect<coord_t>& ref):
+    GenericRect(const GenericRect &ref):
         m_p0(ref.m_p0),
         m_p1(ref.m_p1)
     {
@@ -70,14 +70,14 @@ public:
 
     }
 
-    GenericRect<coord_t>& operator=(const GenericRect<coord_t>& ref)
+    GenericRect &operator=(const GenericRect &ref)
     {
         m_p0 = ref.m_p0;
         m_p1 = ref.m_p1;
         return *this;
     }
 
-    GenericRect<coord_t>& operator=(const not_a_rect_t&)
+    GenericRect &operator=(const not_a_rect_t&)
     {
         m_p0 = point_t(1, 1);
         m_p1 = point_t(0, 0);
