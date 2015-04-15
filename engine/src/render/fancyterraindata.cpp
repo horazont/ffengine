@@ -40,9 +40,6 @@ FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
     sim::TerrainRect full_terrain(0, 0,
                                   m_terrain.size(),
                                   m_terrain.size());
-    m_terrain_lods.notify_update(full_terrain);
-    m_terrain_minmax.notify_update(full_terrain);
-    m_terrain_nt.notify_update(full_terrain);
 
     if (!is_power_of_two(grid_size-1)) {
         throw std::runtime_error("grid_size must be power-of-two plus one");
