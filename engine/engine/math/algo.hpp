@@ -11,6 +11,12 @@ static inline T sqr(T v)
     return v*v;
 }
 
+template <typename float_t>
+static inline float_t frac(float_t v)
+{
+    return (v - std::trunc(v));
+}
+
 template <typename T>
 static inline T interp_nearest(T v0, T v1, T t)
 {
@@ -119,16 +125,25 @@ public:
 
     RasterIterator(float x0, float y0,
                    float x1, float y1):
-        m_step_x(x1 > x0 ? 1 : -1),
-        m_step_y(y1 > y0 ? 1 : -1),
+        m_step_x(x1 > x0 ? 1 : x1 == x0 ? 0 : -1),
+        m_step_y(y1 > y0 ? 1 : y1 == y0 ? 0 : -1),
         m_dxdt(m_step_x / (x1-x0)),
         m_dydt(m_step_y / (y1-y0)),
         m_x(x0),
         m_y(y0),
-        m_t_nextx((std::floor(m_x*m_step_x + 1)*m_step_x - x0)*m_dxdt*m_step_x),
-        m_t_nexty((std::floor(m_y*m_step_y + 1)*m_step_y - y0)*m_dydt*m_step_y)
+        m_t_nextx(),
+        m_t_nexty()
     {
-
+        if (x1 > x0) {
+            m_t_nextx = m_dxdt * (1.0 - frac(x0));
+        } else {
+            m_t_nextx = m_dxdt * (frac(x0));
+        }
+        if (y1 > y0) {
+            m_t_nexty = m_dydt * (1.0 - frac(y0));
+        } else {
+            m_t_nexty = m_dydt * (frac(y0));
+        }
     }
 
     RasterIterator(const RasterIterator &ref) = default;
