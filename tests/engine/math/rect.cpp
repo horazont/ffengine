@@ -190,7 +190,7 @@ TEST_CASE("math/rect/Rect/bounds")
     }
     SECTION("one operand is NotARect")
     {
-        Rect r1(0, 0, 10, 10);
+        Rect r1(20, 20, 30, 30);
 
         CHECK(bounds(r1, Rect(NotARect)) == r1);
         CHECK(bounds(Rect(NotARect), r1) == r1);

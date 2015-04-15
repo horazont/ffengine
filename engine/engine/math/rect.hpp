@@ -228,6 +228,11 @@ template <typename coord_t>
 static inline GenericRect<coord_t> bounds(const GenericRect<coord_t> &r1,
                                           const GenericRect<coord_t> &r2)
 {
+    if (!r1.is_a_rect()) {
+        return r2;
+    } else if (!r2.is_a_rect()) {
+        return r1;
+    }
     return GenericRect<coord_t>(std::min(r1.x0(), r2.x0()),
                                 std::min(r1.y0(), r2.y0()),
                                 std::max(r1.x1(), r2.x1()),
