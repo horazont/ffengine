@@ -133,7 +133,7 @@ public:
     }
 
 public:
-    unsigned int area()
+    coord_t area() const
     {
         return (x1() - x0()) * (y1() - y0());
     }
@@ -163,6 +163,11 @@ public:
     inline bool operator!=(const GenericRect<other_coord_t> &other) const
     {
         return m_p0 != other.m_p0 || m_p1 != other.m_p1;
+    }
+
+    inline operator bool() const
+    {
+        return is_a_rect() && (area() > 0);
     }
 
 };

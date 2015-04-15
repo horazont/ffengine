@@ -106,6 +106,15 @@ TEST_CASE("math/rect/Rect/area")
 {
     CHECK(Rect(0, 1, 2, 3).area() == 4);
     CHECK(Rect(0, 0, 10, 10).area() == 100);
+    CHECK(Rect(0, 0, 1, 1).area() == 1);
+    CHECK(Rect(0, 0, 0, 0).area() == 0);
+}
+
+TEST_CASE("math/rect/Rect/operator bool()")
+{
+    CHECK_FALSE(Rect(10, 10, 10, 10));
+    CHECK_FALSE(Rect(NotARect));
+    CHECK(Rect(2, 2, 10, 10));
 }
 
 TEST_CASE("math/rect/Rect/NotARect")
