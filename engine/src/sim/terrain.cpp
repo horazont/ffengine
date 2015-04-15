@@ -1,5 +1,6 @@
 #include "engine/sim/terrain.hpp"
 
+#include <cassert>
 #include <cstring>
 #include <iostream>
 
@@ -28,7 +29,7 @@ Terrain::~Terrain()
 
 void Terrain::notify_heightmap_changed()
 {
-    m_terrain_updated.emit(TerrainRect(0, 0, m_size+1, m_size+1));
+    m_terrain_updated.emit(TerrainRect(0, 0, m_size, m_size));
 }
 
 void Terrain::notify_heightmap_changed(TerrainRect at)
@@ -283,242 +284,168 @@ NTMapGenerator::~NTMapGenerator()
 
 void NTMapGenerator::worker_impl(const TerrainRect &updated)
 {
-    const unsigned int size = m_source.size();
+    const unsigned int source_size = m_source.size();
 
-    Terrain::HeightField source;
+    TerrainRect to_update = updated;
+    if (to_update.x0() > 0) {
+        to_update.set_x0(to_update.x0() - 1);
+    }
+    if (to_update.y0() > 0) {
+        to_update.set_y0(to_update.y0() - 1);
+    }
+    if (to_update.x1() < source_size) {
+        to_update.set_x1(to_update.x1() + 1);
+    }
+    if (to_update.y1() < source_size) {
+        to_update.set_y1(to_update.y1() + 1);
+    }
+
+    const unsigned int dst_width = (to_update.x1() - to_update.x0());
+    const unsigned int dst_height = (to_update.y1() - to_update.y0());
+    const unsigned int src_xoffset = (to_update.x0() == 0 ? 0 : 1);
+    const unsigned int src_yoffset = (to_update.y0() == 0 ? 0 : 1);
+    const unsigned int src_x0 = to_update.x0() - src_xoffset;
+    const unsigned int src_y0 = to_update.y0() - src_yoffset;
+    const unsigned int src_width = dst_width
+            + (to_update.x0() == 0 ? 0 : 1)
+            + (to_update.x1() == source_size ? 0 : 1);
+    const unsigned int src_height = dst_height
+            + (to_update.y0() == 0 ? 0 : 1)
+            + (to_update.y1() == source_size ? 0 : 1);
+
+
+    Terrain::HeightField source_latch(src_width*src_height);
     // this worker really takes a long time, we will copy the source
     {
         const Terrain::HeightField *heightmap = nullptr;
         auto source_lock = m_source.readonly_field(heightmap);
-        source = *heightmap;
-    }
-
-    NTField dest(size*size);
-
-
-    // first the corners
-
-    // top left corner
-    {
-        const Terrain::height_t y0x0 = source[0];
-        const Terrain::height_t y0xp = source[1];
-        const Terrain::height_t ypx0 = source[size];
-
-        const Vector3f tangent_x(1, 0, y0xp - y0x0);
-        const Vector3f tangent_y(0, 1, ypx0 - y0x0);
-
-        dest[0] = Vector4f((tangent_x % tangent_y).normalized(),
-                           tangent_x[eZ]);
-    }
-
-    // top right corner
-    {
-        const Terrain::height_t y0x0 = source[size-1];
-        const Terrain::height_t y0xm = source[size-2];
-        const Terrain::height_t ypx0 = source[size+size-1];
-
-        const Vector3f tangent_x(1, 0, y0x0 - y0xm);
-        const Vector3f tangent_y(0, 1, ypx0 - y0x0);
-
-        dest[size-1] = Vector4f((tangent_x % tangent_y).normalized(),
-                                tangent_x[eZ]);
-    }
-
-    // bottom left corner
-    {
-        const Terrain::height_t y0x0 = source[(size-1)*size];
-        const Terrain::height_t y0xp = source[(size-1)*size+1];
-        const Terrain::height_t ymx0 = source[(size-2)*size];
-
-        const Vector3f tangent_x(1, 0, y0xp - y0x0);
-        const Vector3f tangent_y(0, 1, y0x0 - ymx0);
-
-        dest[(size-1)*size] = Vector4f((tangent_x % tangent_y).normalized(),
-                                       tangent_x[eZ]);
-    }
-
-    // bottom right corner
-    {
-        const Terrain::height_t y0x0 = source[(size-1)*size+size-1];
-        const Terrain::height_t y0xm = source[(size-1)*size+size-2];
-        const Terrain::height_t ymx0 = source[(size-2)*size+size-1];
-
-        const Vector3f tangent_x(1, 0, y0x0 - y0xm);
-        const Vector3f tangent_y(0, 1, y0x0 - ymx0);
-
-        dest[(size-1)*size+size-1] = Vector4f((tangent_x % tangent_y).normalized(),
-                                              tangent_x[eZ]);
-    }
-
-    // then the borders
-
-    // top border
-    if (updated.y0() <= 1) {
-        for (unsigned int x = std::max(updated.x0(), 1u);
-             x < std::min(updated.x1(), size-1);
-             x++)
+        for (unsigned int ysrc = src_y0, ylatch = 0;
+             ylatch < src_height;
+             ylatch++, ysrc++)
         {
-            Vector3f normal(0, 0, 0);
-
-            const Terrain::height_t y0x0 = source[x];
-            const Terrain::height_t ypx0 = source[size+x];
-            const Terrain::height_t y0xp = source[x+1];
-            const Terrain::height_t y0xm = source[x-1];
-
-            const Vector3f tangent_x1(1, 0, y0x0 - y0xm);
-            const Vector3f tangent_x2(1, 0, y0xp - y0x0);
-
-            const Vector3f tangent_y(0, 1, ypx0 - y0x0);
-
-            // below left face
-            normal += tangent_x1 % tangent_y;
-            // below right face
-            normal += tangent_x2 % tangent_y;
-
-            normal.normalize();
-
-            Vector3f tangent = tangent_x1 + tangent_x2;
-            tangent.normalize();
-
-            dest[x] = Vector4f(normal, tangent[eZ]);
+            memcpy(&source_latch[ylatch*src_width],
+                    &(*heightmap)[ysrc*source_size+src_x0],
+                    sizeof(sim::Terrain::height_t)*src_width);
         }
+
     }
 
-    // bottom border
-    if (updated.y1() >= size-2) {
-        for (unsigned int x = std::max(updated.x0(), 1u);
-             x < std::min(updated.x1(), size-1);
-             x++)
-        {
-            Vector3f normal(0, 0, 0);
+    NTField dest(dst_width*dst_height);
 
-            const Terrain::height_t y0x0 = source[(size-1)*size+x];
-            const Terrain::height_t ymx0 = source[(size-2)*size+x];
-            const Terrain::height_t y0xp = source[(size-1)*size+x+1];
-            const Terrain::height_t y0xm = source[(size-1)*size+x-1];
-
-            const Vector3f tangent_x1(1, 0, y0x0 - y0xm);
-            const Vector3f tangent_x2(1, 0, y0xp - y0x0);
-
-            const Vector3f tangent_y(0, 1, y0x0 - ymx0);
-
-            // above left face
-            normal += tangent_x1 % tangent_y;
-            // above right face
-            normal += tangent_x2 % tangent_y;
-
-            normal.normalize();
-
-            Vector3f tangent = tangent_x1 + tangent_x2;
-            tangent.normalize();
-
-            dest[(size-1)*size+x] = Vector4f(normal, tangent[eZ]);
-        }
-    }
-
-    // left border
-    if (updated.x0() <= 1) {
-        for (unsigned int y = std::max(updated.y0(), 1u);
-             y < std::min(updated.y1(), size-1);
-             y++)
-        {
-            Vector3f normal(0, 0, 0);
-
-            const Terrain::height_t y0x0 = source[y*size];
-            const Terrain::height_t ypx0 = source[(y+1)*size];
-            const Terrain::height_t ymx0 = source[(y-1)*size];
-            const Terrain::height_t y0xp = source[y*size+1];
-
-            const Vector3f tangent_x(1, 0, y0xp - y0x0);
-
-            const Vector3f tangent_y1(0, 1, y0x0 - ymx0);
-            const Vector3f tangent_y2(0, 1, ypx0 - y0x0);
-
-            // above right face
-            normal += tangent_x % tangent_y1;
-            // below right face
-            normal += tangent_x % tangent_y2;
-
-            normal.normalize();
-
-            dest[y*size] = Vector4f(normal, tangent_x[eZ]);
-        }
-    }
-
-    // right border
-    if (updated.x1() >= size-2) {
-        for (unsigned int y = std::max(updated.y0(), 1u);
-             y < std::min(updated.y1(), size-1);
-             y++)
-        {
-            Vector3f normal(0, 0, 0);
-
-            const Terrain::height_t y0x0 = source[y*size+(size-1)];
-            const Terrain::height_t ypx0 = source[(y+1)*size+(size-1)];
-            const Terrain::height_t ymx0 = source[(y-1)*size+(size-1)];
-            const Terrain::height_t y0xm = source[y*size+(size-2)];
-
-            const Vector3f tangent_x(1, 0, y0x0 - y0xm);
-
-            const Vector3f tangent_y1(0, 1, y0x0 - ymx0);
-            const Vector3f tangent_y2(0, 1, ypx0 - y0x0);
-
-            // above right face
-            normal += tangent_x % tangent_y1;
-            // below right face
-            normal += tangent_x % tangent_y2;
-
-            normal.normalize();
-
-            dest[y*size+size-1] = Vector4f(normal, tangent_x[eZ]);
-        }
-    }
-
-
-    // now the interior
-    for (unsigned int y = std::max(updated.y0(), 1u);
-         y < std::min(updated.y1(), size-1);
+    bool has_ym = to_update.y0() > 0;
+    for (unsigned int y = 0;
+         y < dst_height;
          y++)
     {
-        for (unsigned int x = std::max(updated.x0(), 1u);
-             x < std::min(updated.x1(), size-1);
+        bool has_xm = to_update.x0() > 0;
+        bool has_yp = to_update.y1() < source_size || y < dst_height - 1;
+        for (unsigned int x = 0;
+             x < dst_width;
              x++)
         {
+            const bool has_xp = to_update.x1() < source_size || x < dst_width - 1;
             Vector3f normal(0, 0, 0);
+            float tangent_eZ = 0;
 
-            const Terrain::height_t y0x0 = source[y*size+x];
-            const Terrain::height_t ymx0 = source[(y-1)*size+x];
-            const Terrain::height_t ypx0 = source[(y+1)*size+x];
-            const Terrain::height_t y0xm = source[y*size+x-1];
-            const Terrain::height_t y0xp = source[y*size+x+1];
 
-            const Vector3f tangent_x1(1, 0, y0x0 - y0xm);
-            const Vector3f tangent_x2(1, 0, y0xp - y0x0);
+            const Terrain::height_t y0x0 = source_latch[(y+src_yoffset)*src_width+x+src_xoffset];
+            Terrain::height_t ymx0;
+            Terrain::height_t ypx0;
+            Terrain::height_t y0xm;
+            Terrain::height_t y0xp;
 
-            const Vector3f tangent_y1(0, 1, y0x0 - ymx0);
-            const Vector3f tangent_y2(0, 1, ypx0 - y0x0);
+            Vector3f tangent_x1;
+            Vector3f tangent_x2;
 
-            // above left face
-            normal += tangent_x1 % tangent_y1;
-            // above right face
-            normal += tangent_x2 % tangent_y1;
+            Vector3f tangent_y1;
+            Vector3f tangent_y2;
 
-            // below left face
-            normal += tangent_x1 % tangent_y2;
-            // below right face
-            normal += tangent_x2 % tangent_y2;
+            if (has_ym)
+            {
+                ymx0 = source_latch[(y+src_yoffset-1)*src_width+x+src_xoffset];
+                tangent_y1 = Vector3f(0, 1, y0x0 - ymx0);
+            }
+            if (has_yp)
+            {
+                ypx0 = source_latch[(y+src_yoffset+1)*src_width+x+src_xoffset];
+                tangent_y2 = Vector3f(0, 1, ypx0 - y0x0);
+            }
+            if (has_xm)
+            {
+                y0xm = source_latch[(y+src_yoffset)*src_width+x+src_xoffset-1];
+                const float z = y0x0 - y0xm;
+                tangent_x1 = Vector3f(1, 0, z);
+                tangent_eZ += z;
+            }
+            if (has_xp)
+            {
+                y0xp = source_latch[(y+src_yoffset)*src_width+x+src_xoffset+1];
+                const float z = y0xp - y0x0;
+                tangent_x2 = Vector3f(1, 0, z);
+                tangent_eZ += z;
+                if (!has_xm) {
+                    // correct for division by two later on
+                    tangent_eZ *= 2;
+                }
+            } else {
+                // correct for division by two later on
+                tangent_eZ *= 2;
+            }
+
+            assert((has_xm || has_xp) && (has_ym || has_yp));
+
+            if (has_xm && has_ym) {
+                // above left face
+                normal += tangent_x1 % tangent_y1;
+            }
+            if (has_xp && has_ym) {
+                // above right face
+                normal += tangent_x2 % tangent_y1;
+            }
+
+            if (has_xm && has_yp) {
+                // below left face
+                normal += tangent_x1 % tangent_y2;
+            }
+            if (has_xp && has_yp) {
+                // below right face
+                normal += tangent_x2 % tangent_y2;
+            }
+
+            /* if (!has_xm || !has_ym || !has_yp || !has_xp) {
+                std::cerr << x << " " << y << std::endl;
+            } */
 
             normal.normalize();
 
-            const Vector3f tangent = tangent_x1 + tangent_x2;
+            dest[y*dst_width+x] = Vector4f(normal, tangent_eZ / 2.);
 
-            dest[y*size+x] = Vector4f(normal, tangent[eZ]);
+            has_xm = true;
         }
+        has_ym = true;
     }
 
-    std::unique_lock<std::shared_timed_mutex> lock(m_data_mutex);
-    m_field.swap(dest);
-    lock.unlock();
+    /*std::cerr << dst_width*dst_height << std::endl;
+    if (dst_width*dst_height < 1000) {
+        for (unsigned int y = 0; y < dst_height; y++) {
+            for (unsigned int x = 0; x < dst_width; x++) {
+                std::cerr << "y = " << y << "; x = " << x << "; " << dest[y*dst_width+x] << std::endl;
+            }
+        }
+    }*/
+
+    {
+        std::unique_lock<std::shared_timed_mutex> lock(m_data_mutex);
+        m_field.resize(source_size*source_size);
+        for (unsigned int ydst = 0, ystore = src_y0+src_yoffset;
+             ydst < dst_height;
+             ystore++, ydst++)
+        {
+            memcpy(&m_field[ystore*source_size+src_x0+src_xoffset],
+                    &dest[ydst*dst_width],
+                    sizeof(Vector4f)*dst_width);
+        }
+    }
 
     m_field_updated.emit(updated);
 }
