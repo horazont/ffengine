@@ -19,6 +19,9 @@ enum class PlaneSide {
  */
 struct Ray
 {
+    Ray();
+    Ray(const Vector3f &origin, const Vector3f &direction);
+
     /**
      * The origin of the ray.
      */

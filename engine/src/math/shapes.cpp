@@ -3,6 +3,21 @@
 #include "engine/math/intersect.hpp"
 
 
+Ray::Ray():
+    origin(),
+    direction()
+{
+
+}
+
+Ray::Ray(const Vector3f &origin, const Vector3f &direction):
+    origin(origin),
+    direction(direction.normalized())
+{
+
+}
+
+
 Plane::Plane(const float dist, const Vector3f &normal):
     dist(dist),
     normal(normal)

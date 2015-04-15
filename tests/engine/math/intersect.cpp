@@ -5,7 +5,7 @@
 TEST_CASE("math/intersect/isect_ray_triangle/intersecting",
           "Test ray-triangle intersection")
 {
-    Ray r1{Vector3f(0, 0, 1), Vector3f(0, 0, -1)};
+    Ray r1(Vector3f(0, 0, 1), Vector3f(0, 0, -1));
 
     Vector3f p0(-0.5, -0.5, 0);
     Vector3f p1(0.5, 0, 0);
@@ -22,7 +22,7 @@ TEST_CASE("math/intersect/isect_ray_triangle/intersecting",
 TEST_CASE("math/intersect/isect_ray_triangle/non_intersecting",
           "Test ray-triangle non-intersection")
 {
-    Ray r1{Vector3f(0, 0, 1), Vector3f(0, 0.5, 1)};
+    Ray r1(Vector3f(0, 0, 1), Vector3f(0, 0.5, 1));
 
     Vector3f p0(-0.5, -0.5, 0);
     Vector3f p1(0.5, 0, 0);
@@ -39,7 +39,7 @@ TEST_CASE("math/intersect/isect_ray_triangle/non_intersecting",
 TEST_CASE("math/intersect/isect_ray_triangle/below",
           "Test ray-triangle ray below triangle")
 {
-    Ray r1{Vector3f(0, 0, -1), Vector3f(0, 0, -1)};
+    Ray r1(Vector3f(0, 0, -1), Vector3f(0, 0, -1));
 
     Vector3f p0(-0.5, -0.5, 0);
     Vector3f p1(0.5, 0, 0);
@@ -56,7 +56,7 @@ TEST_CASE("math/intersect/isect_ray_triangle/below",
 TEST_CASE("math/intersect/isect_plane_ray/intersection",
           "Test ray-plane intersection")
 {
-    Ray r1{Vector3f(0, 0, 4), Vector3f(0, 0, -1)};
+    Ray r1(Vector3f(0, 0, 4), Vector3f(0, 0, -1));
 
     Vector3f plane_pos(2, 2, 3);
     Vector3f plane_normal(0.1, 0.1, 1.0);
@@ -73,7 +73,7 @@ TEST_CASE("math/intersect/isect_plane_ray/intersection",
 TEST_CASE("math/intersect/isect_plane_ray/below",
           "Test ray-plane intersection, ray below plane")
 {
-    Ray r1{Vector3f(0, 0, 2), Vector3f(0, 0, -1)};
+    Ray r1(Vector3f(0, 0, 2), Vector3f(0, 0, -1));
 
     Vector3f plane_pos(2, 2, 3);
     Vector3f plane_normal(0.1, 0.1, 1.0);
@@ -90,7 +90,7 @@ TEST_CASE("math/intersect/isect_plane_ray/below",
 TEST_CASE("math/intersect/isect_plane_ray/parallel",
           "Test ray-plane intersection, ray parallel to plane")
 {
-    Ray r1{Vector3f(0, 0, 2), Vector3f(0, 0, -1)};
+    Ray r1(Vector3f(0, 0, 2), Vector3f(0, 0, -1));
 
     Vector3f plane_pos(-1, 0, 0);
     Vector3f plane_normal(1, 0, 0);
@@ -106,7 +106,7 @@ TEST_CASE("math/intersect/isect_plane_ray/parallel",
 TEST_CASE("math/intersect/isect_plane_ray/parallel_on_plane",
           "Test ray-plane intersection, ray parallel to plane and on plane")
 {
-    Ray r1{Vector3f(-1, 0, 2), Vector3f(0, 0, -1)};
+    Ray r1(Vector3f(-1, 0, 2), Vector3f(0, 0, -1));
 
     Vector3f plane_pos(-1, 0, 0);
     Vector3f plane_normal(1, 0, 0);
@@ -138,7 +138,7 @@ TEST_CASE("math/intersect/isect_aabb_sphere/non_intersection")
 
 TEST_CASE("math/intersect/isect_aabb_ray/through_x_planes_only")
 {
-    Ray r{Vector3f(-2, 0, 0), Vector3f(1, 0, 0)};
+    Ray r(Vector3f(-2, 0, 0), Vector3f(1, 0, 0));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
@@ -151,7 +151,7 @@ TEST_CASE("math/intersect/isect_aabb_ray/through_x_planes_only")
 
 TEST_CASE("math/intersect/isect_aabb_ray/through_y_planes_only")
 {
-    Ray r{Vector3f(0, -2, 0), Vector3f(0, 1, 0)};
+    Ray r(Vector3f(0, -2, 0), Vector3f(0, 1, 0));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
@@ -164,7 +164,7 @@ TEST_CASE("math/intersect/isect_aabb_ray/through_y_planes_only")
 
 TEST_CASE("math/intersect/isect_aabb_ray/through_z_planes_only")
 {
-    Ray r{Vector3f(0, 0, -2), Vector3f(0, 0, 1)};
+    Ray r(Vector3f(0, 0, -2), Vector3f(0, 0, 1));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
@@ -177,46 +177,46 @@ TEST_CASE("math/intersect/isect_aabb_ray/through_z_planes_only")
 
 TEST_CASE("math/intersect/isect_aabb_ray/through_corner")
 {
-    Ray r{Vector3f(-2, -2, -2), Vector3f(1, 1, 1)};
+    Ray r(Vector3f(-2, -2, -2), Vector3f(1, 1, 1));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
     bool hit = isect_aabb_ray(aabb, r, t0, t1);
 
     CHECK(hit);
-    CHECK(t0 == 1);
-    CHECK(t1 == 3);
+    CHECK(fabs(t0 - 1.73205f) < ISECT_EPSILON);
+    CHECK(fabs(t1 - 5.19615f) < ISECT_EPSILON);
 }
 
 TEST_CASE("math/intersect/isect_aabb_ray/through_xy_edge")
 {
-    Ray r{Vector3f(-2, -2, 0), Vector3f(1, 1, 0)};
+    Ray r(Vector3f(-2, -2, 0), Vector3f(1, 1, 0));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
     bool hit = isect_aabb_ray(aabb, r, t0, t1);
 
     CHECK(hit);
-    CHECK(t0 == 1);
-    CHECK(t1 == 3);
+    CHECK(fabs(t0 - 1.41421f) < ISECT_EPSILON);
+    CHECK(fabs(t1 - 4.24264f) < ISECT_EPSILON);
 }
 
 TEST_CASE("math/intersect/isect_aabb_ray/general_case")
 {
-    Ray r{Vector3f(-1.5, -2, -2.5), Vector3f(0.3, 0.2, 0.6)};
+    Ray r(Vector3f(-1.5, -2, -2.5), Vector3f(0.3, 0.2, 0.6));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
     bool hit = isect_aabb_ray(aabb, r, t0, t1);
 
     CHECK(hit);
-    CHECK(t0 == 5);
-    CHECK(fabs(t1 - 5.8333333f) < ISECT_EPSILON);
+    CHECK(fabs(t0 - 3.5f) < ISECT_EPSILON);
+    CHECK(fabs(t1 - 4.0833330154f) < ISECT_EPSILON);
 }
 
 TEST_CASE("math/intersect/isect_aabb_ray/x_axis_parallel_outside")
 {
-    Ray r{Vector3f(-2, -10, 0), Vector3f(1, 0, 0)};
+    Ray r(Vector3f(-2, -10, 0), Vector3f(1, 0, 0));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
@@ -227,7 +227,7 @@ TEST_CASE("math/intersect/isect_aabb_ray/x_axis_parallel_outside")
 
 TEST_CASE("math/intersect/isect_aabb_ray/x_axis_parallel_on_edge")
 {
-    Ray r{Vector3f(-2, -1, 0), Vector3f(1, 0, 0)};
+    Ray r(Vector3f(-2, -1, 0), Vector3f(1, 0, 0));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
@@ -240,7 +240,7 @@ TEST_CASE("math/intersect/isect_aabb_ray/x_axis_parallel_on_edge")
 
 TEST_CASE("math/intersect/isect_aabb_ray/general_outside")
 {
-    Ray r{Vector3f(-2, -3, -4), Vector3f(-0.2, 0.3, 0.4)};
+    Ray r(Vector3f(-2, -3, -4), Vector3f(-0.2, 0.3, 0.4));
     AABB aabb{Vector3f(-1, -1, -1), Vector3f(1, 1, 1)};
 
     float t0, t1;
@@ -251,7 +251,7 @@ TEST_CASE("math/intersect/isect_aabb_ray/general_outside")
 
 TEST_CASE("math/intersect/isect_aabb_ray/general0")
 {
-    Ray r{Vector3f(1034, -1, -0.5), Vector3f(-0.5, 1, 0)};
+    Ray r(Vector3f(1034, -1, -0.5), Vector3f(-0.5, 1, 0));
     AABB aabb{Vector3f(0, 0, -1), Vector3f(2048, 2048, 1)};
 
     float t0, t1;

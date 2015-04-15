@@ -263,9 +263,9 @@ Ray PerspectivalCamera::ray(const Vector2f &viewport_pos,
 
     const Vector4f direction = inv_view * Vector4f(on_view_plane, 0.);
 
-    return Ray{pos, Vector3f(direction[eX],
+    return Ray(pos, Vector3f(direction[eX],
                              direction[eY],
-                             direction[eZ]).normalized()};
+                             direction[eZ]));
 }
 
 void PerspectivalCamera::set_fovy(const float fovy)
