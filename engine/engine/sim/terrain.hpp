@@ -50,6 +50,7 @@ private:
     HeightField m_heightmap;
 
     sigc::signal<void> m_terrain_changed;
+    sigc::signal<void, TerrainRect> m_terrain_updated;
 
 public:
     inline height_t get(unsigned int x, unsigned int y) const
@@ -87,8 +88,14 @@ public:
         return m_terrain_changed;
     }
 
+    inline sigc::signal<void, TerrainRect> &terrain_updated()
+    {
+        return m_terrain_updated;
+    }
+
 public:
     void notify_heightmap_changed();
+    void notify_heightmap_changed(TerrainRect at);
     std::shared_lock<std::shared_timed_mutex> readonly_field(
             const HeightField *&heightmap) const;
     std::unique_lock<std::shared_timed_mutex> writable_field(
@@ -101,7 +108,35 @@ public:
 };
 
 
-class MinMaxMapGenerator: public engine::NotifiableWorker
+class TerrainWorker
+{
+public:
+    TerrainWorker();
+    virtual ~TerrainWorker();
+
+private:
+    std::mutex m_state_mutex;
+    TerrainRect m_updated_rect;
+    bool m_terminated;
+    std::condition_variable m_wakeup;
+
+    std::thread m_worker_thread;
+
+private:
+    void worker();
+
+protected:
+    void start();
+    void tear_down();
+    virtual void worker_impl(const TerrainRect &updated_rect) = 0;
+
+public:
+    void notify_update(const TerrainRect &at);
+
+};
+
+
+class MinMaxMapGenerator: public TerrainWorker
 {
 public:
     typedef std::tuple<Terrain::height_t, Terrain::height_t> element_t;
@@ -122,7 +157,7 @@ private:
 
 protected:
     void make_zeroth_map(MinMaxField &scratchpad);
-    bool worker_impl() override;
+    void worker_impl(const TerrainRect &updated) override;
 
 public:
     inline unsigned int lod_count() const
@@ -131,14 +166,13 @@ public:
     }
 
 public:
-    void notify_changed();
     std::shared_lock<std::shared_timed_mutex> readonly_lods(
             const MinMaxFieldLODs *&fields) const;
 
 };
 
 
-class NTMapGenerator: public engine::NotifiableWorker
+class NTMapGenerator: public TerrainWorker
 {
 public:
     typedef Vector4f element_t;
@@ -154,15 +188,15 @@ private:
     mutable std::shared_timed_mutex m_data_mutex;
     NTField m_field;
 
-    sigc::signal<void> m_field_changed;
+    sigc::signal<void, TerrainRect> m_field_updated;
 
 protected:
-    bool worker_impl() override;
+    void worker_impl(const TerrainRect &updated) override;
 
 public:
-    inline sigc::signal<void> &field_changed()
+    inline sigc::signal<void, TerrainRect> &field_updated()
     {
-        return m_field_changed;
+        return m_field_updated;
     }
 
     std::shared_lock<std::shared_timed_mutex> readonly_field(
@@ -177,7 +211,7 @@ public:
 
 
 template <typename element_t, typename source_t>
-class FieldLODifier: public engine::NotifiableWorker
+class FieldLODifier: public TerrainWorker
 {
 public:
     typedef std::vector<element_t> Field;
@@ -206,7 +240,7 @@ private:
     FieldLODs m_lods;
 
 protected:
-    bool worker_impl() override
+    void worker_impl(const TerrainRect &updated) override
     {
         std::shared_lock<std::shared_timed_mutex> read_lock(m_data_mutex);
         std::unique_lock<std::shared_timed_mutex> write_lock(m_data_mutex,
@@ -263,8 +297,6 @@ protected:
             prev_heightfield = &m_lods[i-1];
             prev_size = this_size;
         }
-
-        return false;
     }
 
 public:

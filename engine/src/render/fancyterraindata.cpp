@@ -17,22 +17,29 @@ FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
     m_terrain_minmax(terrain),
     m_terrain_nt(terrain),
     m_terrain_nt_lods(m_terrain_nt),
-    m_terrain_lods_conn(terrain.terrain_changed().connect(
-                            std::bind(&HeightFieldLODifier::notify,
-                                      &m_terrain_lods))),
-    m_terrain_minmax_conn(terrain.terrain_changed().connect(
-                              std::bind(&sim::MinMaxMapGenerator::notify,
-                                        &m_terrain_minmax))),
-    m_terrain_nt_conn(terrain.terrain_changed().connect(
-                          std::bind(&sim::NTMapGenerator::notify,
-                                    &m_terrain_nt))),
-    m_terrain_nt_lods_conn(m_terrain_nt.field_changed().connect(
-                               std::bind(&NTMapLODifier::notify,
-                                         &m_terrain_nt_lods)))
+    m_terrain_lods_conn(terrain.terrain_updated().connect(
+                            sigc::mem_fun(m_terrain_lods,
+                                          &HeightFieldLODifier::notify_update)
+                            )),
+    m_terrain_minmax_conn(terrain.terrain_updated().connect(
+                              sigc::mem_fun(m_terrain_minmax,
+                                            &sim::MinMaxMapGenerator::notify_update)
+                              )),
+    m_terrain_nt_conn(terrain.terrain_updated().connect(
+                          sigc::mem_fun(m_terrain_nt,
+                                        &sim::NTMapGenerator::notify_update)
+                          )),
+    m_terrain_nt_lods_conn(m_terrain_nt.field_updated().connect(
+                               sigc::mem_fun(m_terrain_nt_lods,
+                                             &NTMapLODifier::notify_update)
+                               ))
 {
-    m_terrain_lods.notify();
-    m_terrain_minmax.notify();
-    m_terrain_nt.notify();
+    sim::TerrainRect full_terrain(0, 0,
+                                  m_terrain.size(),
+                                  m_terrain.size());
+    m_terrain_lods.notify_update(full_terrain);
+    m_terrain_minmax.notify_update(full_terrain);
+    m_terrain_nt.notify_update(full_terrain);
 
     if (!is_power_of_two(grid_size-1)) {
         throw std::runtime_error("grid_size must be power-of-two plus one");
