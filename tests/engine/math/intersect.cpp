@@ -53,6 +53,98 @@ TEST_CASE("math/intersect/isect_ray_triangle/below",
     CHECK(t < 0);
 }
 
+TEST_CASE("math/intersect/isect_ray_triangle/hit_the_edge")
+{
+    Ray r1(Vector3f(0, 0, 1000), Vector3f(0, 0, -0.99999));
+
+    Vector3f p0(-0.5, -0.5, 0);
+    Vector3f p1(0.5, -0.5, 0);
+    Vector3f p2(-0.5, 0.5, 0);
+
+    float t;
+    bool success;
+    std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
+
+    CHECK(success);
+    CHECK(fabs(t - 1000) < ISECT_EPSILON);
+}
+
+TEST_CASE("math/intersect/isect_ray_triangle/hit_the_edge_non_perp")
+{
+    Ray r1(Vector3f(-9.27867, 22.95933, 26.37506), Vector3f(9.27867, -22.95933, -26.37506).normalized());
+
+    Vector3f p0(-0.5, -0.5, 0);
+    Vector3f p1(0.5, -0.5, 0);
+    Vector3f p2(-0.5, 0.5, 0);
+
+    float t;
+    bool success;
+    std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
+
+    CHECK(success);
+    CHECK(fabs(t - (1000-963.8217163086)) < ISECT_EPSILON);
+}
+
+TEST_CASE("math/intersect/isect_ray_triangle/hit_close_to_the_edge")
+{
+    Ray r1(Vector3f(-9.27867, 22.95933, 26.37506), Vector3f(9.27867, -22.95933, -26.37506).normalized());
+
+    Vector3f p0(-0.5, -0.5, 0);
+    Vector3f p1(3.5, -0.5, 0);
+    Vector3f p2(-0.5, 0.1, 0);
+
+    float t;
+    bool success;
+    std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
+
+    CHECK(success);
+    CHECK(fabs(t - (1000-963.8217163086)) < ISECT_EPSILON);
+}
+
+TEST_CASE("math/intersect/isect_ray_triangle/hit_close_to_the_larger_edge")
+{
+    Ray r1(Vector3f(-9.27867, 22.95933, 26.37506), Vector3f(9.27867, -22.95933, -26.37506).normalized());
+
+    Vector3f p0(-1.79260, 0.31470, 0);
+    Vector3f p1(-1.79260, -1.76613, 0);
+    Vector3f p2(12.07960, -1.76613, 0);
+
+    float t;
+    bool success;
+    std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
+
+    CHECK(success);
+    CHECK(fabs(t - (1000-963.8217163086)) < ISECT_EPSILON);
+}
+
+TEST_CASE("math/intersect/isect_ray_triangle/realworld_miss1")
+{
+    Ray r1(Vector3f(31.128395, 11.252053, 13.137098), Vector3f(-0.836384, -0.054968, -0.545381));
+
+    Vector3f p0(17.000000, 10.000000, -0.191436);
+    Vector3f p1(16.000000, 11.000000, 9.771060);
+    Vector3f p2(17.000000, 11.000000, 0.224137);
+
+    float t;
+    bool success;
+    std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
+    CHECK_FALSE(success);
+}
+
+TEST_CASE("math/intersect/isect_ray_triangle/realworld_miss2")
+{
+    Ray r1(Vector3f(33.072754, 17.278791, 12.833068), Vector3f(-0.735938, 0.150116, -0.660197));
+
+    Vector3f p0(23.000000, 19.000000, 9.568980);
+    Vector3f p1(23.000000, 20.000000, 9.092868);
+    Vector3f p2(24.000000, 20.000000, 2.616207);
+
+    float t;
+    bool success;
+    std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
+    CHECK_FALSE(success);
+}
+
 TEST_CASE("math/intersect/isect_plane_ray/intersection",
           "Test ray-plane intersection")
 {
