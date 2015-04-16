@@ -92,6 +92,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                 0.0, 0.0);
     m_material.attach_texture("heightmap", &m_heightmap);
     m_material.attach_texture("normalt", &m_normalt);
+    glUniform1f(m_material.shader().uniform_location("zoffset"),
+                0.);
     RenderContext::configure_shader(m_material.shader());
 
     m_normal_debug_material.shader().bind();
@@ -103,6 +105,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_normal_debug_material.attach_texture("normalt", &m_normalt);
     glUniform1f(m_normal_debug_material.shader().uniform_location("normal_length"),
                 2.);
+    glUniform1f(m_normal_debug_material.shader().uniform_location("zoffset"),
+                0.);
     RenderContext::configure_shader(m_normal_debug_material.shader());
 
     m_heightmap.bind();
@@ -255,12 +259,10 @@ void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
 
 void FancyTerrainNode::configure_overlay(
         Material &mat,
-        const sim::TerrainRect &clip_rect,
-        const float zoffset)
+        const sim::TerrainRect &clip_rect)
 {
     OverlayConfig &conf = m_overlays[&mat];
     conf.clip_rect = clip_rect;
-    conf.zoffset = zoffset;
 }
 
 bool FancyTerrainNode::configure_overlay_material(Material &mat)
@@ -274,6 +276,8 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
 
     mat.attach_texture("heightmap", &m_heightmap);
     mat.attach_texture("normalt", &m_normalt);
+    mat.shader().bind();
+    glUniform1f(mat.shader().uniform_location("zoffset"), 1.0f);
 
     return true;
 }
@@ -293,7 +297,7 @@ void FancyTerrainNode::render(RenderContext &context)
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
-                 1, context.scene().viewpoint().as_array);
+                 1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
     render_all(context, *m_vao, m_material);
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 
@@ -301,6 +305,30 @@ void FancyTerrainNode::render(RenderContext &context)
     glUniform3fv(m_normal_debug_material.shader().uniform_location("lod_viewpoint"),
                  1, context.scene().viewpoint().as_array);
     render_all(context, *m_nd_vao, m_normal_debug_material); */
+
+    glDepthMask(GL_FALSE);
+    for (auto &overlay: m_render_overlays)
+    {
+        overlay.material->shader().bind();
+        glUniform3fv(overlay.material->shader().uniform_location("lod_viewpoint"),
+                     1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
+        for (auto &slice: m_render_slices)
+        {
+            const unsigned int x = std::get<0>(slice).basex;
+            const unsigned int y = std::get<0>(slice).basey;
+            const unsigned int scale = std::get<0>(slice).lod;
+            const unsigned int slot_index = std::get<1>(slice);
+
+            sim::TerrainRect slice_rect(x, y, x+scale, y+scale);
+            if (slice_rect.overlaps(overlay.clip_rect)) {
+                render_slice(context,
+                             *m_vao, *overlay.material, m_ibo_allocation,
+                             x, y, scale, slot_index,
+                             m_grid_size, m_texture_cache_size);
+            }
+        }
+    }
+    glDepthMask(GL_TRUE);
 }
 
 void FancyTerrainNode::sync(Scene &scene)
@@ -308,6 +336,14 @@ void FancyTerrainNode::sync(Scene &scene)
     // FIXME: use SceneStorage here!
 
     const unsigned int texture_slots = m_texture_cache_size*m_texture_cache_size;
+
+    m_render_overlays.clear();
+    m_render_overlays.reserve(m_overlays.size());
+    for (auto &item: m_overlays) {
+        m_render_overlays.emplace_back(
+                    RenderOverlay{item.first, item.second.clip_rect}
+                    );
+    }
 
     m_heightmap.bind();
     m_tmp_slices.clear();

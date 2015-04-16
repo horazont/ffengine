@@ -91,14 +91,12 @@ public:
     struct OverlayConfig
     {
         sim::TerrainRect clip_rect;
-        float zoffset;
     };
 
     struct RenderOverlay
     {
         Material *material;
         sim::TerrainRect clip_rect;
-        float zoffset;
     };
 
 public:
@@ -195,14 +193,11 @@ public:
      * is used as a key internally. The material must be configured with
      * configure_overlay_material().
      * @param clip_rect A rectangle for clipping the overlay rendering.
-     * @param zoffset An offset which will be applied in the vertex shader to
-     * avoid Z-Fighting between the overlay and the terrain.
      *
      * @see remove_overlay
      */
     void configure_overlay(Material &mat,
-                           const sim::TerrainRect &clip_rect,
-                           const float zoffset = 1.0);
+                           const sim::TerrainRect &clip_rect);
 
     /**
      * Configure a material for use in overlay rendering.
@@ -218,6 +213,12 @@ public:
      *         vec2 tc0;  // general purpose texture coordinate
      *         vec3 normal;  // normal vector
      *     }
+     *
+     * The vertex shader also takes a uniform float, \a zoffset, which is
+     * initialized as ``1.0f``. It cas be used to control the amount of
+     * distance the overlay has from the terrain, for Z-Buffer purposes. The
+     * value is scaled with the distance of the viewer from the camera, thus,
+     * generally, ``1.0f`` is a safe value.
      *
      * The material can be used to create an overlay.
      *
