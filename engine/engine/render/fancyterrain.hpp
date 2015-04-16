@@ -11,8 +11,19 @@ namespace engine {
 
 struct HeightmapSliceMeta
 {
+    /**
+     * World coordinate of the x origin of this slice.
+     */
     unsigned int basex;
+
+    /**
+     * World coordinate of the y origin of this slice.
+     */
     unsigned int basey;
+
+    /**
+     * Size of this slice in world coordinates.
+     */
     unsigned int lod;
 
     bool operator<(const HeightmapSliceMeta &other) const;
@@ -77,6 +88,19 @@ class FancyTerrainNode: public scenegraph::Node
 public:
     typedef unsigned int SlotIndex;
 
+    struct OverlayConfig
+    {
+        sim::TerrainRect clip_rect;
+        float zoffset;
+    };
+
+    struct RenderOverlay
+    {
+        Material *material;
+        sim::TerrainRect clip_rect;
+        float zoffset;
+    };
+
 public:
     /**
      * Construct a fancy terrain node.
@@ -85,6 +109,8 @@ public:
      * @param texture_cache_size The square root of the number of tiles which
      * will be cached on the GPU. This will create a square texture with
      * grid_size*texture_cache_size texels on each edge.
+     *
+     * @opengl
      */
     FancyTerrainNode(FancyTerrainInterface &terrain,
                      const unsigned int texture_cache_size);
@@ -128,6 +154,9 @@ private:
 
     std::vector<std::tuple<HeightmapSliceMeta, unsigned int> > m_render_slices;
 
+    std::unordered_map<Material*, OverlayConfig> m_overlays;
+    std::vector<RenderOverlay> m_render_overlays;
+
 protected:
     void collect_slices_recurse(
             std::vector<HeightmapSliceMeta> &requested_slices,
@@ -146,6 +175,70 @@ protected:
 
 public:
     void attach_grass_texture(Texture2D *tex);
+
+    /**
+     * Register and/or configure an overlay for rendering. If an overlay with
+     * the given material is already registered, the settings will be
+     * overriden.
+     *
+     * The overlay is rendered by rendering the terrain blocks which intersect
+     * the given \a clip_rect using the given Material \a mat. The given
+     * \a zoffset is applied in the Vertex Shader. The \a zoffset is in
+     * relative units which will be scaled based on the distance of the viewer
+     * to the overlay vertex. ``1.0`` is generally a good value.
+     *
+     * The overlay itself is rendered without modifying the depth buffer; it is
+     * considered to be part of the terrain, which has already written its
+     * z values.
+     *
+     * @param mat Material to render the overlay; the pointer to the material
+     * is used as a key internally. The material must be configured with
+     * configure_overlay_material().
+     * @param clip_rect A rectangle for clipping the overlay rendering.
+     * @param zoffset An offset which will be applied in the vertex shader to
+     * avoid Z-Fighting between the overlay and the terrain.
+     *
+     * @see remove_overlay
+     */
+    void configure_overlay(Material &mat,
+                           const sim::TerrainRect &clip_rect,
+                           const float zoffset = 1.0);
+
+    /**
+     * Configure a material for use in overlay rendering.
+     *
+     * A vertex shader used for terrain rendering will be attached to the
+     * materials shader. Then the shader is linked and the vertex textures
+     * which are used for terrain rendering get attached.
+     *
+     * The vertex shader provides a structure to the following shader stages:
+     *
+     *     out TerrainData {
+     *         vec3 world;  // world coordinate
+     *         vec2 tc0;  // general purpose texture coordinate
+     *         vec3 normal;  // normal vector
+     *     }
+     *
+     * The material can be used to create an overlay.
+     *
+     * @param mat A material object whose shader is ready to link except that
+     * it does not contain a vertex shader yet.
+     * @return true if shader compilation and linking was successful, false
+     * otherwise.
+     *
+     * @opengl
+     */
+    bool configure_overlay_material(Material &mat);
+
+
+    /**
+     * Remove a previously registered overlay.
+     *
+     * @param mat The Material used for the overlay.
+     *
+     * @see configure_overlay
+     */
+    void remove_overlay(Material &mat);
 
 public:
     void render(RenderContext &context) override;
