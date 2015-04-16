@@ -206,6 +206,33 @@ void FancyTerrainNode::collect_slices_recurse(
     }
 }
 
+inline void render_slice(RenderContext &context,
+                         VAO &vao,
+                         Material &material,
+                         IBOAllocation &ibo_allocation,
+                         const float x, const float y, const float scale,
+                         const unsigned int slot_index,
+                         const unsigned int grid_size,
+                         const unsigned int texture_cache_size)
+{
+    const float xtex = (float(slot_index % texture_cache_size) + 0.5/grid_size) / texture_cache_size;
+    const float ytex = (float(slot_index / texture_cache_size) + 0.5/grid_size) / texture_cache_size;
+
+    glUniform2f(material.shader().uniform_location("heightmap_base"),
+                xtex, ytex);
+    glUniform1f(material.shader().uniform_location("chunk_size"),
+                scale);
+    glUniform2f(material.shader().uniform_location("chunk_translation"),
+                x, y);
+    /* std::cout << "rendering" << std::endl;
+    std::cout << "  xtex          = " << xtex << std::endl;
+    std::cout << "  ytex          = " << ytex << std::endl;
+    std::cout << "  translationx  = " << x << std::endl;
+    std::cout << "  translationy  = " << y << std::endl;
+    std::cout << "  scale         = " << scale << std::endl; */
+    context.draw_elements(GL_TRIANGLES, vao, material, ibo_allocation);
+}
+
 void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &material)
 {
     for (auto &slice: m_render_slices) {
@@ -213,22 +240,10 @@ void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &ma
         const float y = std::get<0>(slice).basey;
         const float scale = std::get<0>(slice).lod;
         const unsigned int slot_index = std::get<1>(slice);
-        const float xtex = (float(slot_index % m_texture_cache_size) + 0.5/m_grid_size) / m_texture_cache_size;
-        const float ytex = (float(slot_index / m_texture_cache_size) + 0.5/m_grid_size) / m_texture_cache_size;
 
-        glUniform2f(material.shader().uniform_location("heightmap_base"),
-                    xtex, ytex);
-        glUniform1f(material.shader().uniform_location("chunk_size"),
-                    scale);
-        glUniform2f(material.shader().uniform_location("chunk_translation"),
-                    x, y);
-        /* std::cout << "rendering" << std::endl;
-        std::cout << "  xtex          = " << xtex << std::endl;
-        std::cout << "  ytex          = " << ytex << std::endl;
-        std::cout << "  translationx  = " << x << std::endl;
-        std::cout << "  translationy  = " << y << std::endl;
-        std::cout << "  scale         = " << scale << std::endl; */
-        context.draw_elements(GL_TRIANGLES, vao, material, m_ibo_allocation);
+        render_slice(context, vao, material, m_ibo_allocation,
+                     x, y, scale, slot_index,
+                     m_grid_size, m_texture_cache_size);
     }
 }
 
