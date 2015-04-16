@@ -253,6 +253,41 @@ void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
     m_normal_debug_material.attach_texture("grass", tex);
 }
 
+void FancyTerrainNode::configure_overlay(
+        Material &mat,
+        const sim::TerrainRect &clip_rect,
+        const float zoffset)
+{
+    OverlayConfig &conf = m_overlays[&mat];
+    conf.clip_rect = clip_rect;
+    conf.zoffset = zoffset;
+}
+
+bool FancyTerrainNode::configure_overlay_material(Material &mat)
+{
+    bool success = mat.shader().attach_resource(GL_VERTEX_SHADER,
+                                                ":/shaders/terrain/main.vert");
+    success = success && mat.shader().link();
+    if (!success) {
+        return false;
+    }
+
+    mat.attach_texture("heightmap", &m_heightmap);
+    mat.attach_texture("normalt", &m_normalt);
+
+    return true;
+}
+
+void FancyTerrainNode::remove_overlay(Material &mat)
+{
+    auto iter = m_overlays.find(&mat);
+    if (iter == m_overlays.end()) {
+        return;
+    }
+
+    m_overlays.erase(iter);
+}
+
 void FancyTerrainNode::render(RenderContext &context)
 {
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
