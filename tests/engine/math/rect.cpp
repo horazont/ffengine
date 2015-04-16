@@ -205,3 +205,22 @@ TEST_CASE("math/rect/Rect/bounds")
         CHECK(bounds(Rect(NotARect), r1) == r1);
     }
 }
+
+TEST_CASE("math/rect/Rect/overlap")
+{
+    SECTION("obvious")
+    {
+        CHECK(Rect(2, 2, 10, 10).overlaps(Rect(1, 1, 11, 11)));
+        CHECK(Rect(1, 1, 11, 11).overlaps(Rect(2, 2, 10, 10)));
+        CHECK(Rect(5, 5, 10, 10).overlaps(Rect(8, 8, 12, 12)));
+    }
+    SECTION("barely")
+    {
+        CHECK(Rect(0, 0, 10, 10).overlaps(Rect(9, 9, 11, 11)));
+        CHECK_FALSE(Rect(0, 0, 10, 10).overlaps(Rect(10, 10, 11, 11)));
+    }
+    SECTION("not at all")
+    {
+        CHECK_FALSE(Rect(0, 0, 10, 10).overlaps(Rect(20, 20, 30, 30)));
+    }
+}

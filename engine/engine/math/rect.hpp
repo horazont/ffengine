@@ -139,6 +139,17 @@ public:
     }
 
     template<typename other_coord_t>
+    bool overlaps(const GenericRect<other_coord_t> &other)
+    {
+        if (other == NotARect) {
+            return false;
+        }
+
+        return (x0() < other.x1() && x1() > other.x0() &&
+                y0() < other.y1() && y1() > other.y0());
+    }
+
+    template<typename other_coord_t>
     GenericRect operator&=(const GenericRect<other_coord_t> &other)
     {
         if (other == NotARect)
