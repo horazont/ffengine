@@ -186,7 +186,7 @@ void FancyTerrainNode::collect_slices_recurse(
     {
         // next LOD not required, insert node
         requested_slices.push_back(
-                    HeightmapSliceMeta{absolute_x, absolute_y, m_min_lod * (1<<lod)}
+                    HeightmapSliceMeta{absolute_x, absolute_y, m_min_lod << lod}
                     );
         return;
     }
