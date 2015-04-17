@@ -5,6 +5,13 @@
 
 #include <iostream>
 
+// #define TIMELOG_HITTEST
+#define DISABLE_QUADTREE
+
+#ifdef TIMELOG_HITTEST
+#include <chrono>
+typedef std::chrono::steady_clock timelog_clock;
+#endif
 
 namespace engine {
 
@@ -48,6 +55,10 @@ FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
     {
         throw std::runtime_error("grid_size-1 must divide terrain size-1 evenly");
     }
+
+#ifdef DISABLE_QUADTREE
+    logger.log(io::LOG_WARNING, "QuadTree hittest disabled at compile time!");
+#endif
 }
 
 FancyTerrainInterface::~FancyTerrainInterface()
@@ -72,11 +83,33 @@ std::tuple<Vector3f, Vector3f, bool> FancyTerrainInterface::hittest_quadtree(
 
 std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
 {
-    const sim::MinMaxMapGenerator::MinMaxFieldLODs *lods = nullptr;
-    auto mm_lock = m_terrain_minmax.readonly_lods(lods);
-    const sim::Terrain::HeightField *heightfield = nullptr;
-    auto height_lock = m_terrain.readonly_field(heightfield);
-    return isect_terrain_ray(ray, m_terrain.size(), *heightfield, *lods);
+#ifdef TIMELOG_HITTEST
+    timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_lock;
+    timelog_clock::time_point t_done;
+    std::tuple<Vector3f, bool> result;
+#endif
+    {
+        const sim::MinMaxMapGenerator::MinMaxFieldLODs *lods = nullptr;
+        auto mm_lock = m_terrain_minmax.readonly_lods(lods);
+        const sim::Terrain::HeightField *heightfield = nullptr;
+        auto height_lock = m_terrain.readonly_field(heightfield);
+#ifdef TIMELOG_HITTEST
+        t_lock = timelog_clock::now();
+        result =
+#else
+        return
+#endif
+        isect_terrain_ray(ray, m_terrain.size(), *heightfield, *lods);
+    }
+#ifdef TIMELOG_HITTEST
+    t_done = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "hittest: time to lock: %.2f ms",
+                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(t_lock - t0).count());
+    logger.logf(io::LOG_DEBUG, "hittest: time from lock to hit: %.2f ms",
+                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(t_done - t_lock).count());
+    return result;
+#endif
 }
 
 
@@ -109,7 +142,11 @@ std::tuple<float, float, bool> isect_terrain_quadtree_ray_recurse(
         /* std::cout << "AABB test failed" << std::endl; */
         return std::make_tuple(tmin, tmax, false);
     }
-    if (lod_index == 0) {
+#ifdef DISABLE_QUADTREE
+    if (true) {
+#else
+    if (lod_index == 4) {
+#endif
         /* std::cout << "Max LOD reached " << tmin << " " << tmax << std::endl; */
         return std::make_tuple(tmin, tmax, true);
     }
@@ -218,11 +255,23 @@ std::tuple<Vector3f, bool> isect_terrain_ray(
         const sim::Terrain::HeightField &field,
         const sim::MinMaxMapGenerator::MinMaxFieldLODs &lods)
 {
+#ifdef TIMELOG_HITTEST
+    timelog_clock::time_point t0;
+    timelog_clock::time_point t_quad;
+    timelog_clock::time_point t_final;
+    std::tuple<Vector3f, bool> result;
+#endif
     typedef RasterIterator<float> FieldIterator;
 
     Vector3f min, max;
     bool hit = false;
+#ifdef TIMELOG_HITTEST
+    t0 = timelog_clock::now();
+#endif
     std::tie(min, max, hit) = isect_terrain_quadtree_ray(ray, size-1, lods);
+#ifdef TIMELOG_HITTEST
+    t_quad = timelog_clock::now();
+#endif
     if (!hit) {
         return std::make_tuple(Vector3f(), hit);
     }
@@ -256,19 +305,45 @@ std::tuple<Vector3f, bool> isect_terrain_ray(
         const Vector3f p3(x+1, y, field[y*size+x+1]);
 
         float t;
-        bool hit;
         std::tie(t, hit) = isect_ray_triangle(ray, p0, p1, p2);
         if (hit) {
-            return std::make_tuple(ray.origin + ray.direction*t,
-                                   true);
+#ifdef TIMELOG_HITTEST
+            result =
+#else
+            return
+#endif
+                    std::make_tuple(ray.origin + ray.direction*t,
+                                    true);
+#ifdef TIMELOG_HITTEST
+            break;
+#endif
         }
         std::tie(t, hit) = isect_ray_triangle(ray, p2, p0, p3);
         if (hit) {
-            return std::make_tuple(ray.origin + ray.direction*t,
+#ifdef TIMELOG_HITTEST
+            result =
+#else
+            return
+#endif
+                    std::make_tuple(ray.origin + ray.direction*t,
                                    true);
+#ifdef TIMELOG_HITTEST
+            break;
+#endif
         }
+        hit = false;
     }
 
+#ifdef TIMELOG_HITTEST
+    t_final = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "hittest: quadtree time: %.2f ms",
+                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > > (t_quad - t0).count());
+    logger.logf(io::LOG_DEBUG, "hittest: raster time: %.2f ms",
+                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > > (t_final - t_quad).count());
+    if (hit) {
+        return result;
+    }
+#endif
     return std::make_tuple(min, false);
 }
 
