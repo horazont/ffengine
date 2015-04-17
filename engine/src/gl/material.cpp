@@ -6,7 +6,7 @@
 namespace engine {
 
 Material::Material():
-    m_max_texture_units(gl_get_integer(GL_MAX_TEXTURE_UNITS)),
+    m_max_texture_units(gl_get_integer(GL_MAX_TEXTURE_IMAGE_UNITS)),
     m_base_free_unit(0)
 {
 
@@ -21,7 +21,7 @@ GLint Material::get_next_texture_unit()
     }
 
     if (m_base_free_unit >= m_max_texture_units) {
-        throw std::runtime_error("out of texture units");
+        throw std::runtime_error("out of texture units (max=" + std::to_string(m_max_texture_units)+")");
     }
 
     return m_base_free_unit++;
