@@ -251,6 +251,11 @@ void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &ma
     }
 }
 
+void FancyTerrainNode::attach_blend_texture(Texture2D *tex)
+{
+    m_material.attach_texture("blend", tex);
+}
+
 void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
 {
     m_material.attach_texture("grass", tex);

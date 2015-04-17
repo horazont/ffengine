@@ -172,6 +172,7 @@ protected:
     void render_all(RenderContext &context, VAO &vao, Material &material);
 
 public:
+    void attach_blend_texture(Texture2D *tex);
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
 
