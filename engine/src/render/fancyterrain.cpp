@@ -254,7 +254,11 @@ void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &ma
 void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
 {
     m_material.attach_texture("grass", tex);
-    m_normal_debug_material.attach_texture("grass", tex);
+}
+
+void FancyTerrainNode::attach_rock_texture(Texture2D *tex)
+{
+    m_material.attach_texture("rock", tex);
 }
 
 void FancyTerrainNode::configure_overlay(

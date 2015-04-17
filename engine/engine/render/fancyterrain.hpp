@@ -173,6 +173,7 @@ protected:
 
 public:
     void attach_grass_texture(Texture2D *tex);
+    void attach_rock_texture(Texture2D *tex);
 
     /**
      * Register and/or configure an overlay for rendering. If an overlay with
