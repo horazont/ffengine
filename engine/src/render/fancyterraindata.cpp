@@ -125,8 +125,13 @@ std::tuple<float, float, bool> isect_terrain_quadtree_ray_recurse(
     const unsigned int x0 = xlod * quad_size;
     const unsigned int y0 = ylod * quad_size;
     const sim::MinMaxMapGenerator::MinMaxField &field = lods[lod_index];
+#ifdef DISABLE_QUADTREE
+    sim::Terrain::height_t hmin = sim::Terrain::min_height;
+    sim::Terrain::height_t hmax = sim::Terrain::max_height;
+#else
     sim::Terrain::height_t hmin, hmax;
     std::tie(hmin, hmax) = field[ylod*lod_size+xlod];
+#endif
 
     /* std::cout << xlod << " " << ylod << " " << lod_size << " " << quad_size << " " << hmin << " " << hmax << std::endl; */
 
@@ -148,7 +153,7 @@ std::tuple<float, float, bool> isect_terrain_quadtree_ray_recurse(
     if (lod_index == 4) {
 #endif
         /* std::cout << "Max LOD reached " << tmin << " " << tmax << std::endl; */
-        return std::make_tuple(tmin, tmax, true);
+        return std::make_tuple(std::max(tmin, 0.f), tmax, true);
     }
 
     tmin = std::numeric_limits<float>::max();
