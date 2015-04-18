@@ -155,6 +155,7 @@ private:
 
 protected:
     void make_zeroth_map(MinMaxField &scratchpad);
+    void update_zeroth_map(const TerrainRect &updated);
     void worker_impl(const TerrainRect &updated) override;
 
 public:
