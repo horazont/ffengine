@@ -381,13 +381,6 @@ void FancyTerrainNode::sync(Scene &scene)
                     );
     }
 
-    m_material.shader().bind();
-    glUniform1f(m_material.shader().uniform_location("scale_to_radius"),
-                lod_range_base / (m_grid_size-1));
-    m_normal_debug_material.shader().bind();
-    glUniform1f(m_normal_debug_material.shader().uniform_location("scale_to_radius"),
-                lod_range_base / (m_grid_size-1));
-
 #ifdef TIMELOG_SYNC
     t_overlays = timelog_clock::now();
 #endif
