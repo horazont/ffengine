@@ -30,7 +30,7 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_grid_size(terrain_interface.grid_size()),
     m_texture_cache_size(texture_cache_size),
     m_min_lod(m_grid_size-1),
-    m_max_depth(log2_of_pot((terrain_interface.size()-1) / m_min_lod)),
+    m_max_depth(log2_of_pot(terrain_interface.size()-1)),
     m_terrain(terrain_interface.terrain()),
     m_terrain_lods(terrain_interface.heightmap_lods()),
     m_terrain_minmax(terrain_interface.heightmap_minmax()),
@@ -190,15 +190,15 @@ void FancyTerrainNode::collect_slices_recurse(
         const Vector3f &viewpoint,
         const sim::MinMaxMapGenerator::MinMaxFieldLODs &minmaxfields)
 {
-    float min = 0;
-    float max = 100.;
+    float min = sim::Terrain::min_height;
+    float max = sim::Terrain::max_height;
     if (minmaxfields.size() > lod)
     {
-        const unsigned int field_width = ((m_terrain.size()-1) / m_min_lod) >> lod;
+        const unsigned int field_width = (m_terrain.size()-1) >> lod;
         std::tie(min, max) = minmaxfields[lod][relative_y*field_width+relative_x];
     }
 
-    const unsigned int size = (m_min_lod << lod);
+    const unsigned int size = (1u << lod);
 
     const unsigned int absolute_x = relative_x * size;
     const unsigned int absolute_y = relative_y * size;
@@ -206,13 +206,13 @@ void FancyTerrainNode::collect_slices_recurse(
     AABB box{Vector3f(absolute_x, absolute_y, min),
              Vector3f(absolute_x+size, absolute_y+size, max)};
 
-    const float next_range_radius = lod_range_base * (1<<lod);
-    if (lod == 0 ||
+    const float next_range_radius = lod_range_base * (1u<<(lod-log2_of_pot(m_grid_size-1)));
+    if (lod == log2_of_pot(m_grid_size-1) ||
             !isect_aabb_sphere(box, Sphere{viewpoint, next_range_radius}))
     {
         // next LOD not required, insert node
         requested_slices.push_back(
-                    HeightmapSliceMeta{absolute_x, absolute_y, m_min_lod << lod}
+                    HeightmapSliceMeta{absolute_x, absolute_y, size}
                     );
         return;
     }
