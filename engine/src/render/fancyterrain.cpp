@@ -4,6 +4,15 @@
 #include "engine/math/intersect.hpp"
 #include "engine/io/log.hpp"
 
+#define TIMELOG_SYNC
+#define TIMELOG_RENDER
+
+#if defined(TIMELOG_SYNC) || defined(TIMELOG_RENDER)
+#include <chrono>
+typedef std::chrono::steady_clock timelog_clock;
+#define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
+#endif
+
 namespace engine {
 
 static io::Logger &logger = io::logging().get_logger("render.fancyterrain");
@@ -149,15 +158,28 @@ void FancyTerrainNode::collect_slices(
         std::vector<HeightmapSliceMeta> &requested_slices,
         const Vector3f &viewpoint)
 {
-    const sim::MinMaxMapGenerator::MinMaxFieldLODs *minmaxfields = nullptr;
-    auto lock = m_terrain_minmax.readonly_lods(minmaxfields);
+#ifdef TIMELOG_SYNC
+    const timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_lock;
+#endif
+    {
+        const sim::MinMaxMapGenerator::MinMaxFieldLODs *minmaxfields = nullptr;
+        auto lock = m_terrain_minmax.readonly_lods(minmaxfields);
+#ifdef TIMELOG_SYNC
+        t_lock = timelog_clock::now();
+#endif
 
-    collect_slices_recurse(requested_slices,
-                           m_max_depth,
-                           0,
-                           0,
-                           viewpoint,
-                           *minmaxfields);
+        collect_slices_recurse(requested_slices,
+                               m_max_depth,
+                               0,
+                               0,
+                               viewpoint,
+                               *minmaxfields);
+    }
+#ifdef TIMELOG_SYNC
+    logger.logf(io::LOG_DEBUG, "sync: collect_slices: time to lock: %.2f ms",
+                ms_cast(t_lock - t0));
+#endif
 }
 
 void FancyTerrainNode::collect_slices_recurse(
@@ -346,6 +368,11 @@ void FancyTerrainNode::sync(Scene &scene)
 
     const unsigned int texture_slots = m_texture_cache_size*m_texture_cache_size;
 
+#ifdef TIMELOG_SYNC
+    const timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_overlays, t_setup, t_allocate, t_upload;
+#endif
+
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
@@ -354,12 +381,27 @@ void FancyTerrainNode::sync(Scene &scene)
                     );
     }
 
+    m_material.shader().bind();
+    glUniform1f(m_material.shader().uniform_location("scale_to_radius"),
+                lod_range_base / (m_grid_size-1));
+    m_normal_debug_material.shader().bind();
+    glUniform1f(m_normal_debug_material.shader().uniform_location("scale_to_radius"),
+                lod_range_base / (m_grid_size-1));
+
+#ifdef TIMELOG_SYNC
+    t_overlays = timelog_clock::now();
+#endif
+
     m_heightmap.bind();
     m_tmp_slices.clear();
     collect_slices(m_tmp_slices, scene.viewpoint());
     m_render_slices.clear();
 
     unsigned int slot_index = 0;
+
+#ifdef TIMELOG_SYNC
+    t_setup = timelog_clock::now();
+#endif
 
     for (auto &required_slice: m_tmp_slices)
     {
@@ -374,6 +416,10 @@ void FancyTerrainNode::sync(Scene &scene)
 
         slot_index++;
     }
+
+#ifdef TIMELOG_SYNC
+    t_allocate = timelog_clock::now();
+#endif
 
     {
         const sim::Terrain::HeightField *lod0 = nullptr;
@@ -498,6 +544,13 @@ void FancyTerrainNode::sync(Scene &scene)
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     m_vao->sync();
+#ifdef TIMELOG_SYNC
+    t_upload = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "sync: t_overlays = %.2f ms", ms_cast(t_overlays - t0).count());
+    logger.logf(io::LOG_DEBUG, "sync: t_setup    = %.2f ms", ms_cast(t_setup - t_overlays).count());
+    logger.logf(io::LOG_DEBUG, "sync: t_allocate = %.2f ms", ms_cast(t_allocate - t_setup).count());
+    logger.logf(io::LOG_DEBUG, "sync: t_upload   = %.2f ms", ms_cast(t_upload - t_allocate).count());
+#endif
 }
 
 
