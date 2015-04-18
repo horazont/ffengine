@@ -21,11 +21,7 @@
 
 namespace sim {
 
-namespace {
-
-static io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
-
-}
+extern io::Logger &lod_logger;
 
 typedef GenericRect<unsigned int> TerrainRect;
 

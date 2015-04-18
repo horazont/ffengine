@@ -11,7 +11,7 @@
 namespace sim {
 
 io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
-io::Logger &tw_logger = io::logging().get_logger("sim.terrain.worker");
+static io::Logger &tw_logger = io::logging().get_logger("sim.terrain.worker");
 
 Terrain::Terrain(const unsigned int size):
     m_size(size),
