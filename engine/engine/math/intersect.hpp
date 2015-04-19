@@ -1,6 +1,8 @@
 #ifndef SCC_ENGINE_MATH_INTERSECT_H
 #define SCC_ENGINE_MATH_INTERSECT_H
 
+#include <array>
+
 #include "engine/math/vector.hpp"
 #include "engine/math/shapes.hpp"
 
@@ -38,6 +40,10 @@ bool isect_aabb_ray(
         const Ray &ray,
         float &t0,
         float &t1);
+
+PlaneSide isect_aabb_frustum(
+        const AABB &aabb,
+        const std::array<Plane, 4> &frustum);
 
 extern const float ISECT_EPSILON;
 
