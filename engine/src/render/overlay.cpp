@@ -72,7 +72,7 @@ void OverlayNode::render(RenderContext &context)
     glDisable(GL_DEPTH_TEST);
 }
 
-void OverlayNode::sync(Scene &scene)
+void OverlayNode::sync(RenderContext &)
 {
     m_vao->sync();
 }

@@ -1,11 +1,13 @@
 #ifndef SCC_ENGINE_RENDERGRAPH_H
 #define SCC_ENGINE_RENDERGRAPH_H
 
+#include <array>
 #include <vector>
 
 #include "engine/gl/vao.hpp"
 #include "engine/gl/material.hpp"
 #include "engine/gl/fbo.hpp"
+#include "engine/math/shapes.hpp"
 #include "engine/math/vector.hpp"
 
 
@@ -26,65 +28,6 @@ public:
 };
 
 
-class Scene
-{
-public:
-    Scene(SceneGraph &scenegraph, Camera &camera);
-
-private:
-    SceneGraph &m_scenegraph;
-    Camera &m_camera;
-
-    Vector3f m_render_viewpoint;
-    Matrix4f m_render_view;
-
-    std::unordered_map<void*, std::unique_ptr<SceneStorage> > m_storage;
-
-public:
-    inline SceneGraph &scenegraph()
-    {
-        return m_scenegraph;
-    }
-
-    inline Camera &camera()
-    {
-        return m_camera;
-    }
-
-    inline Vector3f &viewpoint()
-    {
-        return m_render_viewpoint;
-    }
-
-    inline Matrix4f &view()
-    {
-        return m_render_view;
-    }
-
-    template <typename T>
-    T &get_storage(void *for_object)
-    {
-        static_assert(std::is_base_of<SceneStorage, T>::value,
-                      "Scene storage type must be subclass of SceneStorage");
-        auto iter = m_storage.find(for_object);
-        if (iter == m_storage.end()) {
-            T *storage = new T();
-            m_storage[for_object] = std::unique_ptr<SceneStorage>(storage);
-            return *storage;
-        }
-
-        return *iter->second;
-    }
-
-public:
-    void set_render_view(const Matrix4f &view);
-    void set_render_viewpoint(const Vector3f &viewpoint);
-
-public:
-    void sync();
-
-};
-
 /**
  * Track the environment in which a render takes place.
  */
@@ -97,10 +40,17 @@ public:
     typedef UBO<Matrix4f, Matrix4f> InvMatrixUBO;
 
 public:
-    RenderContext(Scene &scene);
+    RenderContext(SceneGraph &scenegraph, Camera &camera);
 
 private:
-    Scene &m_scene;
+    SceneGraph &m_scenegraph;
+    Camera &m_camera;
+
+    Vector3f m_render_viewpoint;
+    Matrix4f m_render_view;
+
+    std::unordered_map<void*, std::unique_ptr<SceneStorage> > m_storage;
+
     GLsizei m_viewport_width, m_viewport_height;
     GLfloat m_zfar, m_znear;
 
@@ -108,6 +58,8 @@ private:
     InvMatrixUBO m_inv_matrix_ubo;
     std::vector<Matrix4f> m_model_stack;
     Matrix4f m_current_transformation;
+
+    std::array<Plane, 4> m_frustum;
 
     Vector3f m_viewpoint;
 
@@ -132,9 +84,24 @@ public:
     void start();
 
 public:
-    inline Scene &scene()
+    inline SceneGraph &scenegraph()
     {
-        return m_scene;
+        return m_scenegraph;
+    }
+
+    inline Camera &camera()
+    {
+        return m_camera;
+    }
+
+    inline Vector3f &viewpoint()
+    {
+        return m_render_viewpoint;
+    }
+
+    inline Matrix4f &view()
+    {
+        return m_render_view;
     }
 
     inline GLsizei viewport_width() const
@@ -157,8 +124,31 @@ public:
         return m_zfar;
     }
 
+    inline const std::array<Plane, 4> &frustum() const
+    {
+        return m_frustum;
+    }
+
 public:
+    void set_render_view(const Matrix4f &view);
+    void set_render_viewpoint(const Vector3f &viewpoint);
     void set_viewport_size(GLsizei viewport_width, GLsizei viewport_height);
+
+public:
+    template <typename T>
+    T &get_storage(void *for_object)
+    {
+        static_assert(std::is_base_of<SceneStorage, T>::value,
+                      "Scene storage type must be subclass of SceneStorage");
+        auto iter = m_storage.find(for_object);
+        if (iter == m_storage.end()) {
+            T *storage = new T();
+            m_storage[for_object] = std::unique_ptr<SceneStorage>(storage);
+            return *storage;
+        }
+
+        return *iter->second;
+    }
 
 public:
     void sync();
@@ -227,10 +217,11 @@ public:
 class SceneRenderNode: public RenderNode
 {
 public:
-    SceneRenderNode(RenderTarget &target, Scene &scene);
+    SceneRenderNode(RenderTarget &target,
+                    SceneGraph &scenegraph,
+                    Camera &camera);
 
 protected:
-    Scene &m_scene;
     RenderContext m_context;
 
     GLbitfield m_clear_mask;
@@ -280,9 +271,6 @@ public:
     RenderGraph();
 
 private:
-    std::vector<std::unique_ptr<Scene> > m_locked_scenes;
-    std::vector<std::unique_ptr<Scene> > m_scenes;
-
     std::vector<std::unique_ptr<RenderNode> > m_locked_nodes;
     std::vector<std::unique_ptr<RenderNode> > m_nodes;
 
@@ -297,8 +285,6 @@ public:
         m_nodes.emplace_back(node);
         return *node;
     }
-
-    Scene &new_scene(SceneGraph &scenegraph, Camera &camera);
 
 public:
     bool resort();

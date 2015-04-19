@@ -457,7 +457,7 @@ void FancyTerrainNode::render(RenderContext &context)
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
-                 1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
+                 1, context.viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
     render_all(context, *m_vao, m_material);
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 #ifdef TIMELOG_RENDER
@@ -474,7 +474,7 @@ void FancyTerrainNode::render(RenderContext &context)
     {
         overlay.material->shader().bind();
         glUniform3fv(overlay.material->shader().uniform_location("lod_viewpoint"),
-                     1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
+                     1, context.viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
         for (auto slot_index: m_render_slices)
         {
             const HeightmapSliceMeta &slice = m_slots[slot_index];
@@ -501,7 +501,7 @@ void FancyTerrainNode::render(RenderContext &context)
 #endif
 }
 
-void FancyTerrainNode::sync(Scene &scene)
+void FancyTerrainNode::sync(RenderContext &context)
 {
     // FIXME: use SceneStorage here!
 
@@ -527,7 +527,7 @@ void FancyTerrainNode::sync(Scene &scene)
 
     m_heightmap.bind();
     m_tmp_slices.clear();
-    collect_slices(m_tmp_slices, scene.viewpoint());
+    collect_slices(m_tmp_slices, context.viewpoint());
     m_render_slices.clear();
     m_upload_slices.clear();
 

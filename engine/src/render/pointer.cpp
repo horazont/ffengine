@@ -126,7 +126,7 @@ void PointerNode::render(RenderContext &context)
     context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_alloc);
 }
 
-void PointerNode::sync(Scene&)
+void PointerNode::sync(RenderContext &)
 {
     m_vao->sync();
 }

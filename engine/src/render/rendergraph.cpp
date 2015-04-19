@@ -7,25 +7,11 @@ namespace engine {
 
 static io::Logger &logger = io::logging().get_logger("engine.render.rendergraph");
 
-Scene::Scene(SceneGraph &scenegraph, Camera &camera):
+RenderContext::RenderContext(SceneGraph &scenegraph, Camera &camera):
     m_scenegraph(scenegraph),
     m_camera(camera),
     m_render_viewpoint(0, 0, 0),
-    m_render_view(Identity)
-{
-
-}
-
-void Scene::sync()
-{
-    m_render_view = m_camera.render_view();
-    m_render_viewpoint = Vector3f(m_camera.render_inv_view() * Vector4f(0, 0, 0, 1));
-    m_scenegraph.sync(*this);
-}
-
-
-RenderContext::RenderContext(Scene &scene):
-    m_scene(scene),
+    m_render_view(Identity),
     m_matrix_ubo(),
     m_model_stack(),
     m_current_transformation(Identity)
@@ -107,20 +93,35 @@ void RenderContext::set_viewport_size(GLsizei viewport_width,
     m_viewport_height = viewport_height;
 }
 
+inline Plane transform_plane(Matrix4f proj, Matrix4f view, Matrix4f inv_view, Vector4f hom)
+{
+    Vector4f unprojected = proj * hom;
+    Vector3f normal(unprojected[eX], unprojected[eY], unprojected[eZ]);
+    Vector3f origin = normal*unprojected[eZ];
+    normal = Vector3f(view * Vector4f(normal, 0)).normalized();
+    origin = Vector3f(inv_view * Vector4f(origin, 1));
+    return Plane(origin, normal);
+}
+
 void RenderContext::sync()
 {
+    m_render_view = m_camera.render_view();
+    Matrix4f inv_view = m_camera.render_inv_view();
+    m_render_viewpoint = Vector3f(inv_view * Vector4f(0, 0, 0, 1));
+
     std::tie(m_matrix_ubo.get_ref<0>(),
-             m_inv_matrix_ubo.get_ref<0>()) = m_scene.camera().render_projection(
+             m_inv_matrix_ubo.get_ref<0>()) = m_camera.render_projection(
                 m_viewport_width,
                 m_viewport_height);
-    /* m_matrix_ubo.set<0>(std::get<0>(m_scene.camera().render_projection(
-                                        m_viewport_width,
-                                        m_viewport_height))); */
-    m_matrix_ubo.set<1>(m_scene.view());
-    /*std::cout << m_matrix_ubo.get<0>() << std::endl;
-    std::cout << m_matrix_ubo.get<1>() << std::endl;
-    std::cout << m_inv_matrix_ubo.get<0>() << std::endl;
-    std::cout << m_inv_matrix_ubo.get<1>() << std::endl;*/
+    m_matrix_ubo.set<1>(m_render_view);
+
+    Matrix4f projview = m_matrix_ubo.get_ref<0>()/* * m_render_view*/;
+    m_frustum[0] = Plane(projview * Vector4f(1, 0, 0, -1));
+    m_frustum[1] = Plane(projview * Vector4f(-1, 0, 0, -1));
+    m_frustum[2] = Plane(projview * Vector4f(0, 1, 0, -1));
+    m_frustum[3] = Plane(projview * Vector4f(0, -1, 0, -1));
+
+    m_scenegraph.sync(*this);
 }
 
 void RenderContext::configure_shader(ShaderProgram &shader)
@@ -176,10 +177,11 @@ void BlitNode::sync()
 }
 
 
-SceneRenderNode::SceneRenderNode(RenderTarget &target, Scene &scene):
+SceneRenderNode::SceneRenderNode(RenderTarget &target,
+                                 SceneGraph &scenegraph,
+                                 Camera &camera):
     RenderNode(target),
-    m_scene(scene),
-    m_context(scene),
+    m_context(scenegraph, camera),
     m_clear_mask(0),
     m_clear_colour(1, 1, 1, 1)
 {
@@ -207,7 +209,7 @@ void SceneRenderNode::render()
         glClear(m_clear_mask);
     }
     m_context.start();
-    m_scene.scenegraph().render(m_context);
+    m_context.scenegraph().render(m_context);
 }
 
 void SceneRenderNode::sync()
@@ -222,13 +224,6 @@ void SceneRenderNode::sync()
 RenderGraph::RenderGraph()
 {
 
-}
-
-Scene &RenderGraph::new_scene(SceneGraph &scenegraph, Camera &camera)
-{
-    Scene *scene = new Scene(scenegraph, camera);
-    m_scenes.emplace_back(scene);
-    return *scene;
 }
 
 bool RenderGraph::resort()
@@ -297,12 +292,6 @@ void RenderGraph::render()
 
 void RenderGraph::sync()
 {
-    m_locked_scenes.clear();
-    for (auto &scene: m_scenes)
-    {
-        scene->sync();
-    }
-
     m_locked_nodes.clear();
     m_render_order = m_ordered;
     for (RenderNode *&node: m_render_order)

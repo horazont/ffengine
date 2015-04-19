@@ -92,14 +92,14 @@ void Group::render(RenderContext &context)
     }
 }
 
-void Group::sync(Scene &scene)
+void Group::sync(RenderContext &context)
 {
     m_to_render.clear();
     m_locked_children.clear();
     for (auto &child: m_children)
     {
         m_to_render.push_back(child.get());
-        child->sync(scene);
+        child->sync(context);
     }
 }
 
@@ -133,7 +133,7 @@ void InvisibleGroup::render(RenderContext &)
 
 }
 
-void InvisibleGroup::sync(Scene &)
+void InvisibleGroup::sync(RenderContext &)
 {
 
 }
@@ -186,12 +186,12 @@ void ParentNode::render(RenderContext &context)
     }
 }
 
-void ParentNode::sync(Scene &scene)
+void ParentNode::sync(RenderContext &context)
 {
     m_locked_child = nullptr;
     m_child_to_render = m_child.get();
     if (m_child_to_render) {
-        m_child_to_render->sync(scene);
+        m_child_to_render->sync(context);
     }
 }
 
@@ -219,10 +219,10 @@ void Transformation::render(RenderContext &context)
     context.pop_transformation();
 }
 
-void Transformation::sync(Scene &scene)
+void Transformation::sync(RenderContext &context)
 {
     m_render_transform = m_transform;
-    ParentNode::sync(scene);
+    ParentNode::sync(context);
 }
 
 
@@ -240,9 +240,9 @@ void SceneGraph::render(RenderContext &context)
     m_root.render(context);
 }
 
-void SceneGraph::sync(Scene &scene)
+void SceneGraph::sync(RenderContext &context)
 {
-    m_root.sync(scene);
+    m_root.sync(context);
 }
 
 

@@ -33,7 +33,7 @@ public:
 
 public:
     void render(RenderContext &context) override;
-    void sync(Scene &scene) override;
+    void sync(RenderContext &context) override;
 
 };
 

@@ -75,13 +75,15 @@ public:
      * When this method is called, only GPU-only storage may be accessed.
      * Anything outside that needs to be copied into GPU-only storage when the
      * sync() method is called.
+     *
+     * @opengl
      */
     virtual void render(RenderContext &context) = 0;
 
     /**
      * Synchronize the node state to GPU-only data storage.
      *
-     * @param scene The scene for which to synchronize this node.
+     * @param context The render context for which to synchronize this node.
      *
      * Calling methods which do drawcalls here has undefined effects,
      * most likely they won’t appear anywhere because clearing of the buffers
@@ -92,9 +94,11 @@ public:
      * When this method is called, it is legal to access all memory available
      * to the view.
      *
-     * @see Scene.get_storage SceneStorage
+     * @see RenderContext.get_storage SceneStorage
+     *
+     * @opengl
      */
-    virtual void sync(Scene &scene) = 0;
+    virtual void sync(RenderContext &context) = 0;
 
 };
 
@@ -317,6 +321,8 @@ public:
      * This basically calls Node::render() on all those nodes.
      *
      * @param context The context to render in.
+     *
+     * @opengl
      */
     void render(RenderContext &context) override;
 
@@ -324,9 +330,11 @@ public:
      * Synchronize all children currently in the group for the next call to
      * render().
      *
-     * @param scene The Scene to synchronize for.
+     * @param context The Scene to synchronize for.
+     *
+     * @opengl
      */
-    void sync(Scene &scene) override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -367,15 +375,19 @@ public:
      * Do nothing
      *
      * @param context Ignored.
+     *
+     * @opengl
      */
     void render(RenderContext &context) override;
 
     /**
      * Do nothing
      *
-     * @param scene Ignored.
+     * @param context Ignored.
+     *
+     * @opengl
      */
-    void sync(Scene &scene) override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -459,6 +471,8 @@ public:
      * Renders the child which was present at the last call to sync(), if any.
      *
      * @param context Context to render in.
+     *
+     * @opengl
      */
     void render(RenderContext &context) override;
 
@@ -468,9 +482,11 @@ public:
      * Calls sync() on the child and synchronizes its pointer into GPU-only
      * data storage.
      *
-     * @param scene The Scene to synchronize for.
+     * @param context The RenderContext to synchronize for.
+     *
+     * @opengl
      */
-    void sync(Scene &scene) override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -516,6 +532,8 @@ public:
      * render the child.
      *
      * @param context Render context to use
+     *
+     * @opengl
      */
     void render(RenderContext &context) override;
 
@@ -523,9 +541,11 @@ public:
      * Synchronize the current transformation for rendering into GPU-only data
      * storage.
      *
-     * @param scene The Scene to synchronize for.
+     * @param context The Scene to synchronize for.
+     *
+     * @opengl
      */
-    void sync(Scene &scene) override;
+    void sync(RenderContext &context) override;
 
 };
 
@@ -559,7 +579,7 @@ public:
     }
 
     void render(RenderContext &context);
-    void sync(Scene &scene);
+    void sync(RenderContext &context);
 
 };
 
