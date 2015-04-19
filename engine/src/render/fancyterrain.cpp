@@ -235,9 +235,7 @@ inline void render_slice(RenderContext &context,
                          Material &material,
                          IBOAllocation &ibo_allocation,
                          const float x, const float y,
-                         const float scale,
-                         const unsigned int grid_size,
-                         const unsigned int terrain_size)
+                         const float scale)
 {
     /*const float xtex = (float(slot_index % texture_cache_size) + 0.5/grid_size) / texture_cache_size;
     const float ytex = (float(slot_index / texture_cache_size) + 0.5/grid_size) / texture_cache_size;*/
@@ -261,8 +259,7 @@ void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &ma
         const float scale = slice.lod;
 
         render_slice(context, vao, material, m_ibo_allocation,
-                     x, y, scale,
-                     m_grid_size, m_terrain.size());
+                     x, y, scale);
     }
 }
 
@@ -361,8 +358,7 @@ void FancyTerrainNode::render(RenderContext &context)
             if (slice_rect.overlaps(overlay.clip_rect)) {
                 render_slice(context,
                              *m_vao, *overlay.material, m_ibo_allocation,
-                             x, y, scale,
-                             m_grid_size, m_terrain.size());
+                             x, y, scale);
             }
         }
     }
