@@ -201,13 +201,15 @@ FancyTerrainNode::~FancyTerrainNode()
 
 void FancyTerrainNode::collect_slices(
         std::vector<HeightmapSliceMeta> &requested_slices,
+        const std::array<Plane, 4> &frustum,
         const Vector3f &viewpoint)
 {
     collect_slices_recurse(requested_slices,
                            m_max_depth,
                            0,
                            0,
-                           viewpoint);
+                           viewpoint,
+                           frustum);
 }
 
 void FancyTerrainNode::collect_slices_recurse(
@@ -215,7 +217,8 @@ void FancyTerrainNode::collect_slices_recurse(
         const unsigned int invdepth,
         const unsigned int relative_x,
         const unsigned int relative_y,
-        const Vector3f &viewpoint)
+        const Vector3f &viewpoint,
+        const std::array<Plane, 4> &frustum)
 {
     const float min = 0.;
     const float max = 0.;
@@ -227,6 +230,12 @@ void FancyTerrainNode::collect_slices_recurse(
 
     AABB box{Vector3f(absolute_x, absolute_y, min),
              Vector3f(absolute_x+size, absolute_y+size, max)};
+
+    PlaneSide side = isect_aabb_frustum(box, frustum);
+    if (side == PlaneSide::NEGATIVE_NORMAL) {
+        // outside frustum
+        return;
+    }
 
     const float next_range_radius = lod_range_base * (1u<<invdepth);
     if (invdepth == 0 ||
@@ -248,7 +257,8 @@ void FancyTerrainNode::collect_slices_recurse(
                         invdepth-1,
                         relative_x*2+offsx,
                         relative_y*2+offsy,
-                        viewpoint);
+                        viewpoint,
+                        frustum);
         }
     }
 }
@@ -422,7 +432,7 @@ void FancyTerrainNode::sync(RenderContext &context)
 #endif
 
     m_render_slices.clear();
-    collect_slices(m_render_slices, context.viewpoint()/*fake_viewpoint*/);
+    collect_slices(m_render_slices, context.frustum(), context.viewpoint()/*fake_viewpoint*/);
 
     m_material.shader().bind();
     glUniform1f(m_material.shader().uniform_location("scale_to_radius"),
