@@ -5,7 +5,7 @@
 using namespace engine;
 using namespace sim;
 
-TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/1x1")
+TEST_CASE("render/fancyterraindata/isect_terrain_quadtree_ray/1x1")
 {
     Ray r{Vector3f(-1, 10, 0), Vector3f(1, 0, 0)};
 
@@ -21,7 +21,9 @@ TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/1x1")
     CHECK(leaves_at == Vector3f(2048, 10, 0));
 }
 
-TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recursed_full_hit")
+#ifndef DISABLE_QUADTREE
+
+TEST_CASE("render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recursed_full_hit")
 {
     Ray r{Vector3f(-1, 10, 0), Vector3f(1, 0, 0)};
 
@@ -43,7 +45,7 @@ TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recurse
     CHECK(leaves_at == Vector3f(2048, 10, 0));
 }
 
-TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recursed_partial_hit")
+TEST_CASE("render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recursed_partial_hit")
 {
     Ray r{Vector3f(-1, 10, -0.5), Vector3f(1, 0, 0)};
 
@@ -65,7 +67,7 @@ TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recurse
     CHECK(leaves_at == Vector3f(1024, 10, -0.5));
 }
 
-TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recursed_miss")
+TEST_CASE("render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recursed_miss")
 {
     Ray r{Vector3f(1034, -1, -0.5), Vector3f(0, 1, 0)};
 
@@ -87,7 +89,7 @@ TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/recurse
     CHECK(leaves_at == Vector3f(1024, 10, -0.5)); */
 }
 
-TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/partial_hit_non_aa")
+TEST_CASE("render/fancyterraindata/isect_terrain_quadtree_ray/2x2/partial_hit_non_aa")
 {
     Ray r{Vector3f(1034, -1, -0.5), Vector3f(-0.5, 1, 0)};
 
@@ -108,3 +110,5 @@ TEST_CASE("engine/render/fancyterraindata/isect_terrain_quadtree_ray/2x2/partial
     CHECK(enters_at[eX] == 1024);
     CHECK(leaves_at[eY] == 2048);
 }
+
+#endif

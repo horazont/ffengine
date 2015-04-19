@@ -5,6 +5,7 @@
 
 #include "engine/sim/terrain.hpp"
 
+#define DISABLE_QUADTREE
 
 namespace engine {
 

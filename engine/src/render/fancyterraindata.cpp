@@ -6,7 +6,6 @@
 #include <iostream>
 
 // #define TIMELOG_HITTEST
-#define DISABLE_QUADTREE
 
 #ifdef TIMELOG_HITTEST
 #include <chrono>
