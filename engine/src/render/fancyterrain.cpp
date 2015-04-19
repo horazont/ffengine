@@ -4,8 +4,8 @@
 #include "engine/math/intersect.hpp"
 #include "engine/io/log.hpp"
 
-#define TIMELOG_SYNC
-#define TIMELOG_RENDER
+// #define TIMELOG_SYNC
+// #define TIMELOG_RENDER
 
 #if defined(TIMELOG_SYNC) || defined(TIMELOG_RENDER)
 #include <chrono>
