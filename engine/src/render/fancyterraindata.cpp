@@ -20,44 +20,31 @@ static io::Logger &logger = io::logging().get_logger("render.fancyterraindata");
 FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
                                              const unsigned int grid_size):
     m_grid_size(grid_size),
-    m_minmax_lod_offset(log2_of_pot(m_grid_size-1)),
     m_terrain(terrain),
-    m_terrain_lods(terrain),
-    m_terrain_minmax(terrain),
     m_terrain_nt(terrain),
-    m_terrain_nt_lods(m_terrain_nt),
-    m_terrain_lods_conn(terrain.terrain_updated().connect(
-                            sigc::mem_fun(m_terrain_lods,
-                                          &HeightFieldLODifier::notify_update)
-                            )),
-    m_terrain_minmax_conn(terrain.terrain_updated().connect(
-                              sigc::mem_fun(m_terrain_minmax,
-                                            &sim::MinMaxMapGenerator::notify_update)
-                              )),
     m_terrain_nt_conn(terrain.terrain_updated().connect(
                           sigc::mem_fun(m_terrain_nt,
                                         &sim::NTMapGenerator::notify_update)
-                          )),
-    m_terrain_nt_lods_conn(m_terrain_nt.field_updated().connect(
-                               sigc::mem_fun(m_terrain_nt_lods,
-                                             &NTMapLODifier::notify_update)
-                               ))
+                          ))
 {
     m_any_updated_conns.emplace_back(
-                m_terrain_nt_lods.field_updated().connect(
+                m_terrain_nt.field_updated().connect(
                     sigc::mem_fun(*this,
                                   &FancyTerrainInterface::any_updated)));
     m_any_updated_conns.emplace_back(
-                m_terrain_lods.field_updated().connect(
+                m_terrain.terrain_updated().connect(
                     sigc::mem_fun(*this,
                                   &FancyTerrainInterface::any_updated)));
 
-    if (!is_power_of_two(grid_size-1)) {
-        throw std::runtime_error("grid_size must be power-of-two plus one");
-    }
-    if (((terrain.size()-1) / (m_grid_size-1))*(m_grid_size-1) != terrain.size()-1)
+    const unsigned int tiles = ((terrain.size()-1) / (m_grid_size-1));
+
+    if (tiles*(m_grid_size-1) != terrain.size()-1)
     {
         throw std::runtime_error("grid_size-1 must divide terrain size-1 evenly");
+    }
+    if ((1u<<log2_of_pot(tiles)) != tiles)
+    {
+        throw std::runtime_error("(terrain size-1) / (grid size-1) must be power of two");
     }
 
 #ifdef DISABLE_QUADTREE
@@ -72,28 +59,13 @@ FancyTerrainInterface::~FancyTerrainInterface()
         conn.disconnect();
     }
     m_any_updated_conns.clear();
-    m_terrain_nt_lods_conn.disconnect();
     m_terrain_nt_conn.disconnect();
-    m_terrain_minmax_conn.disconnect();
-    m_terrain_lods_conn.disconnect();
 }
 
 void FancyTerrainInterface::any_updated(const sim::TerrainRect&)
 {
     logger.log(io::LOG_INFO, "Terrain LOD updated");
     m_field_updated.emit();
-}
-
-std::tuple<Vector3f, Vector3f, bool> FancyTerrainInterface::hittest_quadtree(
-        const Ray &ray,
-        const unsigned int lod_index)
-{
-    const sim::MinMaxMapGenerator::MinMaxFieldLODs *lods = nullptr;
-    auto lock = m_terrain_minmax.readonly_lods(lods);
-    if (lods->size() <= lod_index) {
-        return std::make_tuple(Vector3f(), Vector3f(), false);
-    }
-    return isect_terrain_quadtree_ray(ray, m_terrain.size()-1, *lods);
 }
 
 std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
@@ -105,8 +77,6 @@ std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
     std::tuple<Vector3f, bool> result;
 #endif
     {
-        const sim::MinMaxMapGenerator::MinMaxFieldLODs *lods = nullptr;
-        auto mm_lock = m_terrain_minmax.readonly_lods(lods);
         const sim::Terrain::HeightField *heightfield = nullptr;
         auto height_lock = m_terrain.readonly_field(heightfield);
 #ifdef TIMELOG_HITTEST
@@ -115,7 +85,7 @@ std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
 #else
         return
 #endif
-        isect_terrain_ray(ray, m_terrain.size(), *heightfield, *lods);
+        isect_terrain_ray(ray, m_terrain.size(), *heightfield);
     }
 #ifdef TIMELOG_HITTEST
     t_done = timelog_clock::now();
@@ -128,152 +98,10 @@ std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
 }
 
 
-std::tuple<float, float, bool> isect_terrain_quadtree_ray_recurse(
-        const Ray &ray,
-        const unsigned int quad_size,
-        const unsigned int xlod,
-        const unsigned int ylod,
-        const unsigned int lod_index,
-        const sim::MinMaxMapGenerator::MinMaxFieldLODs &lods)
-{
-    const unsigned int lod_size = 1 << ((lods.size()-1) - lod_index);
-    const unsigned int x0 = xlod * quad_size;
-    const unsigned int y0 = ylod * quad_size;
-    const sim::MinMaxMapGenerator::MinMaxField &field = lods[lod_index];
-#ifdef DISABLE_QUADTREE
-    sim::Terrain::height_t hmin = sim::Terrain::min_height;
-    sim::Terrain::height_t hmax = sim::Terrain::max_height;
-#else
-    sim::Terrain::height_t hmin, hmax;
-    std::tie(hmin, hmax) = field[ylod*lod_size+xlod];
-#endif
-
-    /* std::cout << xlod << " " << ylod << " " << lod_size << " " << quad_size << " " << hmin << " " << hmax << std::endl; */
-
-    const AABB box{Vector3f(x0,
-                            y0,
-                            hmin),
-                   Vector3f(x0 + quad_size,
-                            y0 + quad_size,
-                            hmax)};
-
-    float tmin, tmax;
-    if (!isect_aabb_ray(box, ray, tmin, tmax)) {
-        /* std::cout << "AABB test failed" << std::endl; */
-        return std::make_tuple(tmin, tmax, false);
-    }
-#ifdef DISABLE_QUADTREE
-    if (true) {
-#else
-    if (lod_index == 4) {
-#endif
-        /* std::cout << "Max LOD reached " << tmin << " " << tmax << std::endl; */
-        return std::make_tuple(std::max(tmin, 0.f), tmax, true);
-    }
-
-    tmin = std::numeric_limits<float>::max();
-    tmax = std::numeric_limits<float>::min();
-    float test_min, test_max;
-    bool any_hit = false, hit;
-    // top left
-    std::tie(test_min, test_max, hit) = isect_terrain_quadtree_ray_recurse(
-                ray,
-                quad_size / 2,
-                xlod*2,
-                ylod*2,
-                lod_index-1,
-                lods);
-    if (hit) {
-        tmin = std::min(tmin, test_min);
-        tmax = std::max(tmax, test_max);
-        any_hit = true;
-    }
-
-    // bottom left
-    std::tie(test_min, test_max, hit) = isect_terrain_quadtree_ray_recurse(
-                ray,
-                quad_size / 2,
-                xlod*2,
-                ylod*2+1,
-                lod_index-1,
-                lods);
-    if (hit) {
-        tmin = std::min(tmin, test_min);
-        tmax = std::max(tmax, test_max);
-        any_hit = true;
-    }
-
-    // bottom right
-    std::tie(test_min, test_max, hit) = isect_terrain_quadtree_ray_recurse(
-                ray,
-                quad_size / 2,
-                xlod*2+1,
-                ylod*2+1,
-                lod_index-1,
-                lods);
-    if (hit) {
-        tmin = std::min(tmin, test_min);
-        tmax = std::max(tmax, test_max);
-        any_hit = true;
-    }
-
-    // top right
-    std::tie(test_min, test_max, hit) = isect_terrain_quadtree_ray_recurse(
-                ray,
-                quad_size / 2,
-                xlod*2+1,
-                ylod*2,
-                lod_index-1,
-                lods);
-    if (hit) {
-        tmin = std::min(tmin, test_min);
-        tmax = std::max(tmax, test_max);
-        any_hit = true;
-    }
-
-    return std::make_tuple(tmin, tmax, any_hit);
-}
-
-
-std::tuple<Vector3f, Vector3f, bool> isect_terrain_quadtree_ray(
-        const Ray &ray,
-        const unsigned int size,
-        const sim::MinMaxMapGenerator::MinMaxFieldLODs &lods)
-{
-    float tmin, tmax;
-    bool hit;
-    if (lods.size() < log2_of_pot(size-1)+1)
-    {
-        logger.log(io::LOG_WARNING, "not enough LOD data for quadtree tracing");
-        hit = isect_aabb_ray(AABB{Vector3f(0, 0, 0), Vector3f(size, size, 1024)},
-                             ray, tmin, tmax);
-        return std::make_tuple(ray.origin+ray.direction*tmin,
-                               ray.origin+ray.direction*tmax,
-                               hit);
-    }
-    std::tie(tmin, tmax, hit) = isect_terrain_quadtree_ray_recurse(
-                ray,
-                size,
-                0,
-                0,
-                lods.size()-1,
-                lods);
-
-    if (!hit) {
-        return std::make_tuple(Vector3f(), Vector3f(), false);
-    }
-
-    return std::make_tuple(ray.origin+ray.direction*tmin,
-                           ray.origin+ray.direction*tmax,
-                           true);
-}
-
-
 std::tuple<Vector3f, bool> isect_terrain_ray(
         const Ray &ray,
         const unsigned int size,
-        const sim::Terrain::HeightField &field,
-        const sim::MinMaxMapGenerator::MinMaxFieldLODs &lods)
+        const sim::Terrain::HeightField &field)
 {
 #ifdef TIMELOG_HITTEST
     timelog_clock::time_point t0;
@@ -283,18 +111,26 @@ std::tuple<Vector3f, bool> isect_terrain_ray(
 #endif
     typedef RasterIterator<float> FieldIterator;
 
-    Vector3f min, max;
+    float tmin, tmax;
     bool hit = false;
 #ifdef TIMELOG_HITTEST
     t0 = timelog_clock::now();
 #endif
-    std::tie(min, max, hit) = isect_terrain_quadtree_ray(ray, size-1, lods);
+
+    hit = isect_aabb_ray(AABB{Vector3f(0, 0, sim::Terrain::min_height),
+                              Vector3f(size, size, sim::Terrain::max_height)},
+                         ray,
+                         tmin, tmax);
+
 #ifdef TIMELOG_HITTEST
     t_quad = timelog_clock::now();
 #endif
-    if (!hit) {
+    if (!hit || tmin < 0) {
         return std::make_tuple(Vector3f(), hit);
     }
+
+    const Vector3f min = ray.origin + ray.direction*tmin;
+    const Vector3f max = ray.origin + ray.direction*tmax;
 
     // min and max point to the enter and exit point of the range of terrain
     // fields we matched. we now have to march across this line to find the

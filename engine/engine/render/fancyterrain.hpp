@@ -134,26 +134,20 @@ public:
      *
      * @opengl
      */
-    FancyTerrainNode(FancyTerrainInterface &terrain,
-                     const unsigned int texture_cache_size);
+    FancyTerrainNode(FancyTerrainInterface &terrain);
     ~FancyTerrainNode() override;
 
 private:
-    static constexpr float lod_range_base = 255;
+    static constexpr float lod_range_base = 269;
 
     FancyTerrainInterface &m_terrain_interface;
 
     const unsigned int m_grid_size;
-    const unsigned int m_texture_cache_size;
-    const unsigned int m_texture_cache_tiles;
-    const unsigned int m_min_lod;
+    const unsigned int m_tiles;
     const unsigned int m_max_depth;
 
     sim::Terrain &m_terrain;
-    FancyTerrainInterface::HeightFieldLODifier &m_terrain_lods;
-    sim::MinMaxMapGenerator &m_terrain_minmax;
     sim::NTMapGenerator &m_terrain_nt;
-    FancyTerrainInterface::NTMapLODifier &m_terrain_nt_lods;
 
     sigc::connection m_clear_cache_conn;
 
@@ -173,14 +167,7 @@ private:
     std::unique_ptr<VAO> m_nd_vao;
 
     std::atomic<bool> m_cache_invalidated;
-    std::unordered_map<HeightmapSliceMeta, SlotIndex> m_allocated_slices;
-    std::vector<uint_fast8_t> m_slot_usage;
-    unsigned int m_next_unused_slot;
-    std::vector<HeightmapSliceMeta> m_slots;
-
-    std::vector<HeightmapSliceMeta> m_tmp_slices;
-    std::vector<SlotIndex> m_upload_slices;
-    std::vector<SlotIndex> m_render_slices;
+    std::vector<HeightmapSliceMeta> m_render_slices;
 
     std::unordered_map<Material*, OverlayConfig> m_overlays;
     std::vector<RenderOverlay> m_render_overlays;
@@ -188,11 +175,10 @@ private:
 protected:
     void collect_slices_recurse(
             std::vector<HeightmapSliceMeta> &requested_slices,
-            const unsigned int depth,
+            const unsigned int invdepth,
             const unsigned int relative_x,
             const unsigned int relative_y,
-            const Vector3f &viewpoint,
-            const sim::MinMaxMapGenerator::MinMaxFieldLODs &minmaxfields);
+            const Vector3f &viewpoint);
     void collect_slices(
             std::vector<HeightmapSliceMeta> &requested_slices,
             const Vector3f &viewpoint);

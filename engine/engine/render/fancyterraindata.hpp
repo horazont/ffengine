@@ -22,28 +22,17 @@ namespace engine {
 class FancyTerrainInterface
 {
 public:
-    typedef sim::FieldLODifier<sim::Terrain::height_t, sim::Terrain> HeightFieldLODifier;
-    typedef sim::FieldLODifier<sim::NTMapGenerator::element_t, sim::NTMapGenerator> NTMapLODifier;
-
-public:
     FancyTerrainInterface(sim::Terrain &terrain,
                           const unsigned int grid_size);
     ~FancyTerrainInterface();
 
 private:
     const unsigned int m_grid_size;
-    const unsigned int m_minmax_lod_offset;
 
     sim::Terrain &m_terrain;
-    HeightFieldLODifier m_terrain_lods;
-    sim::MinMaxMapGenerator m_terrain_minmax;
     sim::NTMapGenerator m_terrain_nt;
-    NTMapLODifier m_terrain_nt_lods;
 
-    sigc::connection m_terrain_lods_conn;
-    sigc::connection m_terrain_minmax_conn;
     sigc::connection m_terrain_nt_conn;
-    sigc::connection m_terrain_nt_lods_conn;
 
     std::vector<sigc::connection> m_any_updated_conns;
 
@@ -68,24 +57,9 @@ public:
         return m_terrain;
     }
 
-    inline HeightFieldLODifier &heightmap_lods()
-    {
-        return m_terrain_lods;
-    }
-
-    inline sim::MinMaxMapGenerator &heightmap_minmax()
-    {
-        return m_terrain_minmax;
-    }
-
     inline sim::NTMapGenerator &ntmap()
     {
         return m_terrain_nt;
-    }
-
-    inline NTMapLODifier &ntmap_lods()
-    {
-        return m_terrain_nt_lods;
     }
 
     inline sigc::signal<void> &field_updated()
@@ -103,13 +77,7 @@ public:
 std::tuple<Vector3f, bool> isect_terrain_ray(
         const Ray &ray,
         const unsigned int size,
-        const sim::Terrain::HeightField &field,
-        const sim::MinMaxMapGenerator::MinMaxFieldLODs &lods);
-
-std::tuple<Vector3f, Vector3f, bool> isect_terrain_quadtree_ray(
-        const Ray &ray,
-        const unsigned int size,
-        const sim::MinMaxMapGenerator::MinMaxFieldLODs &minmax_lods);
+        const sim::Terrain::HeightField &field);
 
 }
 

@@ -17,9 +17,7 @@ Terrain::Terrain(const unsigned int size):
     m_size(size),
     m_heightmap(m_size*m_size, default_height)
 {
-    if (!engine::is_power_of_two(m_size-1)) {
-        throw std::runtime_error("Terrain size must be power-of-two plus one");
-    }
+
 }
 
 Terrain::~Terrain()
@@ -65,10 +63,11 @@ void Terrain::from_perlin(const PerlinNoiseGenerator &gen)
 
 void Terrain::from_sincos(const Vector3f scale)
 {
+    const float offset = scale[eZ];
     std::unique_lock<std::shared_timed_mutex> lock(m_heightmap_mutex);
     for (unsigned int y = 0; y < m_size; y++) {
         for (unsigned int x = 0; x < m_size; x++) {
-            m_heightmap[y*m_size+x] = (sin(x*scale[eX]) + cos(y*scale[eY])) * scale[eZ];
+            m_heightmap[y*m_size+x] = (sin(x*scale[eX]) + cos(y*scale[eY])) * scale[eZ] + offset;
         }
     }
     lock.unlock();
@@ -151,179 +150,6 @@ void TerrainWorker::notify_update(const TerrainRect &at)
                                  << m_worker_thread.get_id()
                                  << io::submit;
     m_wakeup.notify_all();
-}
-
-
-MinMaxMapGenerator::MinMaxMapGenerator(Terrain &source):
-    m_source(source),
-    m_max_size(source.size()-1),
-    m_lod_count(engine::log2_of_pot(m_max_size)+1)
-{
-    // avoid reallocation
-    m_lods.reserve(m_lod_count);
-    start();
-}
-
-MinMaxMapGenerator::~MinMaxMapGenerator()
-{
-    tear_down();
-}
-
-void MinMaxMapGenerator::make_zeroth_map(MinMaxField &scratchpad)
-{
-    const unsigned int input_size = m_source.size();
-    const unsigned int output_size = m_max_size;
-
-    const Terrain::HeightField *input = nullptr;
-    auto lock = m_source.readonly_field(input);
-
-    for (unsigned int ybase = 0; ybase < input_size-1; ybase++)
-    {
-        for (unsigned int xbase = 0; xbase < input_size-1; xbase++)
-        {
-            Terrain::height_t min = std::numeric_limits<Terrain::height_t>::max();
-            Terrain::height_t max = std::numeric_limits<Terrain::height_t>::min();
-
-            for (unsigned int y = ybase; y < ybase+2; y++) {
-                for (unsigned int x = xbase; x < xbase+2; x++) {
-                    const Terrain::height_t value = (*input)[y*input_size+x];
-                    min = std::min(min, value);
-                    max = std::max(max, value);
-                }
-            }
-
-            scratchpad[ybase*output_size+xbase] = std::make_tuple(min, max);
-        }
-    }
-}
-
-void MinMaxMapGenerator::update_zeroth_map(const TerrainRect &updated)
-{
-    TerrainRect r(updated.x0(), updated.y0(),
-                  (updated.x1()/2)*2, (updated.y1()/2)*2);
-    const unsigned int input_size = m_source.size();
-    const unsigned int output_size = m_max_size;
-
-    MinMaxField &dest = m_lods[0];
-
-    const Terrain::HeightField *input = nullptr;
-    auto lock = m_source.readonly_field(input);
-
-    for (unsigned int ybase = r.y0(); ybase < r.y1(); ybase++)
-    {
-        for (unsigned int xbase = r.x0(); xbase < r.x1(); xbase++)
-        {
-            Terrain::height_t min = std::numeric_limits<Terrain::height_t>::max();
-            Terrain::height_t max = std::numeric_limits<Terrain::height_t>::min();
-
-            for (unsigned int y = ybase; y < ybase+2; y++) {
-                for (unsigned int x = xbase; x < xbase+2; x++) {
-                    const Terrain::height_t value = (*input)[y*input_size+x];
-                    min = std::min(min, value);
-                    max = std::max(max, value);
-                }
-            }
-
-            dest[ybase*output_size+xbase] = std::make_tuple(min, max);
-        }
-    }
-}
-
-void MinMaxMapGenerator::worker_impl(const TerrainRect &updated)
-{
-    std::shared_lock<std::shared_timed_mutex> read_lock(m_data_mutex,
-                                                        std::defer_lock);
-    std::unique_lock<std::shared_timed_mutex> write_lock(m_data_mutex,
-                                                         std::defer_lock);
-
-    read_lock.lock();
-    if (m_lods.size() == 0) {
-        lod_logger.log(io::LOG_DEBUG, "full recomputation of MinMaxField");
-        MinMaxField scratchpad(m_max_size*m_max_size);
-        make_zeroth_map(scratchpad);
-
-        read_lock.unlock();
-        write_lock.lock();
-        m_lods.emplace_back(scratchpad);
-    } else {
-        lod_logger.log(io::LOG_DEBUG, "partial recomputation of MinMaxField");
-        read_lock.unlock();
-        write_lock.lock();
-        update_zeroth_map(updated);
-    }
-    write_lock.unlock();
-    read_lock.lock();
-
-    MinMaxField *prev_field = &m_lods[0];
-    unsigned int prev_size = m_max_size;
-
-    TerrainRect to_update = updated;
-
-    for (unsigned int i = 1; i < m_lod_count; i++)
-    {
-        const unsigned int this_size = (m_max_size >> i);
-
-        MinMaxField *next_field;
-        if (m_lods.size() <= i) {
-            lod_logger.logf(io::LOG_DEBUG, "full recomputation of MinMaxField, lod = %u", i);
-            // if this level has not been computed yet, force full update
-            to_update = TerrainRect(0, 0, this_size, this_size);
-            read_lock.unlock();
-            write_lock.lock();
-            m_lods.emplace_back(MinMaxField(this_size*this_size));
-            next_field = &m_lods[i];
-        } else {
-            lod_logger.logf(io::LOG_DEBUG, "partial recomputation of MinMaxField, lod = %u", i);
-            // reduce the rect size
-            to_update.set_x0(to_update.x0() / 2);
-            to_update.set_y0(to_update.y0() / 2);
-            to_update.set_x1(to_update.x1() / 2);
-            to_update.set_y1(to_update.y1() / 2);
-
-            next_field = &m_lods[i];
-
-            read_lock.unlock();
-            write_lock.lock();
-        }
-
-        for (unsigned int y = to_update.y0(); y < to_update.y1(); y++)
-        {
-            element_t *dest_ptr = &(*next_field)[y*this_size+to_update.x0()];
-            for (unsigned int x = to_update.x0(); x < to_update.x1(); x++)
-            {
-                Terrain::height_t min, max;
-                std::tie(min, max) = (*prev_field)[(2*y)*prev_size+(2*x)];
-
-                Terrain::height_t tmp_min, tmp_max;
-                std::tie(tmp_min, tmp_max) = (*prev_field)[(2*y)*prev_size+(2*x+1)];
-                min = std::min(tmp_min, min);
-                max = std::max(tmp_max, max);
-
-                std::tie(tmp_min, tmp_max) = (*prev_field)[(2*y+1)*prev_size+(2*x+1)];
-                min = std::min(tmp_min, min);
-                max = std::max(tmp_max, max);
-
-                std::tie(tmp_min, tmp_max) = (*prev_field)[(2*y+1)*prev_size+(2*x)];
-                min = std::min(tmp_min, min);
-                max = std::max(tmp_max, max);
-
-                *dest_ptr++ = std::make_tuple(min, max);
-            }
-        }
-
-        write_lock.unlock();
-        read_lock.lock();
-
-        prev_field = next_field;
-        prev_size = this_size;
-    }
-}
-
-std::shared_lock<std::shared_timed_mutex> MinMaxMapGenerator::readonly_lods(
-        const MinMaxMapGenerator::MinMaxFieldLODs *&fields) const
-{
-    fields = &m_lods;
-    return std::shared_lock<std::shared_timed_mutex>(m_data_mutex);
 }
 
 
