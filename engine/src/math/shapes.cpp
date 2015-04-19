@@ -1,5 +1,6 @@
 #include "engine/math/shapes.hpp"
 
+#include "engine/math/algo.hpp"
 #include "engine/math/intersect.hpp"
 
 
@@ -19,7 +20,7 @@ Ray::Ray(const Vector3f &origin, const Vector3f &direction):
 
 
 Plane::Plane(const float dist, const Vector3f &normal):
-    homogenous(normal.normalized(), dist)
+    homogenous(normal / normal.length(), dist / normal.length())
 {
 
 }
@@ -34,7 +35,11 @@ Plane::Plane(const Vector3f &origin, const Vector3f &normal):
 Plane::Plane(const Vector4f &homogenous_vector):
     homogenous(homogenous_vector)
 {
-
+    const float magnitude = std::sqrt(
+                sqr(homogenous.as_array[0])
+            + sqr(homogenous.as_array[1])
+            + sqr(homogenous.as_array[2]));
+    homogenous /= magnitude;
 }
 
 PlaneSide Plane::side_of(const Sphere &other) const
