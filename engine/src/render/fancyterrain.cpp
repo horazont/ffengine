@@ -325,12 +325,19 @@ void FancyTerrainNode::remove_overlay(Material &mat)
 
 void FancyTerrainNode::render(RenderContext &context)
 {
+#ifdef TIMELOG_RENDER
+    const timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_solid, t_overlay;
+#endif
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
     m_material.shader().bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
     render_all(context, *m_vao, m_material);
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
+#ifdef TIMELOG_RENDER
+    t_solid = timelog_clock::now();
+#endif
 
     /* m_normal_debug_material.shader().bind();
     glUniform3fv(m_normal_debug_material.shader().uniform_location("lod_viewpoint"),
@@ -360,6 +367,13 @@ void FancyTerrainNode::render(RenderContext &context)
         }
     }
     glDepthMask(GL_TRUE);
+#ifdef TIMELOG_RENDER
+    t_overlay = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "render: solid time: %.2f ms",
+                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(t_solid-t0).count());
+    logger.logf(io::LOG_DEBUG, "render: overlay time: %.2f ms",
+                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(t_overlay-t_solid).count());
+#endif
 }
 
 void FancyTerrainNode::sync(Scene &scene)
