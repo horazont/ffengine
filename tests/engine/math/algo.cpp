@@ -141,3 +141,25 @@ TEST_CASE("math/raster_line_inclusive/case8")
     CHECK(data == reference);
 }
 
+TEST_CASE("math/raster_line_inclusive/case9")
+{
+    std::vector<std::tuple<float, float> > data;
+    std::copy(TestIterator(0, 0, 11.62, 0), TestIterator(),
+              std::back_inserter(data));
+
+    std::vector<std::tuple<float, float> > reference({
+                                                         std::make_tuple(0, 0),
+                                                         std::make_tuple(1, 0),
+                                                         std::make_tuple(2, 0),
+                                                         std::make_tuple(3, 0),
+                                                         std::make_tuple(4, 0),
+                                                         std::make_tuple(5, 0),
+                                                         std::make_tuple(6, 0),
+                                                         std::make_tuple(7, 0),
+                                                         std::make_tuple(8, 0),
+                                                         std::make_tuple(9, 0),
+                                                         std::make_tuple(10, 0),
+                                                         std::make_tuple(11, 0)
+                                                     });
+    CHECK(data == reference);
+}
