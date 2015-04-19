@@ -81,17 +81,9 @@ struct Plane
      */
     Plane(const Vector3f &origin, const Vector3f &normal);
     Plane(const float dist, const Vector3f &normal);
+    explicit Plane(const Vector4f &homogenous_vector);
 
-    /**
-     * The distance of the plane from the origin, in \link normal \endlink
-     * direction.
-     */
-    float dist;
-
-    /**
-     * The normal of the plane.
-     */
-    Vector3f normal;
+    Vector4f homogenous;
 
     /**
      * Check on which side of the plane a Sphere is.

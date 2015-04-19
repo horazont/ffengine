@@ -19,23 +19,29 @@ Ray::Ray(const Vector3f &origin, const Vector3f &direction):
 
 
 Plane::Plane(const float dist, const Vector3f &normal):
-    dist(dist),
-    normal(normal)
+    homogenous(normal.normalized(), dist)
 {
 
 }
 
 Plane::Plane(const Vector3f &origin, const Vector3f &normal):
-    dist(origin*normal),
-    normal(normal)
+    homogenous()
+{
+    Vector3f normalized_normal = normal.normalized();
+    homogenous = Vector4f(normalized_normal, normalized_normal*origin);
+}
+
+Plane::Plane(const Vector4f &homogenous_vector):
+    homogenous(homogenous_vector)
 {
 
 }
 
 PlaneSide Plane::side_of(const Sphere &other) const
 {
-    const float normal_projected_center = other.center*normal;
-    if (fabs(normal_projected_center - dist) <= other.radius) {
+    const float normal_projected_center =
+            Vector4f(other.center, -1) * homogenous;
+    if (fabs(normal_projected_center) <= other.radius) {
         return PlaneSide::BOTH;
     } else {
         if (normal_projected_center > 0) {
@@ -48,7 +54,7 @@ PlaneSide Plane::side_of(const Sphere &other) const
 
 PlaneSide Plane::side_of(const Vector3f &other) const
 {
-    const float ndist = other * normal - dist;
+    const float ndist = Vector4f(other, -1.f) * homogenous;
     if (fabs(ndist) < ISECT_EPSILON) {
         return PlaneSide::BOTH;
     } else if (ndist < 0) {
