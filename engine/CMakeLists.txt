@@ -42,6 +42,7 @@ set(ENGINE_HEADERS
   engine/render/camera.hpp
   engine/render/fancyterrain.hpp
   engine/render/fancyterraindata.hpp
+  engine/render/frustum.hpp
   engine/render/grid.hpp
   engine/render/overlay.hpp
   engine/render/plane.hpp
@@ -92,6 +93,7 @@ set(ENGINE_SRC
   src/render/camera.cpp
   src/render/fancyterrain.cpp
   src/render/fancyterraindata.cpp
+  src/render/frustum.cpp
   src/render/grid.cpp
   src/render/overlay.cpp
   src/render/plane.cpp
