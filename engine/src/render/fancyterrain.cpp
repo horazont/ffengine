@@ -18,10 +18,28 @@ namespace engine {
 static io::Logger &logger = io::logging().get_logger("render.fancyterrain");
 
 
-bool HeightmapSliceMeta::operator<(const HeightmapSliceMeta &other) const
+HeightmapSliceMeta::HeightmapSliceMeta():
+    valid(false)
+{
+
+}
+
+HeightmapSliceMeta::HeightmapSliceMeta(
+        unsigned int basex,
+        unsigned int basey,
+        unsigned int lod):
+    basex(basex),
+    basey(basey),
+    lod(lod),
+    valid(true)
+{
+
+}
+
+/* bool HeightmapSliceMeta::operator<(const HeightmapSliceMeta &other) const
 {
     return lod < other.lod;
-}
+} */
 
 
 template <typename field_t>
@@ -89,11 +107,31 @@ void upload_slices(
 }
 
 
+static inline FancyTerrainNode::SlotUsages::iterator find_next_unused_slot(
+        FancyTerrainNode::SlotUsage threshold,
+        FancyTerrainNode::SlotUsages &slot_states,
+        FancyTerrainNode::SlotUsages::iterator iter)
+{
+    while (threshold < FancyTerrainNode::SLOT_REQUIRED) {
+        for (; iter != slot_states.end(); ++iter) {
+            if (*iter <= threshold) {
+                return iter;
+            }
+        }
+        // re-start with higher threshold
+        iter = slot_states.begin();
+        ++threshold;
+    }
+    return iter;
+}
+
+
 FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                                    const unsigned int texture_cache_size):
     m_terrain_interface(terrain_interface),
     m_grid_size(terrain_interface.grid_size()),
     m_texture_cache_size(texture_cache_size),
+    m_texture_cache_tiles(m_texture_cache_size*m_texture_cache_size),
     m_min_lod(m_grid_size-1),
     m_max_depth(log2_of_pot(terrain_interface.size()-1)),
     m_terrain(terrain_interface.terrain()),
@@ -219,13 +257,13 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_vao->sync();
     m_nd_vao->sync();
 
-    m_allocated_slices.reserve(m_texture_cache_size*m_texture_cache_size);
+    m_allocated_slices.reserve(m_texture_cache_tiles);
     // we assume that at any given time only one fourth of the texture cache
     // will be used for rendering. otherwise, realloc :)
-    m_render_slices.reserve(m_texture_cache_size*m_texture_cache_size / 4);
+    m_render_slices.reserve(m_texture_cache_tiles / 4);
     m_upload_slices.reserve(m_render_slices.size());
-    m_heightmap_slots.resize(m_texture_cache_size*m_texture_cache_size);
-    m_lowest_unused_slot = 0;
+    m_slots.resize(m_texture_cache_tiles);
+    m_slot_usage.resize(m_texture_cache_tiles, SLOT_EVICTABLE);
 }
 
 FancyTerrainNode::~FancyTerrainNode()
@@ -291,7 +329,7 @@ void FancyTerrainNode::collect_slices_recurse(
     {
         // next LOD not required, insert node
         requested_slices.push_back(
-                    HeightmapSliceMeta{absolute_x, absolute_y, size}
+                    HeightmapSliceMeta(absolute_x, absolute_y, size)
                     );
         return;
     }
@@ -341,7 +379,7 @@ inline void render_slice(RenderContext &context,
 void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &material)
 {
     for (auto slot_index: m_render_slices) {
-        const HeightmapSliceMeta &slice = m_heightmap_slots[slot_index];
+        const HeightmapSliceMeta &slice = m_slots[slot_index];
         const float x = slice.basex;
         const float y = slice.basey;
         const float scale = slice.lod;
@@ -439,7 +477,7 @@ void FancyTerrainNode::render(RenderContext &context)
                      1, context.scene().viewpoint()/*Vector3f(0, 0, 0)*/.as_array);
         for (auto slot_index: m_render_slices)
         {
-            const HeightmapSliceMeta &slice = m_heightmap_slots[slot_index];
+            const HeightmapSliceMeta &slice = m_slots[slot_index];
             const unsigned int x = slice.basex;
             const unsigned int y = slice.basey;
             const unsigned int scale = slice.lod;
@@ -466,8 +504,6 @@ void FancyTerrainNode::render(RenderContext &context)
 void FancyTerrainNode::sync(Scene &scene)
 {
     // FIXME: use SceneStorage here!
-
-    const unsigned int texture_slots = m_texture_cache_size*m_texture_cache_size;
 
 #ifdef TIMELOG_SYNC
     const timelog_clock::time_point t0 = timelog_clock::now();
@@ -497,7 +533,10 @@ void FancyTerrainNode::sync(Scene &scene)
 
     if (m_cache_invalidated) {
         m_allocated_slices.clear();
-        m_lowest_unused_slot = 0;
+        m_slot_usage.clear();
+        m_slots.clear();
+        m_slots.resize(m_texture_cache_tiles, HeightmapSliceMeta());
+        m_slot_usage.resize(m_texture_cache_tiles, SLOT_EVICTABLE);
         m_cache_invalidated = false;
     }
 
@@ -513,20 +552,25 @@ void FancyTerrainNode::sync(Scene &scene)
 #endif
 
     bool warned = false;
-    unsigned int reused = 0, newly_allocated = 0;
+    for (auto &item: m_slot_usage) {
+        if (item > SLOT_EVICTABLE) {
+            --item;
+        }
+    }
+    SlotUsages::iterator lookat = m_slot_usage.begin();
+    SlotUsage threshold = SLOT_EVICTABLE;
+    unsigned int reused = 0, newly_allocated = 0, evicted = 0;
+    unsigned int slot_index;
     for (auto &required_slice: m_tmp_slices)
     {
-        unsigned int slot_index;
         // find element in cache
         auto cache_iter = m_allocated_slices.find(required_slice);
         if (cache_iter != m_allocated_slices.end()) {
             slot_index = cache_iter->second;
             ++reused;
         } else {
-            if (m_lowest_unused_slot < texture_slots)
-            {
-                slot_index = m_lowest_unused_slot++;
-            } else {
+            lookat = find_next_unused_slot(threshold, m_slot_usage, lookat);
+            if (lookat == m_slot_usage.end()) {
                 if (!warned) {
                     logger.logf(io::LOG_ERROR,
                                 "out of heightmap slots! (%u required in total)",
@@ -535,20 +579,30 @@ void FancyTerrainNode::sync(Scene &scene)
                 }
                 continue;
             }
+            slot_index = lookat - m_slot_usage.begin();
+            if (m_slots[slot_index].valid) {
+                cache_iter = m_allocated_slices.find(m_slots[slot_index]);
+                assert(cache_iter != m_allocated_slices.end());
+                assert(cache_iter->second == slot_index);
+                m_allocated_slices.erase(cache_iter);
+                ++evicted;
+            }
             m_allocated_slices[required_slice] = slot_index;
+            assert(m_allocated_slices.find(required_slice) != m_allocated_slices.end());
             m_upload_slices.emplace_back(slot_index);
             ++newly_allocated;
         }
-
         m_render_slices.emplace_back(slot_index);
-        m_heightmap_slots[slot_index] = required_slice;
+        m_slot_usage[slot_index] = SLOT_REQUIRED;
+        m_slots[slot_index] = required_slice;
     }
 
     if (newly_allocated > 0) {
         logger.logf(io::LOG_DEBUG,
-                    "%u slots newly allocated, %u reused; "
+                    "%u slots newly allocated, %u reused, %u evicted; "
                     "%u allocated in total",
-                    newly_allocated, reused, m_allocated_slices.size());
+                    newly_allocated, reused, evicted,
+                    m_allocated_slices.size());
     }
 
 #ifdef TIMELOG_SYNC
@@ -564,7 +618,7 @@ void FancyTerrainNode::sync(Scene &scene)
         upload_slices(
                     m_terrain.size(), m_grid_size, m_texture_cache_size,
                     GL_RED,
-                    m_upload_slices, m_heightmap_slots, *lod0, *lods);
+                    m_upload_slices, m_slots, *lod0, *lods);
     }
 
     m_normalt.bind();
@@ -577,7 +631,7 @@ void FancyTerrainNode::sync(Scene &scene)
         upload_slices(
                     m_terrain.size(), m_grid_size, m_texture_cache_size,
                     GL_RGBA,
-                    m_upload_slices, m_heightmap_slots, *nt_lod0, *nt_lods);
+                    m_upload_slices, m_slots, *nt_lod0, *nt_lods);
     }
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -591,5 +645,9 @@ void FancyTerrainNode::sync(Scene &scene)
 #endif
 }
 
+
+const FancyTerrainNode::SlotUsage FancyTerrainNode::SLOT_EVICTABLE = 0;
+const FancyTerrainNode::SlotUsage FancyTerrainNode::SLOT_SUGGESTED = 1;
+const FancyTerrainNode::SlotUsage FancyTerrainNode::SLOT_REQUIRED = 2;
 
 }

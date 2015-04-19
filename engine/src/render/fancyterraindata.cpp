@@ -44,10 +44,6 @@ FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
                                              &NTMapLODifier::notify_update)
                                ))
 {
-    sim::TerrainRect full_terrain(0, 0,
-                                  m_terrain.size(),
-                                  m_terrain.size());
-
     m_any_updated_conns.emplace_back(
                 m_terrain_nt_lods.field_updated().connect(
                     sigc::mem_fun(*this,
@@ -85,6 +81,7 @@ FancyTerrainInterface::~FancyTerrainInterface()
 
 void FancyTerrainInterface::any_updated(const sim::TerrainRect&)
 {
+    logger.log(io::LOG_INFO, "Terrain LOD updated");
     m_field_updated.emit();
 }
 

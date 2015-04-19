@@ -28,9 +28,21 @@ struct HeightmapSliceMeta
      */
     unsigned int lod;
 
-    bool operator<(const HeightmapSliceMeta &other) const;
+    /**
+     * Is the slice actually valid?
+     */
+    bool valid;
+
+    HeightmapSliceMeta();
+    HeightmapSliceMeta(unsigned int basex, unsigned int basey, unsigned int lod);
+    HeightmapSliceMeta(const HeightmapSliceMeta &ref) = default;
+    HeightmapSliceMeta &operator=(const HeightmapSliceMeta &ref) = default;
+
     inline bool operator==(const HeightmapSliceMeta &other) const
     {
+        if (!valid || !other.valid) {
+            return (valid == other.valid);
+        }
         return (basex == other.basex) && (basey == other.basey) && (lod == other.lod);
     }
 };
@@ -57,6 +69,9 @@ private:
 public:
     result_type operator()(const argument_type &value) const
     {
+        if (!value.valid) {
+            return 0;
+        }
         return m_uint_hash(value.basex)
                 ^ m_uint_hash(value.basey)
                 ^ m_uint_hash(value.lod);
@@ -67,7 +82,6 @@ public:
 }
 
 namespace engine {
-
 
 /**
  * Scenegraph node which renders a terrain using the CDLOD algorithm by
@@ -92,6 +106,11 @@ class FancyTerrainNode: public scenegraph::Node
 {
 public:
     typedef unsigned int SlotIndex;
+    typedef uint_fast8_t SlotUsage;
+    typedef std::vector<SlotUsage> SlotUsages;
+    static const SlotUsage SLOT_EVICTABLE;
+    static const SlotUsage SLOT_SUGGESTED;
+    static const SlotUsage SLOT_REQUIRED;
 
     struct OverlayConfig
     {
@@ -126,6 +145,7 @@ private:
 
     const unsigned int m_grid_size;
     const unsigned int m_texture_cache_size;
+    const unsigned int m_texture_cache_tiles;
     const unsigned int m_min_lod;
     const unsigned int m_max_depth;
 
@@ -154,8 +174,9 @@ private:
 
     std::atomic<bool> m_cache_invalidated;
     std::unordered_map<HeightmapSliceMeta, SlotIndex> m_allocated_slices;
-    unsigned int m_lowest_unused_slot;
-    std::vector<HeightmapSliceMeta> m_heightmap_slots;
+    std::vector<uint_fast8_t> m_slot_usage;
+    unsigned int m_next_unused_slot;
+    std::vector<HeightmapSliceMeta> m_slots;
 
     std::vector<HeightmapSliceMeta> m_tmp_slices;
     std::vector<SlotIndex> m_upload_slices;
