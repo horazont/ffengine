@@ -32,7 +32,7 @@ static inline T interp_linear(T v0, T v1, T t)
 template <typename T>
 static inline T interp_cos(T v0, T v1, T t)
 {
-    const double cos_factor = sqr(std::cos(t*M_PI_2));
+    const T cos_factor = T(1) - sqr(std::cos(t*M_PI_2));
     return interp_linear(v0, v1, cos_factor);
 }
 
