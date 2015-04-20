@@ -28,7 +28,7 @@ the AUTHORS file.
 
 namespace engine {
 
-static io::Logger &logger = io::logging().get_logger("engine.render.rendergraph");
+static io::Logger &logger = io::logging().get_logger("render.rendergraph");
 
 RenderContext::RenderContext(SceneGraph &scenegraph, Camera &camera):
     m_scenegraph(scenegraph),

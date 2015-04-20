@@ -32,7 +32,7 @@ the AUTHORS file.
 
 namespace engine {
 
-static io::Logger &logger = io::logging().get_logger("engine.gl.fbo");
+static io::Logger &logger = io::logging().get_logger("gl.fbo");
 
 Renderbuffer::Renderbuffer(const GLenum internal_format,
                            const GLsizei width,

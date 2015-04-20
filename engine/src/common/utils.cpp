@@ -28,7 +28,7 @@ the AUTHORS file.
 
 namespace engine {
 
-static io::Logger &nw_logger = io::logging().get_logger("engine.common.utils.NotifiableWorker");
+static io::Logger &nw_logger = io::logging().get_logger("common.utils.NotifiableWorker");
 
 
 NotifiableWorker::NotifiableWorker():

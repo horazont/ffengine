@@ -26,6 +26,6 @@ the AUTHORS file.
 
 namespace engine {
 
-io::Logger &gl_array_logger = io::logging().get_logger("engine.gl.array");
+io::Logger &gl_array_logger = io::logging().get_logger("gl.array");
 
 }

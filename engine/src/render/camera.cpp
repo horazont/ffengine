@@ -25,7 +25,7 @@ the AUTHORS file.
 
 namespace engine {
 
-static io::Logger &camera_logger = io::logging().get_logger("engine.render.camera");
+static io::Logger &camera_logger = io::logging().get_logger("render.camera");
 
 
 CameraController::CameraController():

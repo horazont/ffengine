@@ -30,7 +30,7 @@ the AUTHORS file.
 
 namespace engine {
 
-io::Logger &gl_vao_logger = io::logging().get_logger("engine.gl.vao");
+io::Logger &gl_vao_logger = io::logging().get_logger("gl.vao");
 
 
 VAO::VAO():
