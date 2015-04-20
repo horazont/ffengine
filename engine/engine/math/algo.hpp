@@ -26,7 +26,7 @@ static inline T interp_nearest(T v0, T v1, T t)
 template <typename T>
 static inline T interp_linear(T v0, T v1, T t)
 {
-    return t*v0 + (1.0-t)*v1;
+    return (1.0-t)*v0 + t*v1;
 }
 
 template <typename T>
