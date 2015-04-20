@@ -36,6 +36,12 @@ static inline T interp_cos(T v0, T v1, T t)
     return interp_linear(v0, v1, cos_factor);
 }
 
+template <typename T>
+static inline T clamp(T v, T low, T high)
+{
+    return std::max(std::min(v, high), low);
+}
+
 template <typename numeric_t>
 static inline numeric_t sgn(numeric_t v)
 {
