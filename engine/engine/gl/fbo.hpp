@@ -61,17 +61,25 @@ public:
 
 };
 
-
+/**
+ * A target for rendering, which may include colour and depth buffers.
+ */
 class RenderTarget
 {
 public:
     enum class Usage {
-        READ = GL_READ_FRAMEBUFFER,
-        DRAW = GL_DRAW_FRAMEBUFFER,
-        BOTH = GL_FRAMEBUFFER
+        READ = GL_READ_FRAMEBUFFER, ///< Use for reading
+        DRAW = GL_DRAW_FRAMEBUFFER, ///< Use for drawing
+        BOTH = GL_FRAMEBUFFER       ///< Use for both
     };
 
 public:
+    /**
+     * Size of the render target
+     *
+     * @param width Width in pixels
+     * @param height Height in pixels
+     */
     RenderTarget(GLsizei width, GLsizei height);
     virtual ~RenderTarget();
 
@@ -97,13 +105,42 @@ public:
     }
 
 public:
+    /**
+     * Bind the render target for a specific Usage.
+     *
+     * This calls bound().
+     *
+     * @param usage Usage to bind for
+     */
     virtual void bind(Usage usage = Usage::BOTH);
+
+    /**
+     * Notify that the target has been bound, possibly by other means, for
+     * the given usages.
+     *
+     * bind() calls this internally.
+     *
+     * @param usage Usage for which the target was bound.
+     */
     virtual void bound(Usage usage);
+
+    /**
+     * Notify that the target has been unbound, possibly by another target
+     * which was bound.
+     *
+     * This is called by bind() for the targets which are implicitly unbound.
+     *
+     * @param usage Usage for which the target was unbound.
+     */
     void unbound(Usage usage);
 
 };
 
 
+/**
+ * A fake render target which represents the main render target, identified by
+ * OpenGL object id 0.
+ */
 class WindowRenderTarget: public RenderTarget
 {
 public:
@@ -111,6 +148,9 @@ public:
     WindowRenderTarget(GLsizei width, GLsizei height);
 
 public:
+    /**
+     * Change the size of the render target.
+     */
     void set_size(const GLsizei width, const GLsizei height);
 
 public:
@@ -120,6 +160,9 @@ public:
 };
 
 
+/**
+ * A framebuffer object, which is also a RenderTarget.
+ */
 class FBO: public Resource, public RenderTarget
 {
 public:

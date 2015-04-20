@@ -50,24 +50,56 @@ std::tuple<float, bool> isect_ray_triangle(
         const Vector3f &p1,
         const Vector3f &p2);
 
+/**
+ * Calculate the intersection point between a Plane and a Ray, if any.
+ *
+ * @return a tuple consisting of the time point at which the ray intersects
+ * the plane and a PlaneSide value indicating the state of the intersection.
+ *
+ * If the intersection fails, PlaneSide is not equal to PlaneSide::BOTH and
+ * indicates on which side of the plane the origin of the ray resides.
+ */
 std::tuple<float, PlaneSide> isect_plane_ray(
         const Plane &plane,
         const Ray &ray);
 
+/**
+ * Check whether a Sphere and an AABB intersects.
+ *
+ * @return true on intersection, false otherwise.
+ */
 bool isect_aabb_sphere(
         const AABB &aabb,
         const Sphere &sphere);
 
+/**
+ * Calculate the intersection points between a Ray and an AABB.
+ *
+ * @param t0 Reference to store the first intersection time.
+ * @param t1 Reference to store the second intersection time.
+ * @return true if the Ray intersects the AABB, false otherwise.
+ */
 bool isect_aabb_ray(
         const AABB &aabb,
         const Ray &ray,
         float &t0,
         float &t1);
 
+/**
+ * Calculate on which side of the frustum a AABB resides.
+ *
+ * @return If the AABB is wholly inside the frustum, PlaneSide::POSITIVE_NORMAL
+ * is returned. If AABB is wholly outside the frustum,
+ * PlaneSide::NEGATIVE_NORMAL is returned. If the AABB intersects at least one
+ * plane, PlaneSide::BOTH is returned.
+ */
 PlaneSide isect_aabb_frustum(
         const AABB &aabb,
         const std::array<Plane, 4> &frustum);
 
+/**
+ * Epsilon to determine floating point equality in intersection algorithms.
+ */
 extern const float ISECT_EPSILON;
 
 #endif

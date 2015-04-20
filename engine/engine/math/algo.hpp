@@ -40,18 +40,27 @@ static inline float_t frac(float_t v)
     return (v - std::trunc(v));
 }
 
+/**
+ * Return \a v0 if \a t is less than 0.5, otherwise return \a v1.
+ */
 template <typename T>
 static inline T interp_nearest(T v0, T v1, T t)
 {
     return (t >= 0.5 ? v1 : v0);
 }
 
+/**
+ * Interpolate linearily from \a v0 (``t=0``) to \a v1 (``t=1``).
+ */
 template <typename T>
 static inline T interp_linear(T v0, T v1, T t)
 {
     return (1.0-t)*v0 + t*v1;
 }
 
+/**
+ * Interpolate smoothly with cosine from \a v0 (``t=0``) to \a v1 (``t=1``).
+ */
 template <typename T>
 static inline T interp_cos(T v0, T v1, T t)
 {
@@ -59,12 +68,19 @@ static inline T interp_cos(T v0, T v1, T t)
     return interp_linear(v0, v1, cos_factor);
 }
 
+/**
+ * Clamp \a v to the range from \a low to \a high.
+ */
 template <typename T>
 static inline T clamp(T v, T low, T high)
 {
     return std::max(std::min(v, high), low);
 }
 
+/**
+ * Return -1 if \a v is less than 0, 1 if \a v is greater than 0 and 0
+ * otherwise.
+ */
 template <typename numeric_t>
 static inline numeric_t sgn(numeric_t v)
 {
@@ -77,57 +93,21 @@ static inline numeric_t sgn(numeric_t v)
     }
 }
 
-template <typename float_t, typename Callable>
-static inline void raster_line_inclusive(
-        float_t x0, float_t y0,
-        float_t x1, float_t y1,
-        Callable &&callable)
-{
-    // t = 0 => (x = x0, y = y0)
-    // t = 1 => (x = x1, y = y1)
 
-    /* assert(x0 <= x1);
-    assert(y0 <= y1); */
-
-    float x = x0;
-    float y = y0;
-
-    const float step_x = (x1 > x0 ? 1 : -1);
-    const float step_y = (y1 > y0 ? 1 : -1);
-
-    const float dxdt = step_x/(x1-x0);
-    const float dydt = step_y/(y1-y0);
-
-    const float next_x = std::floor(x*step_x + 1)*step_x;
-    const float next_y = std::floor(y*step_y + 1)*step_y;
-
-    /* std::cout << x0 << " " << y0 << std::endl;
-    std::cout << next_x << " " << next_y << std::endl; */
-
-    float t_nextx = (next_x - x0) * dxdt * step_x;
-    float t_nexty = (next_y - y0) * dydt * step_y;
-
-    /* std::cout << t_nextx << " " << t_nexty << std::endl;
-    std::cout << dxdt << " " << dydt << std::endl; */
-
-    /* _Exit(1); */
-
-    callable(std::trunc(x), std::trunc(y));
-    do
-    {
-        if (t_nextx < t_nexty) {
-            t_nextx += dxdt;
-            x += step_x;
-        } else {
-            t_nexty += dydt;
-            y += step_y;
-        }
-        /* std::cout << t_nextx << " " << t_nexty << std::endl; */
-        callable(std::trunc(x), std::trunc(y));
-    } while (t_nextx < 1 || t_nexty < 1);
-}
-
-
+/**
+ * Rasterize a line using subpixel DDA, iterator style.
+ *
+ * Example usage:
+ *
+ *     for (auto iter = RasterIterator<float>(0, 0, 10, 10);
+ *          iter;
+ *          ++iter)
+ *     {
+ *         int x, y;
+ *         std::tie(x, y) = *iter;
+ *         std::cout << x << " " << y << std::endl;
+ *     }
+ */
 template <typename float_t, typename int_t = int>
 struct RasterIterator
 {
@@ -139,6 +119,9 @@ public:
     typedef value_type& reference;
 
 public:
+    /**
+     * Create an invalid iterator.
+     */
     RasterIterator():
         m_step_x(0),
         m_step_y(0),
@@ -152,6 +135,12 @@ public:
 
     }
 
+    /**
+     * Create a raster iterator from the point ``(x0, y0)`` to ``(x1, y1)``.
+     *
+     * The iterator iterates over all integer squares which are touched by the
+     * line from the starting to the end point.
+     */
     RasterIterator(float x0, float y0,
                    float x1, float y1):
         m_step_x(x1 > x0 ? 1 : x1 == x0 ? 0 : -1),
@@ -189,6 +178,9 @@ private:
     float m_t_nextx, m_t_nexty;
 
 public:
+    /**
+     * Advance the iterator
+     */
     RasterIterator &operator++()
     {
         if (!(*this)) {
@@ -214,6 +206,9 @@ public:
         return *this;
     }
 
+    /**
+     * Return an advanced copy of the iterator
+     */
     RasterIterator operator++(int) const
     {
         RasterIterator result(*this);
@@ -221,11 +216,21 @@ public:
         return result;
     }
 
+    /**
+     * Return true if the iterator is valid, false otherwise.
+     *
+     * An iterator which is not valid compares equal to all other invalid
+     * iterators.
+     */
     operator bool() const
     {
         return !isnan(m_x);
     }
 
+    /**
+     * Compare iterators. Iterators only compare equal if they are both
+     * invalid.
+     */
     bool operator==(const RasterIterator &other) const
     {
         if (!(*this) && !other) {
@@ -234,6 +239,9 @@ public:
         return false;
     }
 
+    /**
+     * Return the square at which the iterator currently points.
+     */
     std::tuple<int_t, int_t> operator*() const
     {
         return std::make_tuple(std::trunc(m_x),

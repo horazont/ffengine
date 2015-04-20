@@ -215,6 +215,11 @@ public:
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
 
+    /**
+     * Mark the GPU side texture cache as invalid.
+     *
+     * The textures will be re-transferred on the next sync().
+     */
     void clear_cache();
 
     /**

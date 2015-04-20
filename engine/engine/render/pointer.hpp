@@ -28,9 +28,15 @@ the AUTHORS file.
 
 namespace engine {
 
+/**
+ * Draw a transparent cube with given radius.
+ */
 class PointerNode: public scenegraph::Node
 {
 public:
+    /**
+     * @opengl
+     */
     PointerNode(const float radius);
 
 private:

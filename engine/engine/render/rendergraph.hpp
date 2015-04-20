@@ -158,6 +158,16 @@ public:
     void set_viewport_size(GLsizei viewport_width, GLsizei viewport_height);
 
 public:
+    /**
+     * Create and return the scene level storage for the given \a for_object.
+     *
+     * The storage is indexed using the objects pointer. If no storage has
+     * been allocated yet for \a for_object, a new object of type \a T is
+     * allocated, added to the internal map and returned.
+     *
+     * Otherwise, the existing object is dynamically casted to \a T and
+     * returned.
+     */
     template <typename T>
     T &get_storage(void *for_object)
     {
@@ -170,7 +180,7 @@ public:
             return *storage;
         }
 
-        return *iter->second;
+        return dynamic_cast<T&>(*iter->second);
     }
 
 public:
@@ -191,12 +201,28 @@ public:
 };
 
 
+/**
+ * Node in the rendergraph.
+ *
+ * A rendergraph node describes a step to achieve the finally rendered scene.
+ * The activity is determined by the subclasses.
+ *
+ * Each render node has a RenderTarget attached on which it works.
+ *
+ * A render node can declare other render nodes as its dependencies, using the
+ * vector returned by dependencies().
+ */
 class RenderNode
 {
 public:
     typedef std::vector<RenderNode*> container_type;
 
 public:
+    /**
+     * Construct a rander node which renders into the given \a target.
+     *
+     * @param target RenderTarget to render into.
+     */
     RenderNode(RenderTarget &target);
     virtual ~RenderNode();
 
@@ -205,11 +231,20 @@ protected:
     std::vector<RenderNode*> m_dependencies;
 
 public:
+    /**
+     * Dependencies of the render node, which are other render nodes.
+     *
+     * This list of nodes is used by the RenderGraph to determine the order
+     * in which render nodes are executed.
+     */
     inline container_type &dependencies()
     {
         return m_dependencies;
     }
 
+    /**
+     * @see \link dependencies() \endlink
+     */
     inline const container_type &dependencies() const
     {
         return m_dependencies;
@@ -222,9 +257,22 @@ public:
 };
 
 
+/**
+ * Blit a render target into another. This blits the Color and the Depth buffer
+ * from the source into the destination.
+ */
 class BlitNode: public RenderNode
 {
 public:
+    /**
+     * Create a node which blits the buffer described by the \a src
+     * RenderTarget into the \a dest target.
+     *
+     * \a dest is the \a target for the RenderNode.
+     *
+     * @param src Source
+     * @param dest Destination
+     */
     BlitNode(RenderTarget &src, RenderTarget &dest);
 
 protected:
@@ -237,6 +285,9 @@ public:
 };
 
 
+/**
+ * Render a SceneGraph with a Camera into the given target.
+ */
 class SceneRenderNode: public RenderNode
 {
 public:
@@ -262,7 +313,21 @@ public:
     }
 
 public:
+    /**
+     * Define which parts of the buffer shall be cleared before rendering.
+     *
+     * @param mask Bitmask as passed to glClear
+     */
     void set_clear_mask(GLbitfield mask);
+
+    /**
+     * Set the clear colour.
+     *
+     * This has no effect if GL_COLOR_BUFFER_BIT is not included in the mask
+     * set using set_clear_mask().
+     *
+     * @param colour The colour to fill the buffer with before rendering.
+     */
     void set_clear_colour(const Vector4f &colour);
 
 public:
@@ -288,6 +353,15 @@ public:
 }; */
 
 
+/**
+ * A render graph.
+ *
+ * The render graph describes the steps required to get the desired image onto
+ * the users screen.
+ *
+ * The render graph consists of RenderNode instances, which are automatically
+ * ordered using topological sort.
+ */
 class RenderGraph
 {
 public:
@@ -310,7 +384,20 @@ public:
     }
 
 public:
+    /**
+     * Re-sort the nodes for rendering. This must be called when the
+     * dependencies have been changed.
+     *
+     * This applies topological sort given the dependencies declared by the
+     * nodes. If any cycles are found in the dependency graph, the sorting
+     * fails and the list of nodes to render is cleared (but the nodes are kept
+     * alive).
+     *
+     * @return true if the sorting succeeded, false if cycles are in the tree.
+     * When this function returns false, rendering will not work.
+     */
     bool resort();
+
     void render();
     void sync();
 

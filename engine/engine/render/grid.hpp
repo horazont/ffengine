@@ -28,9 +28,21 @@ the AUTHORS file.
 
 namespace engine {
 
+/**
+ * Render a line grid, coloured based on coordinates.
+ */
 class GridNode: public scenegraph::Node
 {
 public:
+    /**
+     * Create a grid node.
+     *
+     * @param xcells Number of cells in the X direction
+     * @param ycells Number of cells in the Y direction
+     * @param size Size of each cell
+     *
+     * @opengl
+     */
     GridNode(const unsigned int xcells,
              const unsigned int ycells,
              const float size);
