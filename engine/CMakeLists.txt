@@ -46,6 +46,7 @@ set(ENGINE_HEADERS
   engine/render/rendergraph.hpp
   engine/render/scenegraph.hpp
   engine/sim/terrain.hpp
+  engine/sim/world.hpp
   )
 
 set(ENGINE_SRC
@@ -89,6 +90,7 @@ set(ENGINE_SRC
   src/render/rendergraph.cpp
   src/render/scenegraph.cpp
   src/sim/terrain.cpp
+  src/sim/world.cpp
   )
 
 include_directories(${INCLUDE_DIRS})
