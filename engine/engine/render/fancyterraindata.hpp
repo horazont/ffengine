@@ -45,14 +45,14 @@ namespace engine {
 class FancyTerrainInterface
 {
 public:
-    FancyTerrainInterface(sim::Terrain &terrain,
+    FancyTerrainInterface(const sim::Terrain &terrain,
                           const unsigned int grid_size);
     ~FancyTerrainInterface();
 
 private:
     const unsigned int m_grid_size;
 
-    sim::Terrain &m_terrain;
+    const sim::Terrain &m_terrain;
     sim::NTMapGenerator m_terrain_nt;
 
     sigc::connection m_terrain_nt_conn;
@@ -75,7 +75,7 @@ public:
         return m_grid_size;
     }
 
-    inline sim::Terrain &terrain()
+    inline const sim::Terrain &terrain()
     {
         return m_terrain;
     }

@@ -40,7 +40,7 @@ namespace engine {
 static io::Logger &logger = io::logging().get_logger("render.fancyterraindata");
 
 
-FancyTerrainInterface::FancyTerrainInterface(sim::Terrain &terrain,
+FancyTerrainInterface::FancyTerrainInterface(const sim::Terrain &terrain,
                                              const unsigned int grid_size):
     m_grid_size(grid_size),
     m_terrain(terrain),

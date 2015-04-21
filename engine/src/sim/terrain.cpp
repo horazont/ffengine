@@ -53,12 +53,12 @@ Terrain::~Terrain()
 
 }
 
-void Terrain::notify_heightmap_changed()
+void Terrain::notify_heightmap_changed() const
 {
     m_terrain_updated.emit(TerrainRect(0, 0, m_size, m_size));
 }
 
-void Terrain::notify_heightmap_changed(TerrainRect at)
+void Terrain::notify_heightmap_changed(TerrainRect at) const
 {
     m_terrain_updated.emit(at);
 }
@@ -181,7 +181,7 @@ void TerrainWorker::notify_update(const TerrainRect &at)
 }
 
 
-NTMapGenerator::NTMapGenerator(Terrain &source):
+NTMapGenerator::NTMapGenerator(const Terrain &source):
     m_source(source)
 {
     start();

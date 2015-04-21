@@ -70,8 +70,7 @@ private:
     mutable std::shared_timed_mutex m_heightmap_mutex;
     HeightField m_heightmap;
 
-    sigc::signal<void> m_terrain_changed;
-    sigc::signal<void, TerrainRect> m_terrain_updated;
+    mutable sigc::signal<void, TerrainRect> m_terrain_updated;
 
 public:
     inline height_t get(unsigned int x, unsigned int y) const
@@ -104,19 +103,14 @@ public:
         return m_size;
     }
 
-    inline sigc::signal<void> &terrain_changed()
-    {
-        return m_terrain_changed;
-    }
-
-    inline sigc::signal<void, TerrainRect> &terrain_updated()
+    inline sigc::signal<void, TerrainRect> &terrain_updated() const
     {
         return m_terrain_updated;
     }
 
 public:
-    void notify_heightmap_changed();
-    void notify_heightmap_changed(TerrainRect at);
+    void notify_heightmap_changed() const;
+    void notify_heightmap_changed(TerrainRect at) const;
     std::shared_lock<std::shared_timed_mutex> readonly_field(
             const HeightField *&heightmap) const;
     std::unique_lock<std::shared_timed_mutex> writable_field(
@@ -164,11 +158,11 @@ public:
     typedef std::vector<element_t> NTField;
 
 public:
-    NTMapGenerator(Terrain &source);
+    NTMapGenerator(const Terrain &source);
     ~NTMapGenerator() override;
 
 private:
-    Terrain &m_source;
+    const Terrain &m_source;
 
     mutable std::shared_timed_mutex m_data_mutex;
     NTField m_field;
