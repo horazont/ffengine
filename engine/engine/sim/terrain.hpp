@@ -53,9 +53,9 @@ class Terrain
 {
 public:
     typedef float height_t;
-    static constexpr height_t default_height = 20.f;
-    static constexpr height_t max_height = 500.f;
-    static constexpr height_t min_height = 0.f;
+    static const height_t default_height;
+    static const height_t max_height;
+    static const height_t min_height;
     typedef std::vector<height_t> HeightField;
     typedef std::vector<std::vector<height_t> > HeightFieldLODs;
 

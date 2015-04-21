@@ -36,6 +36,11 @@ namespace sim {
 io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
 static io::Logger &tw_logger = io::logging().get_logger("sim.terrain.worker");
 
+
+const Terrain::height_t Terrain::default_height = 20.f;
+const Terrain::height_t Terrain::min_height = 0.f;
+const Terrain::height_t Terrain::max_height = 500.f;
+
 Terrain::Terrain(const unsigned int size):
     m_size(size),
     m_heightmap(m_size*m_size, default_height)
