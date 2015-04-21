@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 find_package(Qt5Core REQUIRED)
 find_package(SIGC++ REQUIRED)
 
-add_subdirectory(surface_mesh)
+# add_subdirectory(surface_mesh)
 add_subdirectory(engine)
 add_subdirectory(game)
 add_subdirectory(tests)

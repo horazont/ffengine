@@ -94,7 +94,7 @@ set(ENGINE_SRC
 include_directories(${INCLUDE_DIRS})
 
 add_library(engine STATIC ${ENGINE_SRC})
-target_link_libraries(engine surface_mesh)
+# target_link_libraries(engine surface_mesh)
 target_link_libraries(engine Qt5::Core)
 target_link_libraries(engine sigc++)
 set_property(
