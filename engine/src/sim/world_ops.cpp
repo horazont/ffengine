@@ -26,9 +26,9 @@ the AUTHORS file.
 namespace sim {
 namespace ops {
 
-/* sim::ops::TerraformRaise */
+/* sim::ops::BrushWorldOperation */
 
-TerraformRaise::TerraformRaise(
+BrushWorldOperation::BrushWorldOperation(
         const float xc, const float yc,
         const unsigned int brush_size,
         const std::vector<float> &density_map,
@@ -41,6 +41,8 @@ TerraformRaise::TerraformRaise(
 {
 
 }
+
+/* sim::ops::TerraformRaise */
 
 WorldOperationResult TerraformRaise::execute(WorldMutator &mutator)
 {
@@ -59,11 +61,7 @@ TerraformLevel::TerraformLevel(
         const std::vector<float> &density_map,
         const float brush_strength,
         const float reference_height):
-    m_xc(xc),
-    m_yc(yc),
-    m_brush_size(brush_size),
-    m_density_map(density_map),
-    m_brush_strength(brush_strength),
+    BrushWorldOperation(xc, yc, brush_size, density_map, brush_strength),
     m_reference_height(reference_height)
 {
 

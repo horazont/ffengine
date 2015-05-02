@@ -29,15 +29,14 @@ the AUTHORS file.
 namespace sim {
 namespace ops {
 
-class TerraformRaise: public WorldOperation
+class BrushWorldOperation: public WorldOperation
 {
 public:
-    TerraformRaise(
+    BrushWorldOperation(
             const float xc, const float yc,
             const unsigned int brush_size,
             const std::vector<float> &density_map,
-            const float brush_strength
-            );
+            const float brush_strength);
 
 protected:
     const float m_xc;
@@ -46,12 +45,19 @@ protected:
     const std::vector<float> m_density_map;
     const float m_brush_strength;
 
+};
+
+class TerraformRaise: public BrushWorldOperation
+{
+public:
+    using BrushWorldOperation::BrushWorldOperation;
+
 public:
     WorldOperationResult execute(WorldMutator &mutator) override;
 
 };
 
-class TerraformLevel: public WorldOperation
+class TerraformLevel: public BrushWorldOperation
 {
 public:
     TerraformLevel(
@@ -63,11 +69,6 @@ public:
             );
 
 private:
-    const float m_xc;
-    const float m_yc;
-    const unsigned int m_brush_size;
-    const std::vector<float> m_density_map;
-    const float m_brush_strength;
     const float m_reference_height;
 
 public:
