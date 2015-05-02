@@ -24,12 +24,18 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_COMMON_UTILS_HPP
 #define SCC_ENGINE_COMMON_UTILS_HPP
 
+#include <atomic>
+#include <cassert>
 #include <cerrno>
 #include <condition_variable>
+#include <deque>
+#include <functional>
+#include <future>
 #include <mutex>
 #include <stdexcept>
 #include <system_error>
 #include <thread>
+#include <vector>
 
 namespace engine {
 
@@ -64,6 +70,76 @@ protected:
 
 public:
     void notify();
+
+};
+
+
+class ThreadPool
+{
+public:
+    ThreadPool();
+    explicit ThreadPool(unsigned int workers);
+    ~ThreadPool();
+
+private:
+    struct abstract_packaged_task
+    {
+        template <typename R>
+        abstract_packaged_task(std::packaged_task<R> &&task):
+            m_task((void*)(new std::packaged_task<R>(std::move(task)))),
+            m_call_exec([](abstract_packaged_task *instance)mutable{
+                (*(std::packaged_task<R>*)instance->m_task)();
+            }),
+            m_call_delete([](abstract_packaged_task *instance)mutable{
+                delete (std::packaged_task<R>*)(instance->m_task);
+            })
+        {
+
+        }
+
+        abstract_packaged_task(abstract_packaged_task &&other);
+
+        ~abstract_packaged_task();
+
+        void operator()();
+
+        void *m_task;
+        std::function<void(abstract_packaged_task*)> m_call_exec;
+        std::function<void(abstract_packaged_task*)> m_call_delete;
+    };
+
+    std::atomic<bool> m_terminated;
+
+    std::mutex m_queue_mutex;
+    std::condition_variable m_queue_wakeup;
+    std::deque<abstract_packaged_task> m_task_queue;
+
+    std::vector<std::thread> m_workers;
+
+protected:
+    void initialize_workers(unsigned int workers);
+    void stop_all();
+    void worker_impl();
+
+public:
+    template <typename R>
+    std::future<R> submit_task(std::packaged_task<R()> &&task)
+    {
+        assert(m_workers.size() > 0);
+        std::future<R> result = task.get_future();
+        {
+            std::unique_lock<std::mutex> lock(m_queue_mutex);
+            m_task_queue.emplace_back(std::move(task));
+        }
+        m_queue_wakeup.notify_one();
+        return result;
+    }
+
+    inline unsigned int workers() const
+    {
+        return m_workers.size();
+    }
+
 
 };
 
