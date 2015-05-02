@@ -25,10 +25,12 @@ the AUTHORS file.
 
 #include "engine/math/algo.hpp"
 
+#include "world_command.pb.h"
 
 namespace sim {
 
-/* utilities */
+static io::Logger &logger = io::logging().get_logger("sim.world");
+
 
 /**
  * Apply a terrain tool using a brush mask.
@@ -78,7 +80,6 @@ void apply_brush_masked_tool(sim::Terrain::HeightField &field,
             }
 
             sim::Terrain::height_t &h = field[yterrain*terrain_size+xterrain];
-
             h = std::max(sim::Terrain::min_height,
                          std::min(sim::Terrain::max_height,
                                   impl.paint(h, brush_strength*sampled[y*size+x])));
@@ -99,7 +100,6 @@ struct raise_tool
         return h + brush_density;
     }
 };
-
 
 /**
  * Tool implementation for flattening the terrain based on a brush.
@@ -123,19 +123,28 @@ struct flatten_tool
     }
 };
 
+/* sim::WorldState */
 
-/* sim::TerraformWorld */
-
-TerraformWorld::TerraformWorld():
-    m_terrain(1081)
+WorldState::WorldState():
+    m_terrain(1081),
+    m_fluid(m_terrain)
 {
 
 }
 
-void TerraformWorld::notify_update_terrain_rect(const float xc,
-                                                const float yc,
-                                                unsigned int brush_size)
+
+/* sim::WorldMutator */
+
+WorldMutator::WorldMutator(WorldState &world):
+    m_state(world)
 {
+
+}
+
+void WorldMutator::notify_update_terrain_rect(const float xc, const float yc,
+                                              const unsigned int brush_size)
+{
+    const sim::Terrain &terrain = m_state.terrain();
     const float brush_radius = brush_size/2.f;
     sim::TerrainRect r(xc, yc, std::ceil(xc+brush_radius), std::ceil(yc+brush_radius));
     if (xc < std::ceil(brush_radius)) {
@@ -148,54 +157,182 @@ void TerraformWorld::notify_update_terrain_rect(const float xc,
     } else {
         r.set_y0(yc-std::ceil(brush_radius));
     }
-    if (r.x1() > m_terrain.size()) {
-        r.set_x1(m_terrain.size());
+    if (r.x1() > terrain.size()) {
+        r.set_x1(terrain.size());
     }
-    if (r.y1() > m_terrain.size()) {
-        r.set_y1(m_terrain.size());
+    if (r.y1() > terrain.size()) {
+        r.set_y1(terrain.size());
     }
-
-    m_terrain.notify_heightmap_changed(r);
+    terrain.notify_heightmap_changed(r);
 }
 
-const Terrain &TerraformWorld::terrain() const
-{
-    return m_terrain;
-}
-
-void TerraformWorld::tf_raise(const float xc, const float yc,
-                              const unsigned int brush_size,
-                              const std::vector<float> &density_map,
-                              const float brush_strength)
+WorldOperationResult WorldMutator::tf_raise(
+        const float xc, const float yc,
+        const unsigned int brush_size,
+        const std::vector<float> &density_map,
+        const float brush_strength)
 {
     {
         sim::Terrain::HeightField *field = nullptr;
-        auto lock = m_terrain.writable_field(field);
+        auto lock = m_state.terrain().writable_field(field);
         apply_brush_masked_tool(*field,
                                 brush_size, density_map, brush_strength,
-                                m_terrain.size(),
+                                m_state.terrain().size(),
                                 xc, yc,
                                 raise_tool());
     }
     notify_update_terrain_rect(xc, yc, brush_size);
+    return NO_ERROR;
 }
 
-void TerraformWorld::tf_level(const float xc, const float yc,
-                              const unsigned int brush_size,
-                              const std::vector<float> &density_map,
-                              const float brush_strength,
-                              const float ref_height)
+WorldOperationResult WorldMutator::tf_level(
+        const float xc, const float yc,
+        const unsigned int brush_size,
+        const std::vector<float> &density_map,
+        const float brush_strength,
+        const float reference_height)
 {
     {
         sim::Terrain::HeightField *field = nullptr;
-        auto lock = m_terrain.writable_field(field);
+        auto lock = m_state.terrain().writable_field(field);
         apply_brush_masked_tool(*field,
                                 brush_size, density_map, brush_strength,
-                                m_terrain.size(),
+                                m_state.terrain().size(),
                                 xc, yc,
-                                flatten_tool(ref_height));
+                                flatten_tool(reference_height));
     }
     notify_update_terrain_rect(xc, yc, brush_size);
+    return NO_ERROR;
 }
+
+
+/* sim::WorldOperation */
+
+WorldOperation::~WorldOperation()
+{
+
+}
+
+
+/* sim::AbstractClient */
+
+std::atomic<WorldOperationToken> AbstractClient::m_token_ctr(0);
+
+AbstractClient::~AbstractClient()
+{
+
+}
+
+void AbstractClient::send_command(messages::WorldCommand &cmd,
+                                  ResultCallback &&callback)
+{
+    if (callback != nullptr) {
+        cmd.set_token(m_token_ctr++);
+        std::unique_lock<std::mutex> lock(m_callbacks_mutex);
+        m_callbacks[cmd.token()] = std::move(callback);
+    } else {
+        cmd.clear_token();
+    }
+    send_command_to_backend(cmd);
+}
+
+void AbstractClient::recv_response(const messages::WorldCommandResponse &resp)
+{
+    WorldOperationToken token = resp.token();
+    ResultCallback cb = nullptr;
+    {
+        std::unique_lock<std::mutex> lock(m_callbacks_mutex);
+        auto iter = m_callbacks.find(token);
+        if (iter != m_callbacks.end()) {
+            cb = std::move(iter->second);
+            m_callbacks.erase(iter);
+        }
+    }
+    // TODO: maybe use std::async here, if it seems sensible at some point
+    cb(resp.result());
+}
+
+
+/* sim::Server */
+
+Server::Server():
+    m_state(),
+    m_mutator(m_state),
+    m_terminated(false),
+    m_game_thread(std::bind(&Server::game_thread, this))
+{
+
+}
+
+Server::~Server()
+{
+    m_terminated = true;
+    m_game_thread.join();
+}
+
+void Server::game_frame()
+{
+    m_state.fluid().wait_for();
+
+    {
+        std::unique_lock<std::mutex> lock(m_op_queue_mutex);
+        m_op_queue.swap(m_op_buffer);
+    }
+
+    for (auto &op: m_op_buffer)
+    {
+        op->execute(m_mutator);
+    }
+
+    m_op_buffer.clear();
+;
+    m_state.fluid().start();
+}
+
+void Server::game_thread()
+{
+    static const std::chrono::microseconds game_frame_duration(16000);
+    static const std::chrono::microseconds busywait(100);
+
+    m_state.fluid().start();
+    // tnext_frame is always in the future when we are on time
+    WorldClock::time_point tnext_frame = WorldClock::now();
+    while (!m_terminated)
+    {
+        WorldClock::time_point tnow = WorldClock::now();
+        if (tnext_frame > tnow)
+        {
+            std::chrono::nanoseconds time_to_sleep = tnext_frame - tnow;
+            if (time_to_sleep > busywait) {
+                std::this_thread::sleep_for(time_to_sleep - busywait);
+            }
+            continue;
+        }
+
+        {
+            std::unique_lock<std::shared_timed_mutex> lock(m_interframe_mutex);
+            game_frame();
+        }
+
+        tnext_frame += game_frame_duration;
+    }
+}
+
+void Server::enqueue_op(std::unique_ptr<WorldOperation> &&op)
+{
+    std::unique_lock<std::mutex> lock(m_op_queue_mutex);
+    m_op_queue.emplace_back(std::move(op));
+}
+
+Server::SyncSafeLock Server::sync_safe_point()
+{
+    SyncSafeLock lock(m_interframe_mutex);
+    // TODO: for now, this is all we need. when other simulations get added,
+    // we will need to make them stop here. Fluid sim has the advantage of
+    // being double buffered, so we don’t have to wait for it, only make sure
+    // that no new frame gets started and no world state is modified.
+    return lock;
+}
+
 
 }

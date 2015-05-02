@@ -1,5 +1,7 @@
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
+find_package(Protobuf REQUIRED)
+
 set(ENGINE_HEADERS
   engine/common/resource.hpp
   engine/common/types.hpp
@@ -42,11 +44,14 @@ set(ENGINE_HEADERS
   engine/render/fancyterraindata.hpp
   engine/render/grid.hpp
   engine/render/overlay.hpp
+  engine/render/plane.hpp
   engine/render/pointer.hpp
   engine/render/rendergraph.hpp
   engine/render/scenegraph.hpp
+  engine/sim/fluid.hpp
   engine/sim/terrain.hpp
   engine/sim/world.hpp
+  engine/sim/world_ops.hpp
   )
 
 set(ENGINE_SRC
@@ -86,26 +91,42 @@ set(ENGINE_SRC
   src/render/fancyterraindata.cpp
   src/render/grid.cpp
   src/render/overlay.cpp
+  src/render/plane.cpp
   src/render/pointer.cpp
   src/render/rendergraph.cpp
   src/render/scenegraph.cpp
+  src/sim/fluid.cpp
   src/sim/terrain.cpp
   src/sim/world.cpp
+  src/sim/world_ops.cpp
   )
 
+set(ENGINE_PROTOS
+  proto/types.proto
+  proto/world_command.proto
+  )
+
+PROTOBUF_GENERATE_CPP(
+  PROTO_SRCS
+  PROTO_HDRS
+  ${ENGINE_PROTOS})
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${INCLUDE_DIRS})
 
-add_library(engine STATIC ${ENGINE_SRC})
+add_library(engine STATIC ${ENGINE_SRC} ${PROTO_SRCS})
 # target_link_libraries(engine surface_mesh)
 target_link_libraries(engine Qt5::Core)
 target_link_libraries(engine sigc++)
+target_link_libraries(engine protobuf)
 set_property(
   TARGET engine
   PROPERTY INTERFACE_INCLUDE_DIRECTORIES
   ${INCLUDE_DIRS}
+  ${CMAKE_CURRENT_BINARY_DIR}
   )
 set_property(
   TARGET engine
   PROPERTY INTERFACE_COMPILE_DEFINITIONS)
 
-add_custom_target(dummy_engine_files SOURCES ${ENGINE_HEADERS})
+add_custom_target(dummy_engine_files SOURCES ${ENGINE_HEADERS} ${ENGINE_PROTOS})

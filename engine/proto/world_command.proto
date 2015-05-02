@@ -1,0 +1,32 @@
+package sim.messages;
+
+import "types.proto";
+
+message WorldCommand {
+    optional uint32 token = 1;
+
+    optional TerraformRaise tf_raise = 128;
+    optional TerraformLevel tf_level = 129;
+};
+
+message TerraformRaise {
+    required float xc = 1;
+    required float yc = 2;
+    required uint32 brush_size = 3;
+    repeated float density_map = 4;
+    required float brush_strength = 5;
+};
+
+message TerraformLevel {
+    required float xc = 1;
+    required float yc = 2;
+    required uint32 brush_size = 3;
+    repeated float density_map = 4;
+    required float brush_strength = 5;
+    required float reference_height = 6;
+};
+
+message WorldCommandResponse {
+    required uint32 token = 1;
+    optional .sim.WorldOperationResult result = 2;
+};

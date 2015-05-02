@@ -1,0 +1,5 @@
+package sim;
+
+enum WorldOperationResult {
+    NO_ERROR = 0;
+};
