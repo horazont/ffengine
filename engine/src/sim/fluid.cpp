@@ -238,7 +238,7 @@ void Fluid::prepare_block(const unsigned int x, const unsigned int y)
     for (unsigned int cy = cy0; cy < cy1; cy++)
     {
         FluidCell *front = m_blocks.cell_front(cx0, cy);
-        FluidCell *back = m_blocks.cell_front(cx0, cy);
+        FluidCell *back = m_blocks.cell_back(cx0, cy);
         for (unsigned int cx = cx0; cx < cx1; cx++)
         {
             *back = *front;
