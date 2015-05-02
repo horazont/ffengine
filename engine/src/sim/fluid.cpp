@@ -330,6 +330,7 @@ void Fluid::worker_impl()
 
 void Fluid::start()
 {
+    m_blocks.swap_buffers();
     {
         std::unique_lock<std::mutex> lock(m_control_mutex);
         assert(!m_run);
