@@ -87,6 +87,59 @@ void apply_brush_masked_tool(sim::Terrain::HeightField &field,
     }
 }
 
+/*
+* Apply a fluid tool using a brush mask.
+*
+* @param field The fluid grid to work on
+* @param brush_size Diameter of the brush
+* @param sampled Density map of the brush
+* @param brush_strength Factor which is applied to the density map for each
+* painted pixel.
+* @param terrain_size Size of the terrain, for clipping
+* @param x0 X center for painting
+* @param y0 Y center for painting
+* @param impl Tool implementation
+*
+* @see flatten_tool, raise_tool
+*/
+template <typename impl_t>
+void apply_brush_masked_tool(FluidBlocks &field,
+                             const unsigned int brush_size,
+                             const std::vector<float> &sampled,
+                             const float brush_strength,
+                             const float x0,
+                             const float y0,
+                             const impl_t &impl)
+{
+    const int fluid_size = field.m_cells_per_axis;
+    const int size = brush_size;
+    const float radius = size / 2.f;
+    const int fluid_xbase = std::round(x0 - radius);
+    const int fluid_ybase = std::round(y0 - radius);
+
+    for (int y = 0; y < size; y++) {
+        const int yfluid = y + fluid_ybase;
+        if (yfluid < 0) {
+            continue;
+        }
+        if (yfluid >= (int)fluid_size) {
+            break;
+        }
+        for (int x = 0; x < size; x++) {
+            const int xfluid = x + fluid_xbase;
+            if (xfluid < 0) {
+                continue;
+            }
+            if (xfluid >= (int)fluid_size) {
+                break;
+            }
+
+            impl.apply(*field.cell_back(xfluid, yfluid),
+                       brush_strength*sampled[y*size+x]);
+        }
+    }
+}
+
 /**
  * Tool implementation for raising / lowering the terrain based on a brush.
  *
@@ -120,6 +173,14 @@ struct flatten_tool
                                  float brush_density) const
     {
         return interp_linear(h, new_value, brush_density);
+    }
+};
+
+struct fluid_raise_tool
+{
+    void apply(FluidCell &cell, float brush_density) const
+    {
+        cell.fluid_height = std::max(0.f, cell.fluid_height+brush_density);
     }
 };
 
@@ -202,6 +263,20 @@ WorldOperationResult WorldMutator::tf_level(
                                 flatten_tool(reference_height));
     }
     notify_update_terrain_rect(xc, yc, brush_size);
+    return NO_ERROR;
+}
+
+WorldOperationResult WorldMutator::fluid_raise(
+        const float xc, const float yc,
+        const unsigned int brush_size,
+        const std::vector<float> &density_map,
+        const float brush_strength)
+{
+    apply_brush_masked_tool(m_state.fluid().blocks(),
+                            brush_size, density_map,
+                            brush_strength,
+                            xc, yc,
+                            fluid_raise_tool());
     return NO_ERROR;
 }
 

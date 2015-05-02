@@ -77,6 +77,16 @@ WorldOperationResult TerraformLevel::execute(WorldMutator &mutator)
 }
 
 
+/* sim::ops::FluidRaise */
+
+WorldOperationResult FluidRaise::execute(WorldMutator &mutator)
+{
+    return mutator.fluid_raise(m_xc, m_yc,
+                               m_brush_size,
+                               m_density_map,
+                               m_brush_strength);
+}
+
 
 }
 }

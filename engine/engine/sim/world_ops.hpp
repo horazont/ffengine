@@ -76,6 +76,16 @@ public:
 
 };
 
+class FluidRaise: public BrushWorldOperation
+{
+public:
+    using BrushWorldOperation::BrushWorldOperation;
+
+public:
+    WorldOperationResult execute(WorldMutator &mutator) override;
+
+};
+
 }
 }
 
