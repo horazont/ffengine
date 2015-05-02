@@ -354,7 +354,7 @@ struct Matrix
     {
         float_t summed = 0;
         for (unsigned int i = 0; i < rows*columns; i++) {
-            summed += abs(coeff[i]);
+            summed += std::abs(coeff[i]);
         }
         return summed;
     }

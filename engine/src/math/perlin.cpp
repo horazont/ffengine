@@ -75,8 +75,8 @@ VectorFloat perlin_rng_interpolated(const Vector2 &pos)
     const int int_x = floor(pos[eX]);
     const int int_y = floor(pos[eY]);
 
-    const VectorFloat frac_x = abs(pos[eX] - VectorFloat(int_x));
-    const VectorFloat frac_y = abs(pos[eY] - VectorFloat(int_y));
+    const VectorFloat frac_x = std::abs(pos[eX] - VectorFloat(int_x));
+    const VectorFloat frac_y = std::abs(pos[eY] - VectorFloat(int_y));
 
     const double vs[4] = {
         perlin_rng(int_x   ,   int_y    ),

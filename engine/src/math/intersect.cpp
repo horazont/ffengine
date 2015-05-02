@@ -111,14 +111,14 @@ bool isect_aabb_sphere(const AABB &aabb, const Sphere &sphere)
 
 bool isect_aabb_ray(const AABB &aabb, const Ray &ray, float &t0, float &t1)
 {
-    std::array<Plane, 6> sides({
+    std::array<Plane, 6> sides({{
                                    Plane(aabb.min, Vector3f(-1, 0, 0)),
                                    Plane(aabb.max, Vector3f(1, 0, 0)),
                                    Plane(aabb.min, Vector3f(0, -1, 0)),
                                    Plane(aabb.max, Vector3f(0, 1, 0)),
                                    Plane(aabb.min, Vector3f(0, 0, -1)),
                                    Plane(aabb.max, Vector3f(0, 0, 1))
-                               });
+                               }});
 
     float test_min, test_max;
     float tmin = std::numeric_limits<float>::min();

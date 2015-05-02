@@ -79,9 +79,11 @@ struct ShaderUniformBlock
 };
 
 
-template <int N, typename ubo_t>
+template <int size_minus_N, typename ubo_t>
 struct typecheck_helper
 {
+    static constexpr int N = std::tuple_size<typename ubo_t::local_types>::value - size_minus_N;
+
     static inline const ShaderUniformBlockMember &get_next_member(
             const ShaderUniformBlock &block,
             int &member_idx,
@@ -122,12 +124,12 @@ struct typecheck_helper
             throw std::runtime_error("inconsistent types at member "+std::to_string(this_member));
         }
 
-        typecheck_helper<N+1, ubo_t>::typecheck(block, member_idx, offset);
+        typecheck_helper<size_minus_N-1, ubo_t>::typecheck(block, member_idx, offset);
     }
 };
 
 template <typename ubo_t>
-struct typecheck_helper<std::tuple_size<typename ubo_t::local_types>::value, ubo_t>
+struct typecheck_helper<0, ubo_t>
 {
     static inline void typecheck(const ShaderUniformBlock&,
                                  int,
@@ -180,7 +182,7 @@ protected:
                                      " locally)");
         }
 
-        typecheck_helper<0, ubo_t>::typecheck(block, 0, 0);
+        typecheck_helper<std::tuple_size<typename ubo_t::local_types>::value, ubo_t>::typecheck(block, 0, 0);
     }
 
 public:
@@ -212,7 +214,7 @@ public:
 
 public:
     template <typename ubo_t>
-    inline void check_uniform_block(const std::string &block_name, const ubo_t &ubo)
+    inline void check_uniform_block(const std::string &block_name, const ubo_t &)
     {
         check_uniform_block<ubo_t>(block_name);
     }

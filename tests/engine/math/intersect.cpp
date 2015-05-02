@@ -377,12 +377,12 @@ TEST_CASE("math/intersect/isect_aabb_ray/general0")
 
 TEST_CASE("math/intersect/isect_aabb_frustum/inside")
 {
-    std::array<Plane, 4> frustum({
+    std::array<Plane, 4> frustum({{
                                      Plane(-1, Vector3f(1, 0, 0)),
                                      Plane(-1, Vector3f(-1, 0, 0)),
                                      Plane(-1, Vector3f(0, 1, 0)),
                                      Plane(-1, Vector3f(0, -1, 0)),
-                                 });
+                                 }});
     AABB aabb{Vector3f(-0.1, -0.1, -0.1), Vector3f(0.1, 0.1, 0.1)};
 
     PlaneSide side = isect_aabb_frustum(aabb, frustum);
@@ -391,12 +391,12 @@ TEST_CASE("math/intersect/isect_aabb_frustum/inside")
 
 TEST_CASE("math/intersect/isect_aabb_frustum/intersect")
 {
-    std::array<Plane, 4> frustum({
+    std::array<Plane, 4> frustum({{
                                      Plane(Vector4f(1, 0, 0, -1)),
                                      Plane(Vector4f(-1, 0, 0, -1)),
                                      Plane(Vector4f(0, 1, 0, -1)),
                                      Plane(Vector4f(0, -1, 0, -1)),
-                                 });
+                                 }});
     AABB aabb{Vector3f(-1.5, -1.5, -1.5), Vector3f(0.5, 0.5, 0.5)};
 
     PlaneSide side = isect_aabb_frustum(aabb, frustum);
@@ -405,12 +405,12 @@ TEST_CASE("math/intersect/isect_aabb_frustum/intersect")
 
 TEST_CASE("math/intersect/isect_aabb_frustum/outside")
 {
-    std::array<Plane, 4> frustum({
+    std::array<Plane, 4> frustum({{
                                      Plane(Vector4f(1, 0, 0, -1)),
                                      Plane(Vector4f(-1, 0, 0, -1)),
                                      Plane(Vector4f(0, 1, 0, -1)),
                                      Plane(Vector4f(0, -1, 0, -1)),
-                                 });
+                                 }});
     AABB aabb{Vector3f(-2, -2, -2), Vector3f(-1.5, -1.5, -1.5)};
 
     PlaneSide side = isect_aabb_frustum(aabb, frustum);

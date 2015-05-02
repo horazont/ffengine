@@ -319,7 +319,7 @@ struct Vector {
     {
         vector_float_t summed = 0;
         for (unsigned int i = 0; i < dimension; i++) {
-            summed += abs(as_array[i]);
+            summed += std::abs(as_array[i]);
         }
         return summed;
     }
