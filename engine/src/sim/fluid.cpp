@@ -186,7 +186,7 @@ void Fluid::coordinator_impl()
         t_sync = timelog_clock::now();
 #endif
 
-        coordinator_run_workers(JobType::PREPARE);
+        /*coordinator_run_workers(JobType::PREPARE);*/
 
 #ifdef TIMELOG_FLUIDSIM
         t_prepare = timelog_clock::now();
@@ -253,6 +253,9 @@ void Fluid::coordinator_run_workers(JobType job)
 
 void Fluid::prepare_block(const unsigned int x, const unsigned int y)
 {
+    // XXX: this step is currently not used, JobType::PREPARE does not get
+    // emitted by the controller!
+
     // copy the frontbuffer to the backbuffer
     const unsigned int cy0 = y*m_blocks.m_block_size;
     const unsigned int cy1 = (y+1)*m_blocks.m_block_size;
