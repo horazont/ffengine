@@ -161,23 +161,23 @@ public:
         return &m_meta_cells[y*m_cells_per_axis+x];
     }
 
-    inline void cell_back_neighbourhood(
+    inline void cell_front_neighbourhood(
             const unsigned int x, const unsigned int y,
-            std::array<FluidCell*, 8> &neighbourhood,
+            std::array<const FluidCell*, 8> &neighbourhood,
             std::array<FluidCellMeta*, 8> &neighbourhood_meta)
     {
         if (x > 0) {
-            neighbourhood[Left] = cell_back(x-1, y);
+            neighbourhood[Left] = cell_front(x-1, y);
             neighbourhood_meta[Left] = cell_meta(x-1, y);
             if (y > 0) {
-                neighbourhood[TopLeft] = cell_back(x-1, y-1);
+                neighbourhood[TopLeft] = cell_front(x-1, y-1);
                 neighbourhood_meta[TopLeft] = cell_meta(x-1, y-1);
             } else {
                 neighbourhood[TopLeft] = nullptr;
                 neighbourhood_meta[TopLeft] = nullptr;
             }
             if (y < m_cells_per_axis-1) {
-                neighbourhood[BottomLeft] = cell_back(x-1, y+1);
+                neighbourhood[BottomLeft] = cell_front(x-1, y+1);
                 neighbourhood_meta[BottomLeft] = cell_meta(x-1, y+1);
             } else {
                 neighbourhood[BottomLeft] = nullptr;
@@ -193,17 +193,17 @@ public:
         }
 
         if (x < m_cells_per_axis-1) {
-            neighbourhood[Right] = cell_back(x+1, y);
+            neighbourhood[Right] = cell_front(x+1, y);
             neighbourhood_meta[Right] = cell_meta(x+1, y);
             if (y > 0) {
-                neighbourhood[TopRight] = cell_back(x+1, y-1);
+                neighbourhood[TopRight] = cell_front(x+1, y-1);
                 neighbourhood_meta[TopRight] = cell_meta(x+1, y-1);
             } else {
                 neighbourhood[TopRight] = nullptr;
                 neighbourhood_meta[TopRight] = nullptr;
             }
             if (y < m_cells_per_axis-1) {
-                neighbourhood[BottomRight] = cell_back(x+1, y+1);
+                neighbourhood[BottomRight] = cell_front(x+1, y+1);
                 neighbourhood_meta[BottomRight] = cell_meta(x+1, y+1);
             } else {
                 neighbourhood[BottomRight] = nullptr;
@@ -219,7 +219,7 @@ public:
         }
 
         if (y > 0) {
-            neighbourhood[Top] = cell_back(x, y-1);
+            neighbourhood[Top] = cell_front(x, y-1);
             neighbourhood_meta[Top] = cell_meta(x, y-1);
         } else {
             neighbourhood[Top] = nullptr;
@@ -227,7 +227,7 @@ public:
         }
 
         if (y < m_cells_per_axis-1) {
-            neighbourhood[Bottom] = cell_back(x, y+1);
+            neighbourhood[Bottom] = cell_front(x, y+1);
             neighbourhood_meta[Bottom] = cell_meta(x, y+1);
         } else {
             neighbourhood[Bottom] = nullptr;

@@ -234,17 +234,11 @@ void Fluid::prepare_block(const unsigned int x, const unsigned int y)
     const unsigned int cy0 = y*m_blocks.m_block_size;
     const unsigned int cy1 = (y+1)*m_blocks.m_block_size;
     const unsigned int cx0 = x*m_blocks.m_block_size;
-    const unsigned int cx1 = (x+1)*m_blocks.m_block_size;
     for (unsigned int cy = cy0; cy < cy1; cy++)
     {
-        FluidCell *front = m_blocks.cell_front(cx0, cy);
+        const FluidCell *front = m_blocks.cell_front(cx0, cy);
         FluidCell *back = m_blocks.cell_back(cx0, cy);
-        for (unsigned int cx = cx0; cx < cx1; cx++)
-        {
-            *back = *front;
-            ++front;
-            ++back;
-        }
+        memcpy(back, front, sizeof(FluidCell)*m_blocks.m_block_size);
     }
 }
 
@@ -282,6 +276,38 @@ void Fluid::terrain_updated(TerrainRect r)
 
 void Fluid::update_block(const unsigned int x, const unsigned int y)
 {
+    const unsigned int cy0 = y*m_blocks.m_block_size;
+    const unsigned int cy1 = (y+1)*m_blocks.m_block_size;
+    const unsigned int cx0 = x*m_blocks.m_block_size;
+    const unsigned int cx1 = (x+1)*m_blocks.m_block_size;
+
+    std::array<const FluidCell*, 8> neigh;
+    std::array<FluidCellMeta*, 8> neigh_meta;
+
+    for (unsigned int cy = cy0; cy < cy1; cy++)
+    {
+        FluidCell *back = m_blocks.cell_back(cx0, cy);
+        const FluidCell *front = m_blocks.cell_front(cx0, cy);
+        for (unsigned int cx = cx0; cx < cx1; cx++)
+        {
+            /*m_blocks.cell_front_neighbourhood(x, y, neigh, neigh_meta);
+            back->fluid_height *= 4.f;
+            float n_neighbours = 4.f;
+            for (const FluidCell *neigh_cell: neigh)
+            {
+                if (!neigh_cell) {
+                    continue;
+                }
+                back->fluid_height += neigh_cell->fluid_height;
+                n_neighbours += 1;
+            }
+            back->fluid_height /= n_neighbours;*/
+            back->fluid_height = front->fluid_height * 0.95;
+
+            ++back;
+            ++front;
+        }
+    }
 }
 
 void Fluid::worker_impl()
@@ -345,18 +371,21 @@ void Fluid::to_gl_texture() const
 
     // terrain_height, fluid_height, flowx, flowy
     std::vector<Vector4f> buffer(total_cells);
-    std::shared_lock<std::shared_timed_mutex> lock(m_blocks.m_frontbuffer_mutex);
-    const FluidCellMeta *meta = m_blocks.cell_meta(0, 0);
-    const FluidCell *cell = m_blocks.cell_front(0, 0);
-    Vector4f *dest = &buffer.front();
-    for (unsigned int i = 0; i < total_cells; i++)
-    {
-        *dest = Vector4f(meta->terrain_height, cell->fluid_height,
-                         cell->fluid_flow[0], cell->fluid_flow[1]);
 
-        ++cell;
-        ++meta;
-        ++dest;
+    {
+        std::shared_lock<std::shared_timed_mutex> lock(m_blocks.m_frontbuffer_mutex);
+        const FluidCellMeta *meta = m_blocks.cell_meta(0, 0);
+        const FluidCell *cell = m_blocks.cell_front(0, 0);
+        Vector4f *dest = &buffer.front();
+        for (unsigned int i = 0; i < total_cells; i++)
+        {
+            *dest = Vector4f(meta->terrain_height, cell->fluid_height,
+                             cell->fluid_flow[0], cell->fluid_flow[1]);
+
+            ++cell;
+            ++meta;
+            ++dest;
+        }
     }
 
     glTexSubImage2D(GL_TEXTURE_2D, 0,
