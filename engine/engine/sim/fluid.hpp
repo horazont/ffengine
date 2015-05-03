@@ -277,6 +277,7 @@ public:
 private:
     const Terrain &m_terrain;
     const unsigned int m_block_count;
+    const unsigned int m_worker_count;
     FluidBlocks m_blocks;
     std::vector<FluidSource> m_sources;
 
@@ -289,18 +290,20 @@ private:
     /* owned by Fluid */
     sigc::connection m_terrain_update_conn;
 
-    /* guarded by m_worker_wakeup_mutex */
-    std::mutex m_worker_wakeup_mutex;
+    /* guarded by m_worker_task_mutex */
+    std::mutex m_worker_task_mutex;
     std::condition_variable m_worker_wakeup;
-    bool m_worker_terminate;
     JobType m_worker_job;
+    unsigned int m_worker_to_start;
+    bool m_worker_terminate;
 
     /* guarded by m_worker_done_mutex */
     std::mutex m_worker_done_mutex;
-    std::condition_variable m_worker_done;
+    std::condition_variable m_worker_done_wakeup;
+    unsigned int m_worker_stopped;
 
     /* atomic */
-    std::atomic<unsigned int> m_block_ctr;
+    std::atomic<unsigned int> m_worker_block_ctr;
     std::atomic_bool m_terminated;
 
     std::thread m_coordinator_thread;
@@ -320,6 +323,7 @@ private:
 
 protected:
     void coordinator_impl();
+    void coordinator_run_workers(JobType job);
 
     void prepare_block(const unsigned int x, const unsigned int y);
 

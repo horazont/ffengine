@@ -25,6 +25,7 @@ the AUTHORS file.
 
 #include <GL/glew.h>
 
+#include <cstring>
 #include <iostream>
 
 #include "engine/gl/util.hpp"
@@ -44,6 +45,20 @@ typedef std::chrono::steady_clock timelog_clock;
 namespace sim {
 
 static io::Logger &logger = io::logging().get_logger("sim.fluid");
+
+
+unsigned int determine_worker_count()
+{
+    unsigned int thread_count = std::thread::hardware_concurrency();
+    if (thread_count == 0) {
+        thread_count = 2;
+        logger.logf(io::LOG_ERROR,
+                    "failed to determine hardware concurrency. "
+                    "giving it a try with %u",
+                    thread_count);
+    }
+    return thread_count;
+}
 
 
 const float Fluid::flow_damping = 0.991f;
@@ -83,13 +98,16 @@ FluidBlocks::FluidBlocks(const unsigned int block_count_per_axis,
 Fluid::Fluid(const Terrain &terrain):
     m_terrain(terrain),
     m_block_count((m_terrain.size()-1) / block_size),
+    m_worker_count(determine_worker_count()),
     m_blocks(m_block_count, block_size),
     m_terrain_update_conn(m_terrain.terrain_updated().connect(
                               sigc::mem_fun(*this, &Fluid::terrain_updated))),
+    m_worker_to_start(0),
     m_worker_terminate(false),
+    m_worker_stopped(m_worker_count),
     // initializing the m_block_ctr to a value >= m_block_count**2 will make
     // all workers go to sleep immediately
-    m_block_ctr(m_block_count*m_block_count),
+    m_worker_block_ctr(0),
     m_terminated(false),
     m_coordinator_thread(std::bind(&Fluid::coordinator_impl, this)),
     m_run(false),
@@ -101,22 +119,14 @@ Fluid::Fluid(const Terrain &terrain):
                                  std::to_string(block_size));
     }
 
-    if (!std::atomic_is_lock_free(&m_block_ctr)) {
+    if (!std::atomic_is_lock_free(&m_worker_block_ctr)) {
         logger.logf(io::LOG_WARNING, "fluid sim counter is not lock-free.");
     } else {
         logger.logf(io::LOG_INFO, "fluid sim counter is lock-free.");
     }
 
-    unsigned int thread_count = std::thread::hardware_concurrency();
-    if (thread_count == 0) {
-        thread_count = 2;
-        logger.logf(io::LOG_ERROR,
-                    "failed to determine hardware concurrency. "
-                    "giving it a try with %u",
-                    thread_count);
-    }
-    m_worker_threads.reserve(thread_count);
-    for (unsigned int i = 0; i < thread_count; i++) {
+    m_worker_threads.reserve(m_worker_count);
+    for (unsigned int i = 0; i < m_worker_count; i++) {
         m_worker_threads.emplace_back(std::bind(&Fluid::worker_impl, this));
     }
 }
@@ -134,6 +144,8 @@ Fluid::~Fluid()
 
 void Fluid::coordinator_impl()
 {
+    const unsigned int worker_count = m_worker_count;
+
     logger.logf(io::LOG_INFO, "fluidsim: %u cells in %u blocks",
                 m_blocks.m_cells_per_axis*m_blocks.m_cells_per_axis,
                 m_blocks.m_blocks_per_axis*m_blocks.m_blocks_per_axis);
@@ -145,7 +157,7 @@ void Fluid::coordinator_impl()
             }
             if (m_terminated) {
                 control_lock.unlock();
-                std::unique_lock<std::mutex> done_lock(m_done_mutex);
+                std::lock_guard<std::mutex> done_lock(m_done_mutex);
                 m_done = true;
                 break;
             }
@@ -159,7 +171,7 @@ void Fluid::coordinator_impl()
         // sync terrain
         TerrainRect updated_rect;
         {
-            std::unique_lock<std::mutex> lock(m_terrain_update_mutex);
+            std::lock_guard<std::mutex> lock(m_terrain_update_mutex);
             updated_rect = m_terrain_update;
             m_terrain_update = NotARect;
         }
@@ -174,40 +186,15 @@ void Fluid::coordinator_impl()
         t_sync = timelog_clock::now();
 #endif
 
-        m_block_ctr = 0;
-        {
-            std::unique_lock<std::mutex> worker_lock(m_worker_wakeup_mutex);
-            m_worker_job = JobType::PREPARE;
-        }
-        m_worker_wakeup.notify_all();
-
-        {
-            std::unique_lock<std::mutex> done_lock(m_worker_done_mutex);
-            while (m_block_ctr < m_block_count*m_block_count) {
-                m_worker_done.wait(done_lock);
-            }
-        }
+        coordinator_run_workers(JobType::PREPARE);
 
 #ifdef TIMELOG_FLUIDSIM
         t_prepare = timelog_clock::now();
 #endif
-
-        m_block_ctr = 0;
-        {
-            std::unique_lock<std::mutex> worker_lock(m_worker_wakeup_mutex);
-            m_worker_job = JobType::UPDATE;
-        }
-        m_worker_wakeup.notify_all();
+        coordinator_run_workers(JobType::UPDATE);
 
         {
-            std::unique_lock<std::mutex> done_lock(m_worker_done_mutex);
-            while (m_block_ctr < m_block_count*m_block_count) {
-                m_worker_done.wait(done_lock);
-            }
-        }
-
-        {
-            std::unique_lock<std::mutex> done_lock(m_done_mutex);
+            std::lock_guard<std::mutex> done_lock(m_done_mutex);
             assert(!m_done);
             m_done = true;
         }
@@ -222,10 +209,46 @@ void Fluid::coordinator_impl()
         logger.logf(io::LOG_DEBUG, "fluid: sim time: %.2f ms",
                     TIMELOG_ms(t_sim - t_prepare));
 #endif
-        std::this_thread::sleep_for(std::chrono::milliseconds(8));
     }
-    m_worker_terminate = true;
+    {
+        std::lock_guard<std::mutex> lock(m_worker_task_mutex);
+        m_worker_terminate = true;
+    }
     m_worker_wakeup.notify_all();
+}
+
+void Fluid::coordinator_run_workers(JobType job)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_worker_done_mutex);
+        assert(m_worker_stopped == m_worker_count);
+        m_worker_stopped = 0;
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_worker_task_mutex);
+        assert(m_worker_to_start == 0);
+        // configure job
+        m_worker_job = job;
+        m_worker_to_start = m_worker_count;
+        // make sure all blocks run, we don’t need memory ordering, the mutex
+        // implicitly orders
+        m_worker_block_ctr.store(0, std::memory_order_relaxed);
+    }
+    // start all workers
+    m_worker_wakeup.notify_all();
+
+    // wait for all workers to finish
+    {
+        std::unique_lock<std::mutex> lock(m_worker_done_mutex);
+        while (m_worker_stopped < m_worker_count) {
+            m_worker_done_wakeup.wait(lock);
+        }
+        assert(m_worker_stopped == m_worker_count);
+    }
+    // some assertions
+    assert(m_worker_block_ctr.load(std::memory_order_relaxed) >=
+           m_block_count*m_block_count);
+    assert(m_worker_to_start == 0);
 }
 
 void Fluid::prepare_block(const unsigned int x, const unsigned int y)
@@ -314,30 +337,33 @@ void Fluid::worker_impl()
 {
     const unsigned int out_of_tasks_limit = m_block_count*m_block_count;
 
-    std::unique_lock<std::mutex> wakeup_lock(m_worker_wakeup_mutex);
+    std::unique_lock<std::mutex> wakeup_lock(m_worker_task_mutex);
     while (!m_worker_terminate)
     {
-        while (m_block_ctr >= out_of_tasks_limit && !m_worker_terminate) {
-            /*logger.logf(io::LOG_DEBUG, "fluid: %p waiting for tasks...", this);*/
+        while (m_worker_to_start == 0 &&
+               !m_worker_terminate)
+        {
             m_worker_wakeup.wait(wakeup_lock);
-            /*logger.logf(io::LOG_DEBUG, "fluid: %p woke up", this);*/
         }
         if (m_worker_terminate) {
             return;
         }
+        --m_worker_to_start;
         JobType my_job = m_worker_job;
-        /*logger.logf(io::LOG_DEBUG, "fluid: %p starts processing", this);*/
         wakeup_lock.unlock();
 
         while (1) {
-            const unsigned int my_block = m_block_ctr.fetch_add(1);
-            /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u", this, my_block);*/
-            if (my_block >= out_of_tasks_limit) {
+            const unsigned int my_block = m_worker_block_ctr.fetch_add(
+                        1,
+                        std::memory_order_relaxed);
+            if (my_block >= out_of_tasks_limit)
+            {
                 break;
             }
 
             const unsigned int x = my_block % m_blocks.m_blocks_per_axis;
             const unsigned int y = my_block / m_blocks.m_blocks_per_axis;
+            /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u %u", this, x, y);*/
             switch (my_job) {
             case JobType::PREPARE:
                 prepare_block(x, y);
@@ -348,7 +374,11 @@ void Fluid::worker_impl()
             }
         }
 
-        m_worker_done.notify_one();
+        {
+            std::lock_guard<std::mutex> lock(m_worker_done_mutex);
+            m_worker_stopped += 1;
+        }
+        m_worker_done_wakeup.notify_all();
 
         wakeup_lock.lock();
     }
