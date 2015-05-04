@@ -302,14 +302,26 @@ void Fluid::terrain_updated(TerrainRect r)
     m_terrain_update = bounds(r, m_terrain_update);
 }
 
-template <unsigned int dir, bool reverse>
+template <unsigned int dir>
 static inline FluidFloat flow(
         FluidCell &back,
         const FluidCell &front,
+        const FluidCellMeta &meta,
         const FluidCell &neigh_front,
-        const FluidCell &left,
-        const FluidCell &right)
+        const FluidCellMeta &neigh_meta,
+        const FluidCell &flow_source)
 {
+    const FluidFloat dheight = front.fluid_height - neigh_front.fluid_height;
+    const FluidFloat dterrain_height = meta.terrain_height - neigh_meta.terrain_height;
+    const FluidFloat height_flow = (dheight+dterrain_height) * Fluid::flow_damping;
+
+    const FluidFloat applicable_flow =
+            clamp(height_flow,
+                  -neigh_front.fluid_height / FluidFloat(4.),
+                  front.fluid_height / FluidFloat(4.));
+    back.fluid_height -= applicable_flow;
+    return 0.f;
+
     /*const FluidFloat dheight = left.fluid_height - right.fluid_height;
     const FluidFloat height_flow = dheight * Fluid::flow_friction;
     const FluidFloat flow =
@@ -350,21 +362,34 @@ void Fluid::update_block(const unsigned int x, const unsigned int y)
             m_blocks.cell_front_neighbourhood(cx, cy, neigh, neigh_meta);
 
             back->fluid_height = front->fluid_height;
-            for (int i = 0; i < 8; i+=2)
-            {
-                if (!neigh[i]) {
-                    continue;
-                }
 
-                const FluidFloat dheight = front->fluid_height - neigh[i]->fluid_height;
-                const FluidFloat dterrain_height = meta->terrain_height - neigh_meta[i]->terrain_height;
-                const FluidFloat height_flow = (dheight+dterrain_height) * Fluid::flow_damping;
-
-                const FluidFloat applicable_flow =
-                        clamp(height_flow,
-                              -neigh[i]->fluid_height / FluidFloat(4.),
-                              front->fluid_height / FluidFloat(4.));
-                back->fluid_height -= applicable_flow;
+            if (neigh[Right]) {
+                back->fluid_flow[0] = flow<0>(
+                            *back,
+                            *front, *meta,
+                            *neigh[Right], *neigh_meta[Right],
+                            *front);
+            }
+            if (neigh[Left]) {
+                flow<0>(
+                            *back,
+                            *front, *meta,
+                            *neigh[Left], *neigh_meta[Left],
+                            *neigh[Left]);
+            }
+            if (neigh[Bottom]) {
+                back->fluid_flow[1] = flow<1>(
+                            *back,
+                            *front, *meta,
+                            *neigh[Bottom], *neigh_meta[Bottom],
+                            *front);
+            }
+            if (neigh[Top]) {
+                flow<1>(
+                            *back,
+                            *front, *meta,
+                            *neigh[Top], *neigh_meta[Top],
+                            *neigh[Top]);
             }
 
             ++back;
