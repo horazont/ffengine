@@ -25,34 +25,49 @@ the AUTHORS file.
 
 namespace engine {
 
-ZUpPlaneNode::ZUpPlaneNode(const float width, const float height):
+ZUpPlaneNode::ZUpPlaneNode(const float width, const float height,
+                           const unsigned int cells):
     m_vbo(VBOFormat({
                         VBOAttribute(3)
                     })),
     m_ibo(),
     m_material(),
-    m_vbo_alloc(m_vbo.allocate(4)),
-    m_ibo_alloc(m_ibo.allocate(4))
+    m_vbo_alloc(m_vbo.allocate((cells+1)*(cells+1))),
+    m_ibo_alloc(m_ibo.allocate(cells*cells*6))
 {
     {
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
-        slice[0] = Vector3f(0, 0, 0);
-        slice[1] = Vector3f(0, height, 0);
-        slice[2] = Vector3f(width, height, 0);
-        slice[3] = Vector3f(width, 0, 0);
+        unsigned int i = 0;
+        for (unsigned int y = 0; y <= cells; y++)
+        {
+            const float yf = float(y) / cells * 2.f - 1.f;
+            for (unsigned int x = 0; x <= cells; x++)
+            {
+                const float xf = float(x) / cells * 2.f - 1.f;
+                slice[i] = Vector3f(xf*width/2.f, yf*height/2.f, 0);
+                ++i;
+            }
+        }
     }
 
     {
         uint16_t *dest = m_ibo_alloc.get();
-        *dest++ = 1;
-        *dest++ = 0;
-        *dest++ = 2;
-        *dest++ = 3;
+        for (unsigned int y = 0; y < cells; y++) {
+            for (unsigned int x = 0; x < cells; x++) {
+                const unsigned int curr_base = y*(cells+1) + x;
+                *dest++ = curr_base + (cells+1);
+                *dest++ = curr_base;
+                *dest++ = curr_base + (cells+1) + 1;
+
+                *dest++ = curr_base + (cells+1) + 1;
+                *dest++ = curr_base;
+                *dest++ = curr_base + 1;
+            }
+        }
     }
 
     m_vbo_alloc.mark_dirty();
     m_ibo_alloc.mark_dirty();
-
 }
 
 Material &ZUpPlaneNode::material()
@@ -73,7 +88,9 @@ void ZUpPlaneNode::setup_vao()
 
 void ZUpPlaneNode::render(RenderContext &context)
 {
-    context.draw_elements(GL_TRIANGLE_STRIP, *m_vao, m_material, m_ibo_alloc);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_alloc);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void ZUpPlaneNode::sync(RenderContext &)

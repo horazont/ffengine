@@ -34,7 +34,8 @@ namespace engine {
 class ZUpPlaneNode: public scenegraph::Node
 {
 public:
-    ZUpPlaneNode(const float width, const float height);
+    ZUpPlaneNode(const float width, const float height,
+                 const unsigned int cells);
 
 private:
     VBO m_vbo;
