@@ -338,12 +338,13 @@ void Fluid::update_block(const unsigned int x, const unsigned int y)
     const unsigned int cx1 = (x+1)*m_blocks.m_block_size;
 
     std::array<const FluidCell*, 8> neigh;
-    std::array<FluidCellMeta*, 8> neigh_meta;
+    std::array<const FluidCellMeta*, 8> neigh_meta;
 
     for (unsigned int cy = cy0; cy < cy1; cy++)
     {
         FluidCell *back = m_blocks.cell_back(cx0, cy);
         const FluidCell *front = m_blocks.cell_front(cx0, cy);
+        const FluidCellMeta *meta = m_blocks.cell_meta(cx0, cy);
         for (unsigned int cx = cx0; cx < cx1; cx++)
         {
             m_blocks.cell_front_neighbourhood(cx, cy, neigh, neigh_meta);
@@ -356,7 +357,8 @@ void Fluid::update_block(const unsigned int x, const unsigned int y)
                 }
 
                 const FluidFloat dheight = front->fluid_height - neigh[i]->fluid_height;
-                const FluidFloat height_flow = dheight * Fluid::flow_damping;
+                const FluidFloat dterrain_height = meta->terrain_height - neigh_meta[i]->terrain_height;
+                const FluidFloat height_flow = (dheight+dterrain_height) * Fluid::flow_damping;
 
                 const FluidFloat applicable_flow =
                         clamp(height_flow,
@@ -367,6 +369,7 @@ void Fluid::update_block(const unsigned int x, const unsigned int y)
 
             ++back;
             ++front;
+            ++meta;
         }
     }
 }

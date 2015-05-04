@@ -166,7 +166,7 @@ public:
     inline void cell_front_neighbourhood(
             const unsigned int x, const unsigned int y,
             std::array<const FluidCell*, 8> &neighbourhood,
-            std::array<FluidCellMeta*, 8> &neighbourhood_meta)
+            std::array<const FluidCellMeta*, 8> &neighbourhood_meta)
     {
         if (x > 0) {
             neighbourhood[Left] = cell_front(x-1, y);
