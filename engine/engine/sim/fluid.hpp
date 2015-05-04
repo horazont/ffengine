@@ -32,6 +32,8 @@ the AUTHORS file.
 namespace sim {
 
 
+typedef float FluidFloat;
+
 struct FluidCellMeta
 {
     FluidCellMeta();
@@ -40,7 +42,7 @@ struct FluidCellMeta
      * Height of the terrain in the cell. This is the average terrain height,
      * based on the height of the four adjacent vertices.
      */
-    float terrain_height;
+    FluidFloat terrain_height;
 };
 
 
@@ -53,12 +55,12 @@ struct FluidCell
      * `terrain_height = 2` and `fluid_height = 1` would have an absolute
      * fluid height of 3.
      */
-    float fluid_height;
+    FluidFloat fluid_height;
 
     /**
      * Fluid flow in the cell.
      */
-    float fluid_flow[2];
+    FluidFloat fluid_flow[2];
 };
 
 
@@ -88,7 +90,7 @@ struct FluidSource
     /**
      * Absolute height of the fluid at the source.
      */
-    float absolute_height;
+    FluidFloat absolute_height;
 };
 
 
@@ -260,11 +262,12 @@ public:
  */
 class Fluid
 {
-protected:
-    static const float flow_friction;
-    static const float flow_damping;
+public:
+    static const FluidFloat flow_friction;
+    static const FluidFloat flow_damping;
     static const unsigned int block_size;
 
+protected:
     enum class JobType {
         PREPARE = 0,
         UPDATE = 1

@@ -180,7 +180,7 @@ struct fluid_raise_tool
 {
     void apply(FluidCell &cell, float brush_density) const
     {
-        cell.fluid_height = std::max(0.f, cell.fluid_height+brush_density);
+        cell.fluid_height = std::max(FluidFloat(0.), cell.fluid_height+brush_density);
     }
 };
 

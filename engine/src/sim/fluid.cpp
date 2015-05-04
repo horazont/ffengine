@@ -30,6 +30,7 @@ the AUTHORS file.
 
 #include "engine/gl/util.hpp"
 #include "engine/io/log.hpp"
+#include "engine/math/algo.hpp"
 
 
 #define TIMELOG_FLUIDSIM
@@ -61,8 +62,9 @@ unsigned int determine_worker_count()
 }
 
 
-const float Fluid::flow_damping = 0.991f;
-const float Fluid::flow_friction = 0.3f;
+/*const FluidFloat Fluid::flow_damping = 0.991f;*/
+const FluidFloat Fluid::flow_damping = 0.1;
+const FluidFloat Fluid::flow_friction = 0.3;
 const unsigned int Fluid::block_size = 60;
 
 
@@ -300,6 +302,34 @@ void Fluid::terrain_updated(TerrainRect r)
     m_terrain_update = bounds(r, m_terrain_update);
 }
 
+template <unsigned int dir, bool reverse>
+static inline FluidFloat flow(
+        FluidCell &back,
+        const FluidCell &front,
+        const FluidCell &neigh_front,
+        const FluidCell &left,
+        const FluidCell &right)
+{
+    /*const FluidFloat dheight = left.fluid_height - right.fluid_height;
+    const FluidFloat height_flow = dheight * Fluid::flow_friction;
+    const FluidFloat flow =
+            left.fluid_flow[dir] * Fluid::flow_damping +
+            height_flow * (FluidFloat(1.0) - Fluid::flow_damping);
+
+    assert(!isnan(flow) && !isinf(flow));
+
+    const FluidFloat applicable_flow =
+            clamp(flow,
+                  -neigh_front.fluid_height / FluidFloat(4.),
+                  front.fluid_height / FluidFloat(4.));
+
+
+    back.fluid_height -= applicable_flow;
+    assert(back.fluid_height >= FluidFloat(0));
+    return applicable_flow;*/
+
+}
+
 void Fluid::update_block(const unsigned int x, const unsigned int y)
 {
     const unsigned int cy0 = y*m_blocks.m_block_size;
@@ -316,19 +346,24 @@ void Fluid::update_block(const unsigned int x, const unsigned int y)
         const FluidCell *front = m_blocks.cell_front(cx0, cy);
         for (unsigned int cx = cx0; cx < cx1; cx++)
         {
-            /*m_blocks.cell_front_neighbourhood(x, y, neigh, neigh_meta);
-            back->fluid_height *= 4.f;
-            float n_neighbours = 4.f;
-            for (const FluidCell *neigh_cell: neigh)
+            m_blocks.cell_front_neighbourhood(cx, cy, neigh, neigh_meta);
+
+            back->fluid_height = front->fluid_height;
+            for (int i = 0; i < 8; i+=2)
             {
-                if (!neigh_cell) {
+                if (!neigh[i]) {
                     continue;
                 }
-                back->fluid_height += neigh_cell->fluid_height;
-                n_neighbours += 1;
+
+                const FluidFloat dheight = front->fluid_height - neigh[i]->fluid_height;
+                const FluidFloat height_flow = dheight * Fluid::flow_damping;
+
+                const FluidFloat applicable_flow =
+                        clamp(height_flow,
+                              -neigh[i]->fluid_height / FluidFloat(4.),
+                              front->fluid_height / FluidFloat(4.));
+                back->fluid_height -= applicable_flow;
             }
-            back->fluid_height /= n_neighbours;*/
-            back->fluid_height = front->fluid_height * 0.95;
 
             ++back;
             ++front;
