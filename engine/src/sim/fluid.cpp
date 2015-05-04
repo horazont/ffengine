@@ -354,6 +354,7 @@ static inline FluidFloat flow(
 
     back.fluid_height -= applicable_flow;
     if (back.fluid_height < FluidFloat(0)) {
+#ifndef NDEBUG
         if (std::abs(back.fluid_height) > 1e-6) {
             std::cout << front.fluid_height << std::endl;
             std::cout << neigh_front.fluid_height << std::endl;
@@ -363,7 +364,9 @@ static inline FluidFloat flow(
             std::cout << flow_sign << std::endl;
             std::cout << dir << std::endl;
             assert(back.fluid_height >= FluidFloat(0));
-        } else {
+        } else
+#endif
+        {
             back.fluid_height = 0.f;
         }
     }
