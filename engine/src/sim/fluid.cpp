@@ -46,6 +46,7 @@ typedef std::chrono::steady_clock timelog_clock;
 namespace sim {
 
 static io::Logger &logger = io::logging().get_logger("sim.fluid");
+static const FluidCell null_cell;
 
 
 unsigned int determine_worker_count()
@@ -59,6 +60,16 @@ unsigned int determine_worker_count()
                     thread_count);
     }
     return thread_count;
+}
+
+
+template <typename T>
+T first(T v1, T v2)
+{
+    if (v1) {
+        return v1;
+    }
+    return v2;
 }
 
 
@@ -340,7 +351,6 @@ static inline FluidFloat flow(
             applicable_flow = 0;
         }
     }
-
     back.fluid_height -= applicable_flow;
     if (back.fluid_height < FluidFloat(0)) {
         if (std::abs(back.fluid_height) > 1e-6) {
@@ -356,7 +366,26 @@ static inline FluidFloat flow(
             back.fluid_height = 0.f;
         }
     }
+
     return applicable_flow;
+}
+
+template <unsigned int dir>
+static inline void full_flow(
+        FluidCell &back,
+        const FluidCell &front,
+        const FluidCellMeta &meta,
+        const FluidCell &left_front,
+        const FluidCellMeta *left_meta,
+        const FluidCell &right_front,
+        const FluidCellMeta *right_meta)
+{
+    if (left_meta) {
+        flow<dir, -1>(back, front, meta, left_front, *left_meta, left_front);
+    }
+    if (right_meta) {
+        back.fluid_flow[dir] = flow<dir, 1>(back, front, meta, right_front, *right_meta, front);
+    }
 }
 
 void Fluid::update_block(const unsigned int x, const unsigned int y)
@@ -379,33 +408,28 @@ void Fluid::update_block(const unsigned int x, const unsigned int y)
             m_blocks.cell_front_neighbourhood(cx, cy, neigh, neigh_meta);
 
             back->fluid_height = front->fluid_height;
-            if (neigh[Right]) {
-                back->fluid_flow[0] = flow<0, 1>(
-                            *back,
-                            *front, *meta,
-                            *neigh[Right], *neigh_meta[Right],
-                            *front);
+
+            {
+                const FluidCell *left = first(neigh[Left], &null_cell);
+                const FluidCell *right = first(neigh[Right], &null_cell);
+                const FluidCellMeta *left_meta = neigh_meta[Left];
+                const FluidCellMeta *right_meta = neigh_meta[Right];
+                full_flow<0>(
+                            *back, *front,
+                            *meta,
+                            *left, left_meta,
+                            *right, right_meta);
             }
-            if (neigh[Left]) {
-                flow<0, -1>(
-                            *back,
-                            *front, *meta,
-                            *neigh[Left], *neigh_meta[Left],
-                            *neigh[Left]);
-            }
-            if (neigh[Bottom]) {
-                back->fluid_flow[1] = flow<1, 1>(
-                            *back,
-                            *front, *meta,
-                            *neigh[Bottom], *neigh_meta[Bottom],
-                            *front);
-            }
-            if (neigh[Top]) {
-                flow<1, -1>(
-                            *back,
-                            *front, *meta,
-                            *neigh[Top], *neigh_meta[Top],
-                            *neigh[Top]);
+            {
+                const FluidCell *left = first(neigh[Top], &null_cell);
+                const FluidCell *right = first(neigh[Bottom], &null_cell);
+                const FluidCellMeta *left_meta = neigh_meta[Top];
+                const FluidCellMeta *right_meta = neigh_meta[Bottom];
+                full_flow<1>(
+                            *back, *front,
+                            *meta,
+                            *left, left_meta,
+                            *right, right_meta);
             }
 
             ++back;
