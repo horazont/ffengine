@@ -75,12 +75,12 @@ T first(T v1, T v2)
 
 const FluidFloat Fluid::flow_damping = 0.995;
 /* const FluidFloat Fluid::flow_damping = 0.1; */
-const FluidFloat Fluid::flow_friction = 0.1;
+const FluidFloat Fluid::flow_friction = 0.6;
 const unsigned int Fluid::block_size = 60;
 
 
 FluidCellMeta::FluidCellMeta():
-    terrain_height(0.f)
+    terrain_height(0)
 {
 
 }
@@ -326,8 +326,8 @@ static inline FluidFloat flow(
     const FluidFloat dterrain_height = meta.terrain_height - neigh_meta.terrain_height;
     const FluidFloat height_flow = (dheight+dterrain_height) * Fluid::flow_friction;
 
-    const FluidFloat flow = flow_sign*(
-            flow_source.fluid_flow[dir] * Fluid::flow_damping +
+    const FluidFloat flow = (
+            flow_sign*flow_source.fluid_flow[dir] * Fluid::flow_damping +
             height_flow * (FluidFloat(1.0) - Fluid::flow_damping));
 
     assert(std::abs(flow) < 1e10);
@@ -340,17 +340,18 @@ static inline FluidFloat flow(
 
     if (applicable_flow > FluidFloat(0)) {
         // flow is outgoing, check that neighbour height is appropriate
-        if (dterrain_height + front.fluid_height < 0) {
+        if (front.fluid_height + meta.terrain_height < neigh_meta.terrain_height) {
             // we can’t go up there
             applicable_flow = 0;
         }
     } else if (applicable_flow < FluidFloat(0)) {
-        // flow is incomingf, check that our height is appropriate
-        if (neigh_front.fluid_height - dterrain_height < 0) {
+        // flow is incoming, check that our height is appropriate
+        if (meta.terrain_height > neigh_front.fluid_height + neigh_meta.terrain_height) {
             // it can’t go up here
             applicable_flow = 0;
         }
     }
+
     back.fluid_height -= applicable_flow;
     if (back.fluid_height < FluidFloat(0)) {
         if (std::abs(back.fluid_height) > 1e-6) {
@@ -385,6 +386,12 @@ static inline void full_flow(
     }
     if (right_meta) {
         back.fluid_flow[dir] = flow<dir, 1>(back, front, meta, right_front, *right_meta, front);
+        /*if (left_meta) {
+            // we can smooth the flow a bit
+            back.fluid_flow[dir] *= 128;
+            back.fluid_flow[dir] += left_front.fluid_flow[dir] + right_front.fluid_flow[dir];
+            back.fluid_flow[dir] /= 130;
+        }*/
     }
 }
 
