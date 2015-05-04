@@ -94,6 +94,13 @@ FluidCell::FluidCell():
 }
 
 
+FluidBlockMeta::FluidBlockMeta():
+    active(true)
+{
+
+}
+
+
 FluidBlocks::FluidBlocks(const unsigned int block_count_per_axis,
                          const unsigned int block_size):
     m_block_size(block_size),
@@ -400,6 +407,13 @@ static inline void full_flow(
 
 void Fluid::update_block(const unsigned int x, const unsigned int y)
 {
+    {
+        FluidBlockMeta *meta = m_blocks.block_meta(x, y);
+        if (!meta->active) {
+            return;
+        }
+    }
+
     const unsigned int cy0 = y*m_blocks.m_block_size;
     const unsigned int cy1 = (y+1)*m_blocks.m_block_size;
     const unsigned int cx0 = x*m_blocks.m_block_size;

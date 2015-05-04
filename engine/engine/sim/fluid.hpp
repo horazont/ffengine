@@ -102,6 +102,8 @@ struct FluidSource
  */
 struct FluidBlockMeta
 {
+    FluidBlockMeta();
+
     /**
      * Is the block active? If so, it is fully simulated in a frame. Blocks
      * become inactive if there has been no significant change in a frame.
@@ -242,6 +244,18 @@ public:
     {
         front = cell_front(x, y);
         back = cell_back(x, y);
+    }
+
+    inline FluidBlockMeta *block_meta(const unsigned int x,
+                                      const unsigned int y)
+    {
+        return &m_block_meta[y*m_blocks_per_axis+x];
+    }
+
+    inline const FluidBlockMeta *block_meta(const unsigned int x,
+                                            const unsigned int y) const
+    {
+        return &m_block_meta[y*m_blocks_per_axis+x];
     }
 
     inline void swap_buffers()
