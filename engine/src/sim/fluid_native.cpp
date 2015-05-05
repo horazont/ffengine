@@ -267,21 +267,7 @@ static inline FluidFloat flow(
 
     back.fluid_height -= applicable_flow;
     if (back.fluid_height < FluidFloat(0)) {
-#ifndef NDEBUG
-        if (std::abs(back.fluid_height) > 1e-6) {
-            std::cout << front.fluid_height << std::endl;
-            std::cout << neigh_front.fluid_height << std::endl;
-            std::cout << back.fluid_height << std::endl;
-            std::cout << flow << std::endl;
-            std::cout << applicable_flow << std::endl;
-            std::cout << flow_sign << std::endl;
-            std::cout << dir << std::endl;
-            assert(back.fluid_height >= FluidFloat(0));
-        } else
-#endif
-        {
-            back.fluid_height = 0.f;
-        }
+        back.fluid_height = 0.f;
     }
 
     return applicable_flow;
@@ -325,13 +311,13 @@ void NativeFluidSim::update_block(FluidBlock &block)
     std::array<const FluidCell*, 8> neigh;
     std::array<const FluidCellMeta*, 8> neigh_meta;
 
+    FluidCell *back = block.local_cell_back(0, 0);
+    const FluidCell *front = block.local_cell_front(0, 0);
+    const FluidCellMeta *meta = block.local_cell_meta(0, 0);
     for (unsigned int cy = cy0; cy < cy1; cy++)
     {
         for (unsigned int cx = cx0; cx < cx1; cx++)
         {
-            FluidCell *back = m_blocks.cell_back(cx, cy);
-            const FluidCell *front = m_blocks.cell_front(cx, cy);
-            const FluidCellMeta *meta = m_blocks.cell_meta(cx, cy);
             m_blocks.cell_front_neighbourhood(cx, cy, neigh, neigh_meta);
 
             back->fluid_height = front->fluid_height;
@@ -359,9 +345,9 @@ void NativeFluidSim::update_block(FluidBlock &block)
                             *right, right_meta);
             }
 
-            /*++back;
+            ++back;
             ++front;
-            ++meta;*/
+            ++meta;
         }
     }
 }
