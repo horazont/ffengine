@@ -127,7 +127,7 @@ void NativeFluidSim::coordinator_impl()
 
 #ifdef TIMELOG_FLUIDSIM
         const timelog_clock::time_point t0 = timelog_clock::now();
-        timelog_clock::time_point t_sync, t_prepare, t_sim;
+        timelog_clock::time_point t_sync, t_sim;
 #endif
         // sync terrain
         TerrainRect updated_rect;
@@ -142,17 +142,10 @@ void NativeFluidSim::coordinator_impl()
             sync_terrain(updated_rect);
         }
 
-
 #ifdef TIMELOG_FLUIDSIM
         t_sync = timelog_clock::now();
 #endif
-
-        /*coordinator_run_workers(JobType::PREPARE);*/
-
-#ifdef TIMELOG_FLUIDSIM
-        t_prepare = timelog_clock::now();
-#endif
-        coordinator_run_workers(JobType::UPDATE);
+        coordinator_run_workers();
 
         {
             std::lock_guard<std::mutex> done_lock(m_done_mutex);
@@ -165,10 +158,8 @@ void NativeFluidSim::coordinator_impl()
         t_sim = timelog_clock::now();
         logger.logf(io::LOG_DEBUG, "fluid: sync time: %.2f ms",
                     TIMELOG_ms(t_sync - t0));
-        logger.logf(io::LOG_DEBUG, "fluid: prep time: %.2f ms",
-                    TIMELOG_ms(t_prepare - t_sync));
         logger.logf(io::LOG_DEBUG, "fluid: sim time: %.2f ms",
-                    TIMELOG_ms(t_sim - t_prepare));
+                    TIMELOG_ms(t_sim - t_sync));
 #endif
     }
     {
@@ -178,7 +169,7 @@ void NativeFluidSim::coordinator_impl()
     m_worker_wakeup.notify_all();
 }
 
-void NativeFluidSim::coordinator_run_workers(JobType job)
+void NativeFluidSim::coordinator_run_workers()
 {
     {
         std::lock_guard<std::mutex> lock(m_worker_done_mutex);
@@ -188,8 +179,6 @@ void NativeFluidSim::coordinator_run_workers(JobType job)
     {
         std::lock_guard<std::mutex> lock(m_worker_task_mutex);
         assert(m_worker_to_start == 0);
-        // configure job
-        m_worker_job = job;
         m_worker_to_start = m_worker_count;
         // make sure all blocks run, we don’t need memory ordering, the mutex
         // implicitly orders
@@ -393,7 +382,6 @@ void NativeFluidSim::worker_impl()
             return;
         }
         --m_worker_to_start;
-        JobType my_job = m_worker_job;
         wakeup_lock.unlock();
 
         while (1) {
@@ -408,14 +396,7 @@ void NativeFluidSim::worker_impl()
             const unsigned int x = my_block % m_blocks.blocks_per_axis();
             const unsigned int y = my_block / m_blocks.blocks_per_axis();
             /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u %u", this, x, y);*/
-            switch (my_job) {
-            case JobType::PREPARE:
-                assert(false);
-                break;
-            case JobType::UPDATE:
-                update_block(*m_blocks.block(x, y));
-                break;
-            }
+            update_block(*m_blocks.block(x, y));
         }
 
         {

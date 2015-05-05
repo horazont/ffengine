@@ -38,12 +38,6 @@ public:
                    const Terrain &terrain);
     ~NativeFluidSim() override;
 
-protected:
-    enum class JobType {
-        PREPARE = 0,
-        UPDATE = 1
-    };
-
 private:
     FluidBlocks &m_blocks;
     const Terrain &m_terrain;
@@ -66,7 +60,6 @@ private:
     /* guarded by m_worker_task_mutex */
     std::mutex m_worker_task_mutex;
     std::condition_variable m_worker_wakeup;
-    JobType m_worker_job;
     unsigned int m_worker_to_start;
     bool m_worker_terminate;
 
@@ -86,7 +79,7 @@ private:
 
 protected:
     void coordinator_impl();
-    void coordinator_run_workers(JobType job);
+    void coordinator_run_workers();
 
     void sync_terrain(TerrainRect rect);
 
