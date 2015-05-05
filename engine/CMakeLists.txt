@@ -49,6 +49,8 @@ set(ENGINE_HEADERS
   engine/render/rendergraph.hpp
   engine/render/scenegraph.hpp
   engine/sim/fluid.hpp
+  engine/sim/fluid_base.hpp
+  engine/sim/fluid_native.hpp
   engine/sim/terrain.hpp
   engine/sim/world.hpp
   engine/sim/world_ops.hpp
@@ -96,6 +98,8 @@ set(ENGINE_SRC
   src/render/rendergraph.cpp
   src/render/scenegraph.cpp
   src/sim/fluid.cpp
+  src/sim/fluid_base.cpp
+  src/sim/fluid_native.cpp
   src/sim/terrain.cpp
   src/sim/world.cpp
   src/sim/world_ops.cpp

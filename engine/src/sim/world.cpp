@@ -111,7 +111,7 @@ void apply_brush_masked_tool(FluidBlocks &field,
                              const float y0,
                              const impl_t &impl)
 {
-    const int fluid_size = field.m_cells_per_axis;
+    const int fluid_size = field.cells_per_axis();
     const int size = brush_size;
     const float radius = size / 2.f;
     const int fluid_xbase = std::round(x0 - radius);
@@ -366,7 +366,7 @@ void Server::game_frame()
 
 void Server::game_thread()
 {
-    static const std::chrono::microseconds game_frame_duration(16000);
+    static const std::chrono::microseconds game_frame_duration(32000);
     static const std::chrono::microseconds busywait(100);
 
     m_state.fluid().start();
