@@ -350,8 +350,11 @@ void Server::game_frame()
 {
     m_state.fluid().wait_for();
 
+    // wait for the fluid sim to finish _without_ holding the lock!
+    // this allows the UI to render even while the fluid sim is stuck
+    std::lock_guard<std::shared_timed_mutex> lock(m_interframe_mutex);
     {
-        std::unique_lock<std::mutex> lock(m_op_queue_mutex);
+        std::lock_guard<std::mutex> lock(m_op_queue_mutex);
         m_op_queue.swap(m_op_buffer);
     }
 
@@ -385,10 +388,7 @@ void Server::game_thread()
             continue;
         }
 
-        {
-            std::unique_lock<std::shared_timed_mutex> lock(m_interframe_mutex);
-            game_frame();
-        }
+        game_frame();
 
         tnext_frame += game_frame_duration;
     }
