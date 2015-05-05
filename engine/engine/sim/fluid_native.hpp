@@ -83,7 +83,8 @@ protected:
 
     void sync_terrain(TerrainRect rect);
 
-    void update_block(FluidBlock &block);
+    void update_active_block(FluidBlock &block);
+    void update_inactive_block(FluidBlock &block);
 
     void worker_impl();
 

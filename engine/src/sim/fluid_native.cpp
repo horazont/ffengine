@@ -266,10 +266,13 @@ static inline FluidFloat flow(
         }
     }
 
-    back.fluid_height -= applicable_flow;
-    if (back.fluid_height < FluidFloat(0)) {
-        back.fluid_height = 0.f;
+    // minimum height for fluid
+    if (neigh_front.fluid_height < 1e-6 && applicable_flow < 1e-4) {
+        applicable_flow = 0.f;
+    } else if (front.fluid_height < 1e-6 && applicable_flow > -1e-4) {
+        applicable_flow = 0.f;
     }
+    back.fluid_height -= applicable_flow;
 
     return applicable_flow;
 }
@@ -296,14 +299,13 @@ static inline void full_flow(
             back.fluid_flow[dir] /= 130;
         }*/
     }
+    if (back.fluid_height < FluidFloat(0)) {
+        back.fluid_height = 0.f;
+    }
 }
 
-void NativeFluidSim::update_block(FluidBlock &block)
+void NativeFluidSim::update_active_block(FluidBlock &block)
 {
-    if (!block.active()) {
-        return;
-    }
-
     const unsigned int cy0 = block.y()*IFluidSim::block_size;
     const unsigned int cy1 = (block.y()+1)*IFluidSim::block_size;
     const unsigned int cx0 = block.x()*IFluidSim::block_size;
@@ -365,6 +367,137 @@ void NativeFluidSim::update_block(FluidBlock &block)
     }
 }
 
+template <int dir, int flow_sign>
+FluidFloat check_active_seams(FluidCell *local_seam_back,
+                              const FluidCell *local_seam_front,
+                              const FluidCellMeta *local_seam_meta,
+                              const FluidCell *neighbour_seam_front,
+                              const FluidCellMeta *neighbour_seam_meta)
+{
+    const FluidCell *flow_source_front = (
+                flow_sign > 0
+                ? local_seam_front
+                : neighbour_seam_front);
+    // when we’re going along the Y axis (flow direction 0) we have to use
+    // the long stride, otherwise the cells are adjacent
+    const unsigned int stride = (dir == 0 ? IFluidSim::block_size : 1);
+
+    FluidFloat difference_accum = FluidFloat(0);
+
+    for (unsigned int i = 0; i < IFluidSim::block_size; i++)
+    {
+        flow<dir, flow_sign>(
+                    *local_seam_back,
+                    *local_seam_front,
+                    *local_seam_meta,
+                    *neighbour_seam_front,
+                    *neighbour_seam_meta,
+                    *flow_source_front);
+
+        if (local_seam_front->fluid_height < 1e-4 && local_seam_back->fluid_height > 1e-5) {
+            // activate immediately, this is new fluid entering our area
+            difference_accum += 100.f;
+        } else if (local_seam_back->fluid_height < 0) {
+            // we have to activate immediately!
+            // FIXME: use the proper threshold here
+            difference_accum += 100.f;
+            local_seam_back->fluid_height = 0.f;
+        } else {
+            const FluidFloat local_difference =
+                    std::abs(local_seam_back->fluid_height - local_seam_front->fluid_height)
+                    / local_seam_front->fluid_height;
+            if (!isnan(local_difference)) {
+                // nan can happen if nothing changed and cell is empty
+                difference_accum += local_difference;
+            }
+        }
+
+        local_seam_back += stride;
+        local_seam_front += stride;
+        local_seam_meta += stride;
+        neighbour_seam_front += stride;
+        neighbour_seam_meta += stride;
+        flow_source_front += stride;
+    }
+
+    return difference_accum;
+}
+
+void NativeFluidSim::update_inactive_block(FluidBlock &block)
+{
+    // check the seams of the block for changes which are non-steady state
+    // if the changes become too large we have to re-activate the block
+
+    FluidFloat difference_accum = 0.f;
+    bool any = false;
+
+    if (block.x() > 0) {
+        FluidBlock &neighbour = *m_blocks.block(block.x()-1, block.y());
+        if (neighbour.active()) {
+            any = true;
+            difference_accum += check_active_seams<0, -1>(
+                        block.local_cell_back(0, 0),
+                        block.local_cell_front(0, 0),
+                        block.local_cell_meta(0, 0),
+                        neighbour.local_cell_front(IFluidSim::block_size-1, 0),
+                        neighbour.local_cell_meta(IFluidSim::block_size-1, 0)
+                        );
+        }
+    }
+    if (block.y() > 0) {
+        FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()-1);
+        if (neighbour.active()) {
+            any = true;
+            difference_accum += check_active_seams<1, -1>(
+                        block.local_cell_back(0, 0),
+                        block.local_cell_front(0, 0),
+                        block.local_cell_meta(0, 0),
+                        neighbour.local_cell_front(0, IFluidSim::block_size-1),
+                        neighbour.local_cell_meta(0, IFluidSim::block_size-1)
+                        );
+        }
+    }
+    if (block.x() < m_blocks.blocks_per_axis()-1) {
+        FluidBlock &neighbour = *m_blocks.block(block.x()+1, block.y());
+        if (neighbour.active()) {
+            any = true;
+            difference_accum += check_active_seams<0, 1>(
+                        block.local_cell_back(IFluidSim::block_size-1, 0),
+                        block.local_cell_front(IFluidSim::block_size-1, 0),
+                        block.local_cell_meta(IFluidSim::block_size-1, 0),
+                        neighbour.local_cell_front(0, 0),
+                        neighbour.local_cell_meta(0, 0)
+                        );
+        }
+    }
+    if (block.y() < m_blocks.blocks_per_axis()-1) {
+        FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()+1);
+        if (neighbour.active()) {
+            any = true;
+            difference_accum += check_active_seams<1, -1>(
+                        block.local_cell_back(0, IFluidSim::block_size-1),
+                        block.local_cell_front(0, IFluidSim::block_size-1),
+                        block.local_cell_meta(0, IFluidSim::block_size-1),
+                        neighbour.local_cell_front(0, 0),
+                        neighbour.local_cell_meta(0, 0)
+                        );
+        }
+    }
+
+    if (any) {
+        logger.logf(io::LOG_WARNING, "%.4f", difference_accum);
+    }
+
+    if (difference_accum > 0.1f)
+    {
+        logger.logf(io::LOG_DEBUG,
+                    "reenabled block %u,%u with difference of %.4f",
+                    block.x(), block.y(),
+                    difference_accum);
+        block.set_active(true);
+    }
+}
+
 void NativeFluidSim::worker_impl()
 {
     const unsigned int out_of_tasks_limit = m_blocks.blocks_per_axis()*m_blocks.blocks_per_axis();
@@ -395,7 +528,12 @@ void NativeFluidSim::worker_impl()
             const unsigned int x = my_block % m_blocks.blocks_per_axis();
             const unsigned int y = my_block / m_blocks.blocks_per_axis();
             /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u %u", this, x, y);*/
-            update_block(*m_blocks.block(x, y));
+            FluidBlock &block = *m_blocks.block(x, y);
+            if (block.active()) {
+                update_active_block(block);
+            } else {
+                update_inactive_block(block);
+            }
         }
 
         {
