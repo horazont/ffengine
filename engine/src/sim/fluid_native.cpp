@@ -222,6 +222,7 @@ void NativeFluidSim::sync_terrain(TerrainRect rect)
                     (*field)[(y+1)*terrain_size+x]+
                     (*field)[(y+1)*terrain_size+x+1];
             meta_ptr->terrain_height = hsum / 4.f;
+            m_blocks.block_for_cell(x, y)->set_active(true);
         }
     }
 }
@@ -311,6 +312,8 @@ void NativeFluidSim::update_block(FluidBlock &block)
     std::array<const FluidCell*, 8> neigh;
     std::array<const FluidCellMeta*, 8> neigh_meta;
 
+    float change_accum = 0.f;
+
     FluidCell *back = block.local_cell_back(0, 0);
     const FluidCell *front = block.local_cell_front(0, 0);
     const FluidCellMeta *meta = block.local_cell_meta(0, 0);
@@ -345,10 +348,20 @@ void NativeFluidSim::update_block(FluidBlock &block)
                             *right, right_meta);
             }
 
+            change_accum += std::abs(back->fluid_height - front->fluid_height);
+
             ++back;
             ++front;
             ++meta;
         }
+    }
+
+    block.accum_change(change_accum);
+    if (block.change() < FluidBlock::CHANGE_BACKLOG_THRESHOLD) {
+        logger.logf(io::LOG_DEBUG, "disabling block %u,%u after change of %.4f",
+                    block.x(), block.y(),
+                    block.change());
+        block.set_active(false);
     }
 }
 

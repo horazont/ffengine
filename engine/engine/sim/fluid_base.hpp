@@ -183,6 +183,10 @@ enum FluidNeighbours {
 class FluidBlock
 {
 public:
+    static const FluidFloat CHANGE_BACKLOG_FILTER_CONSTANT;
+    static const FluidFloat CHANGE_BACKLOG_THRESHOLD;
+
+public:
     FluidBlock(const unsigned int x,
                const unsigned int y);
 
@@ -190,6 +194,7 @@ private:
     const unsigned int m_x;
     const unsigned int m_y;
 
+    float m_change_backlog;
     bool m_active;
 
     std::vector<FluidCellMeta> m_meta_cells;
@@ -244,7 +249,22 @@ public:
 
     inline void set_active(bool new_active)
     {
+        if (new_active != m_active && new_active)
+        {
+            m_change_backlog = CHANGE_BACKLOG_THRESHOLD / CHANGE_BACKLOG_FILTER_CONSTANT;
+        }
         m_active = new_active;
+    }
+
+    inline void accum_change(FluidFloat change)
+    {
+        m_change_backlog = m_change_backlog * CHANGE_BACKLOG_FILTER_CONSTANT
+                + change * (FluidFloat(1) - CHANGE_BACKLOG_FILTER_CONSTANT);
+    }
+
+    inline FluidFloat change() const
+    {
+        return m_change_backlog;
     }
 
     inline void swap_buffers()
@@ -288,6 +308,14 @@ public:
                                    const unsigned int blocky) const
     {
         return &m_blocks[blocky*m_blocks_per_axis+blockx];
+    }
+
+    inline FluidBlock *block_for_cell(const unsigned int cellx,
+                                      const unsigned int celly)
+    {
+        const unsigned int blockx = cellx / IFluidSim::block_size;
+        const unsigned int blocky = celly / IFluidSim::block_size;
+        return block(blockx, blocky);
     }
 
     inline FluidCell *cell_back(const unsigned int x, const unsigned int y)

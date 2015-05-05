@@ -87,21 +87,21 @@ void apply_brush_masked_tool(sim::Terrain::HeightField &field,
     }
 }
 
-/*
-* Apply a fluid tool using a brush mask.
-*
-* @param field The fluid grid to work on
-* @param brush_size Diameter of the brush
-* @param sampled Density map of the brush
-* @param brush_strength Factor which is applied to the density map for each
-* painted pixel.
-* @param terrain_size Size of the terrain, for clipping
-* @param x0 X center for painting
-* @param y0 Y center for painting
-* @param impl Tool implementation
-*
-* @see flatten_tool, raise_tool
-*/
+/**
+ * Apply a fluid tool using a brush mask.
+ *
+ * @param field The fluid grid to work on
+ * @param brush_size Diameter of the brush
+ * @param sampled Density map of the brush
+ * @param brush_strength Factor which is applied to the density map for each
+ * painted pixel.
+ * @param terrain_size Size of the terrain, for clipping
+ * @param x0 X center for painting
+ * @param y0 Y center for painting
+ * @param impl Tool implementation
+ *
+ * @see flatten_tool, raise_tool
+ */
 template <typename impl_t>
 void apply_brush_masked_tool(FluidBlocks &field,
                              const unsigned int brush_size,
@@ -136,6 +136,7 @@ void apply_brush_masked_tool(FluidBlocks &field,
 
             impl.apply(*field.cell_back(xfluid, yfluid),
                        brush_strength*sampled[y*size+x]);
+            field.block_for_cell(xfluid, yfluid)->set_active(true);
         }
     }
 }
