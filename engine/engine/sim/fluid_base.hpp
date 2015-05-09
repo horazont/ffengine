@@ -37,7 +37,16 @@ typedef float FluidFloat;
 class IFluidSim
 {
 public:
+    /**
+     * The flow friction is in units of 1 / Time Unit. It controls the
+     * influence of the absolute height difference between two adjacent cells
+     * on the flow between the cells.
+     */
     static const FluidFloat flow_friction;
+
+    /**
+     * The damping is unitless.
+     */
     static const FluidFloat flow_damping;
     static const unsigned int block_size;
 
@@ -110,11 +119,15 @@ struct FluidCell
      * Height of the fluid *above* the terrain in the cell. Thus, a cell with
      * `terrain_height = 2` and `fluid_height = 1` would have an absolute
      * fluid height of 3.
+     *
+     * The fluid and terrain heights are in Length Units (LU).
      */
     FluidFloat fluid_height;
 
     /**
      * Fluid flow in the cell.
+     *
+     * The flow is in units of Length Unit / Time Unit.
      */
     FluidFloat fluid_flow[2];
 };

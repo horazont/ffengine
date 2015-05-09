@@ -256,21 +256,21 @@ static inline FluidFloat flow(
         // flow is outgoing, check that neighbour height is appropriate
         if (front.fluid_height + meta.terrain_height < neigh_meta.terrain_height) {
             // we can’t go up there
-            applicable_flow = 0;
+            return applicable_flow;
         }
     } else if (applicable_flow < FluidFloat(0)) {
         // flow is incoming, check that our height is appropriate
         if (meta.terrain_height > neigh_front.fluid_height + neigh_meta.terrain_height) {
             // it can’t go up here
-            applicable_flow = 0;
+            return applicable_flow;
         }
     }
 
     // minimum height for fluid
     if (neigh_front.fluid_height < 1e-6 && applicable_flow < 1e-4) {
-        applicable_flow = 0.f;
+        return applicable_flow;
     } else if (front.fluid_height < 1e-6 && applicable_flow > -1e-4) {
-        applicable_flow = 0.f;
+        return applicable_flow;
     }
     back.fluid_height -= applicable_flow;
 
@@ -299,7 +299,7 @@ static inline void full_flow(
             back.fluid_flow[dir] /= 130;
         }*/
     }
-    if (back.fluid_height < FluidFloat(0)) {
+    if (back.fluid_height < 0) {
         back.fluid_height = 0.f;
     }
 }
