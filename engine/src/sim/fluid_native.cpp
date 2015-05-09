@@ -105,8 +105,6 @@ NativeFluidSim::~NativeFluidSim()
 
 void NativeFluidSim::coordinator_impl()
 {
-    const unsigned int worker_count = m_worker_count;
-
     logger.logf(io::LOG_INFO, "fluidsim: %u cells in %u blocks",
                 m_blocks.cells_per_axis()*m_blocks.cells_per_axis(),
                 m_blocks.blocks_per_axis()*m_blocks.blocks_per_axis());
