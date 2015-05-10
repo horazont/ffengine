@@ -33,7 +33,7 @@ ZUpPlaneNode::ZUpPlaneNode(const float width, const float height,
     m_ibo(),
     m_material(),
     m_vbo_alloc(m_vbo.allocate((cells+1)*(cells+1))),
-    m_ibo_alloc(m_ibo.allocate(cells*cells*6))
+    m_ibo_alloc(m_ibo.allocate(cells*cells*4))
 {
     {
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
@@ -55,12 +55,9 @@ ZUpPlaneNode::ZUpPlaneNode(const float width, const float height,
         for (unsigned int y = 0; y < cells; y++) {
             for (unsigned int x = 0; x < cells; x++) {
                 const unsigned int curr_base = y*(cells+1) + x;
+                *dest++ = curr_base;
                 *dest++ = curr_base + (cells+1);
-                *dest++ = curr_base;
                 *dest++ = curr_base + (cells+1) + 1;
-
-                *dest++ = curr_base + (cells+1) + 1;
-                *dest++ = curr_base;
                 *dest++ = curr_base + 1;
             }
         }
@@ -88,9 +85,9 @@ void ZUpPlaneNode::setup_vao()
 
 void ZUpPlaneNode::render(RenderContext &context)
 {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_alloc);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    /*glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);*/
+    context.draw_elements(GL_LINES_ADJACENCY, *m_vao, m_material, m_ibo_alloc);
+    /*glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
 }
 
 void ZUpPlaneNode::sync(RenderContext &)
