@@ -87,18 +87,15 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
                     })),
     m_ibo(),
     m_vbo_allocation(m_vbo.allocate(m_grid_size*m_grid_size)),
-    m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*6))
+    m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*4))
 {
     uint16_t *dest = m_ibo_allocation.get();
     for (unsigned int y = 0; y < m_grid_size-1; y++) {
         for (unsigned int x = 0; x < m_grid_size-1; x++) {
             const unsigned int curr_base = y*m_grid_size + x;
+            *dest++ = curr_base;
             *dest++ = curr_base + m_grid_size;
-            *dest++ = curr_base;
             *dest++ = curr_base + m_grid_size + 1;
-
-            *dest++ = curr_base + m_grid_size + 1;
-            *dest++ = curr_base;
             *dest++ = curr_base + 1;
         }
     }
@@ -110,6 +107,9 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     success = success && m_material.shader().attach_resource(
                 GL_VERTEX_SHADER,
                 ":/shaders/terrain/main.vert");
+    success = success && m_material.shader().attach_resource(
+                GL_GEOMETRY_SHADER,
+                ":/shaders/terrain/main.geom");
     success = success && m_material.shader().attach_resource(
                 GL_FRAGMENT_SHADER,
                 ":/shaders/terrain/main.frag");
@@ -271,7 +271,7 @@ inline void render_slice(RenderContext &context,
     std::cout << "  translationx  = " << x << std::endl;
     std::cout << "  translationy  = " << y << std::endl;
     std::cout << "  scale         = " << scale << std::endl;*/
-    context.draw_elements(GL_TRIANGLES, vao, material, ibo_allocation);
+    context.draw_elements(GL_LINES_ADJACENCY, vao, material, ibo_allocation);
 }
 
 void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &material)
@@ -313,6 +313,8 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
 {
     bool success = mat.shader().attach_resource(GL_VERTEX_SHADER,
                                                 ":/shaders/terrain/main.vert");
+    success = success && mat.shader().attach_resource(GL_GEOMETRY_SHADER,
+                                                ":/shaders/terrain/main.geom");
     success = success && mat.shader().link();
     if (!success) {
         return false;
