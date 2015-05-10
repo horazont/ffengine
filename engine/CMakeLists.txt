@@ -51,6 +51,7 @@ set(ENGINE_HEADERS
   engine/sim/fluid.hpp
   engine/sim/fluid_base.hpp
   engine/sim/fluid_native.hpp
+  engine/sim/objects.hpp
   engine/sim/terrain.hpp
   engine/sim/world.hpp
   engine/sim/world_ops.hpp
@@ -100,6 +101,7 @@ set(ENGINE_SRC
   src/sim/fluid.cpp
   src/sim/fluid_base.cpp
   src/sim/fluid_native.cpp
+  src/sim/objects.cpp
   src/sim/terrain.cpp
   src/sim/world.cpp
   src/sim/world_ops.cpp
