@@ -370,7 +370,7 @@ void Server::game_frame()
 
 void Server::game_thread()
 {
-    static const std::chrono::microseconds game_frame_duration(32000);
+    static const std::chrono::microseconds game_frame_duration(16000);
     static const std::chrono::microseconds busywait(100);
 
     m_state.fluid().start();
