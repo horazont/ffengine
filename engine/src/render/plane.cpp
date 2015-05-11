@@ -86,6 +86,10 @@ void ZUpPlaneNode::setup_vao()
 void ZUpPlaneNode::render(RenderContext &context)
 {
     /*glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);*/
+    m_material.bind();
+    glUniform3fv(m_material.shader().uniform_location("viewpoint"),
+                 1,
+                 context.viewpoint().as_array);
     context.draw_elements(GL_LINES_ADJACENCY, *m_vao, m_material, m_ibo_alloc);
     /*glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
 }
