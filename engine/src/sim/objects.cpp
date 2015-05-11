@@ -8,12 +8,12 @@
 
 namespace sim {
 
-const ObjectID NULL_OBJECT_ID = 0;
+constexpr Object::ID NULL_OBJECT_ID = 0;
 
 
 /* sim::Object */
 
-Object::Object(const ObjectID object_id):
+Object::Object(const ID object_id):
     m_object_id(object_id)
 {
 
@@ -30,11 +30,12 @@ Object::~Object()
 ObjectManager::ObjectManager()
 {
     m_free_list.emplace_back(
-                ObjectIDRegion{1, std::numeric_limits<ObjectID>::max()-1}
+                IDRegion{1, std::numeric_limits<Object::ID>::max()-1}
                 );
 }
 
-inline ObjectChunk *ObjectManager::get_object_chunk(ObjectID object_id)
+inline ObjectManager::Chunk *ObjectManager::get_object_chunk(
+        Object::ID object_id)
 {
     if (object_id == NULL_OBJECT_ID) {
         return nullptr;
@@ -43,8 +44,8 @@ inline ObjectChunk *ObjectManager::get_object_chunk(ObjectID object_id)
     // offset by one, we don’t waste space here
     --object_id;
 
-    const std::vector<ObjectChunk>::size_type chunk_index =
-            object_id / ObjectChunk::CHUNK_SIZE;
+    const std::vector<Chunk>::size_type chunk_index =
+            object_id / Chunk::CHUNK_SIZE;
 
     if (chunk_index >= m_chunks.size()) {
         return nullptr;
@@ -53,16 +54,16 @@ inline ObjectChunk *ObjectManager::get_object_chunk(ObjectID object_id)
     return &m_chunks[chunk_index];
 }
 
-inline std::unique_ptr<Object> *ObjectManager::get_object_ptr(ObjectID object_id)
+inline std::unique_ptr<Object> *ObjectManager::get_object_ptr(Object::ID object_id)
 {
-    ObjectChunk *chunk = get_object_chunk(object_id);
+    Chunk *chunk = get_object_chunk(object_id);
     if (!chunk) {
         return nullptr;
     }
-    return &(chunk->objects[object_id % ObjectChunk::CHUNK_SIZE]);
+    return &(chunk->objects[object_id % Chunk::CHUNK_SIZE]);
 }
 
-inline ObjectChunk &ObjectManager::require_object_chunk(ObjectID object_id)
+inline ObjectManager::Chunk &ObjectManager::require_object_chunk(Object::ID object_id)
 {
     if (object_id == NULL_OBJECT_ID) {
         throw std::runtime_error("NULL_OBJECT require");
@@ -71,8 +72,8 @@ inline ObjectChunk &ObjectManager::require_object_chunk(ObjectID object_id)
     // offset by one, we don’t waste space here
     --object_id;
 
-    const std::vector<ObjectChunk>::size_type chunk_index =
-            object_id / ObjectChunk::CHUNK_SIZE;
+    const std::vector<Chunk>::size_type chunk_index =
+            object_id / Chunk::CHUNK_SIZE;
 
     if (chunk_index >= m_chunks.size()) {
         m_chunks.resize(chunk_index+1);
@@ -81,12 +82,12 @@ inline ObjectChunk &ObjectManager::require_object_chunk(ObjectID object_id)
     return m_chunks[chunk_index];
 }
 
-inline std::unique_ptr<Object> &ObjectManager::require_object_ptr(ObjectID object_id)
+inline std::unique_ptr<Object> &ObjectManager::require_object_ptr(Object::ID object_id)
 {
-    return require_object_chunk(object_id).objects[object_id % ObjectChunk::CHUNK_SIZE];
+    return require_object_chunk(object_id).objects[object_id % Chunk::CHUNK_SIZE];
 }
 
-ObjectID ObjectManager::allocate_object_id()
+Object::ID ObjectManager::allocate_object_id()
 {
     if (m_free_list.empty()) {
         throw std::runtime_error("Out of ObjectIDs. What kind of machine are "
@@ -94,8 +95,8 @@ ObjectID ObjectManager::allocate_object_id()
                                  "cannot simply exhaust the 64bit integer "
                                  "space without running out of memory first!");
     }
-    ObjectIDRegion &first = m_free_list.front();
-    const ObjectID result = first.first++;
+    IDRegion &first = m_free_list.front();
+    const Object::ID result = first.first++;
     first.count--;
     if (first.count == 0) {
         m_free_list.erase(m_free_list.begin());
@@ -104,7 +105,7 @@ ObjectID ObjectManager::allocate_object_id()
     return result;
 }
 
-Object *ObjectManager::get_base(ObjectID object_id)
+Object *ObjectManager::get_base(Object::ID object_id)
 {
     std::unique_ptr<Object> *object_ptr = get_object_ptr(object_id);
     if (!object_ptr) {
@@ -113,20 +114,20 @@ Object *ObjectManager::get_base(ObjectID object_id)
     return object_ptr->get();
 }
 
-void ObjectManager::release_object_id(ObjectID object_id)
+void ObjectManager::release_object_id(Object::ID object_id)
 {
     auto match = std::lower_bound(
                 m_free_list.begin(),
                 m_free_list.end(),
                 object_id,
-                [](const ObjectIDRegion &region, const ObjectID object_id)
+                [](const IDRegion &region, const Object::ID object_id)
     {
         return (region.first < object_id);
     });
 
     if (match != m_free_list.begin()) {
         auto previous = match-1;
-        ObjectIDRegion &region = *previous;
+        IDRegion &region = *previous;
         if (region.first > 0 && region.first - 1 == object_id) {
             region.count++;
             region.first--;
@@ -153,7 +154,7 @@ void ObjectManager::release_object_id(ObjectID object_id)
         }
     }
 
-    m_free_list.insert(match, ObjectIDRegion{object_id, 1});
+    m_free_list.insert(match, IDRegion{object_id, 1});
 }
 
 void ObjectManager::set_object(std::unique_ptr<Object> &&obj)
@@ -161,7 +162,7 @@ void ObjectManager::set_object(std::unique_ptr<Object> &&obj)
     require_object_ptr(obj->object_id()) = std::move(obj);
 }
 
-void ObjectManager::kill(ObjectID object_id)
+void ObjectManager::kill(Object::ID object_id)
 {
     if (object_id == NULL_OBJECT_ID) {
         return;

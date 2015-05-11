@@ -29,13 +29,13 @@ the AUTHORS file.
 class MyObject: public sim::Object
 {
 public:
-    explicit MyObject(sim::ObjectID object_id):
+    explicit MyObject(sim::Object::ID object_id):
         sim::Object(object_id)
     {
 
     }
 
-    MyObject(sim::ObjectID object_id,
+    MyObject(sim::Object::ID object_id,
              unsigned int value):
         sim::Object(object_id),
         m_value(value)
@@ -50,7 +50,7 @@ public:
 class OtherObject: public sim::Object
 {
 public:
-    OtherObject(sim::ObjectID object_id):
+    OtherObject(sim::Object::ID object_id):
         sim::Object(object_id)
     {
         throw std::runtime_error("throw a thing");
