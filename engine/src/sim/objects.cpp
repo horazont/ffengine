@@ -8,7 +8,7 @@
 
 namespace sim {
 
-const ObjectID NULL_OBJECT_ID = std::numeric_limits<ObjectID>::max();
+const ObjectID NULL_OBJECT_ID = 0;
 
 
 /* sim::Object */
@@ -30,8 +30,60 @@ Object::~Object()
 ObjectManager::ObjectManager()
 {
     m_free_list.emplace_back(
-                ObjectIDRegion{0, std::numeric_limits<ObjectID>::max()-1}
+                ObjectIDRegion{1, std::numeric_limits<ObjectID>::max()-1}
                 );
+}
+
+inline ObjectChunk *ObjectManager::get_object_chunk(ObjectID object_id)
+{
+    if (object_id == NULL_OBJECT_ID) {
+        return nullptr;
+    }
+
+    // offset by one, we don’t waste space here
+    --object_id;
+
+    const std::vector<ObjectChunk>::size_type chunk_index =
+            object_id / ObjectChunk::CHUNK_SIZE;
+
+    if (chunk_index >= m_chunks.size()) {
+        return nullptr;
+    }
+
+    return &m_chunks[chunk_index];
+}
+
+inline std::unique_ptr<Object> *ObjectManager::get_object_ptr(ObjectID object_id)
+{
+    ObjectChunk *chunk = get_object_chunk(object_id);
+    if (!chunk) {
+        return nullptr;
+    }
+    return &(chunk->objects[object_id % ObjectChunk::CHUNK_SIZE]);
+}
+
+inline ObjectChunk &ObjectManager::require_object_chunk(ObjectID object_id)
+{
+    if (object_id == NULL_OBJECT_ID) {
+        throw std::runtime_error("NULL_OBJECT require");
+    }
+
+    // offset by one, we don’t waste space here
+    --object_id;
+
+    const std::vector<ObjectChunk>::size_type chunk_index =
+            object_id / ObjectChunk::CHUNK_SIZE;
+
+    if (chunk_index >= m_chunks.size()) {
+        m_chunks.resize(chunk_index+1);
+    }
+
+    return m_chunks[chunk_index];
+}
+
+inline std::unique_ptr<Object> &ObjectManager::require_object_ptr(ObjectID object_id)
+{
+    return require_object_chunk(object_id).objects[object_id % ObjectChunk::CHUNK_SIZE];
 }
 
 ObjectID ObjectManager::allocate_object_id()
@@ -49,19 +101,16 @@ ObjectID ObjectManager::allocate_object_id()
         m_free_list.erase(m_free_list.begin());
     }
 
-    m_chunks.resize(std::max((result / ObjectChunk::CHUNK_SIZE)+1,
-                             m_chunks.size()));
-
     return result;
 }
 
 Object *ObjectManager::get_base(ObjectID object_id)
 {
-    const std::vector<ObjectChunk>::size_type chunk_index = object_id / ObjectChunk::CHUNK_SIZE;
-    if (chunk_index >= m_chunks.size()) {
+    std::unique_ptr<Object> *object_ptr = get_object_ptr(object_id);
+    if (!object_ptr) {
         return nullptr;
     }
-    return m_chunks[chunk_index].objects[object_id % ObjectChunk::CHUNK_SIZE].get();
+    return object_ptr->get();
 }
 
 void ObjectManager::release_object_id(ObjectID object_id)
@@ -109,24 +158,24 @@ void ObjectManager::release_object_id(ObjectID object_id)
 
 void ObjectManager::set_object(std::unique_ptr<Object> &&obj)
 {
-    const ObjectID object_id = obj->object_id();
-    const std::vector<ObjectChunk>::size_type chunk_index = object_id / ObjectChunk::CHUNK_SIZE;
-    m_chunks[chunk_index].objects[object_id % ObjectChunk::CHUNK_SIZE] = std::move(obj);
+    require_object_ptr(obj->object_id()) = std::move(obj);
 }
 
 void ObjectManager::kill(ObjectID object_id)
 {
-    const std::vector<ObjectChunk>::size_type chunk_index = object_id / ObjectChunk::CHUNK_SIZE;
-    if (chunk_index >= m_chunks.size()) {
+    if (object_id == NULL_OBJECT_ID) {
         return;
     }
-    /* std::cout << "deleting object id " << object_id << std::endl;*/
-    std::unique_ptr<Object> &obj = m_chunks[chunk_index].objects[object_id % ObjectChunk::CHUNK_SIZE];
-    if (!obj) {
-        return;
-    }
-    obj = nullptr;
 
+    std::unique_ptr<Object> *object_ptr = get_object_ptr(object_id);
+    if (!object_ptr) {
+        return;
+    }
+    if (!(*object_ptr)) {
+        return;
+    }
+
+    *object_ptr = nullptr;
     release_object_id(object_id);
 }
 

@@ -63,11 +63,11 @@ TEST_CASE("sim/ObjectManager/allocate")
 {
     sim::ObjectManager om;
     MyObject &obj1 = om.allocate<MyObject>();
-    CHECK(obj1.object_id() == 0);
+    CHECK(obj1.object_id() == 1);
     MyObject &obj2 = om.allocate<MyObject>();
-    CHECK(obj2.object_id() == 1);
+    CHECK(obj2.object_id() == 2);
     MyObject &obj3 = om.allocate<MyObject>();
-    CHECK(obj3.object_id() == 2);
+    CHECK(obj3.object_id() == 3);
 }
 
 TEST_CASE("sim/ObjectManager/get")
@@ -78,13 +78,13 @@ TEST_CASE("sim/ObjectManager/get")
     om.allocate<MyObject>(30);
 
     {
-        MyObject *obj = om.get_safe<MyObject>(1);
+        MyObject *obj = om.get_safe<MyObject>(2);
         REQUIRE(obj != nullptr);
         CHECK(obj->m_value == 20);
     }
 
     {
-        OtherObject *obj = om.get_safe<OtherObject>(1);
+        OtherObject *obj = om.get_safe<OtherObject>(2);
         CHECK(obj == nullptr);
     }
 }
@@ -96,24 +96,24 @@ TEST_CASE("sim/ObjectManager/kill")
     om.allocate<MyObject>(20);
     om.allocate<MyObject>(30);
 
-    om.kill(0);
-    om.kill(2);
+    om.kill(1);
+    om.kill(3);
 
     MyObject &obj = om.allocate<MyObject>(40);
-    CHECK(obj.object_id() == 0);
+    CHECK(obj.object_id() == 1);
 
-    om.kill(0);
     om.kill(1);
+    om.kill(2);
 
-    CHECK(om.allocate<MyObject>(100).object_id() == 0);
-    CHECK(om.allocate<MyObject>(200).object_id() == 1);
-    CHECK(om.allocate<MyObject>(300).object_id() == 2);
+    CHECK(om.allocate<MyObject>(100).object_id() == 1);
+    CHECK(om.allocate<MyObject>(200).object_id() == 2);
+    CHECK(om.allocate<MyObject>(300).object_id() == 3);
 }
 
 TEST_CASE("sim/ObjectManager/continous_alloc")
 {
     sim::ObjectManager om;
-    for (unsigned int i = 0; i < 10000; i++) {
+    for (unsigned int i = 1; i <= 10000; i++) {
         MyObject &obj = om.allocate<MyObject>(i*10);
         CHECK(obj.object_id() == i);
     }
@@ -122,17 +122,18 @@ TEST_CASE("sim/ObjectManager/continous_alloc")
 TEST_CASE("sim/ObjectManager/random_dealloc_and_alloc")
 {
     sim::ObjectManager om;
-    for (unsigned int i = 0; i < 10000; i++) {
+    for (unsigned int i = 1; i <= 10000; i++) {
         MyObject &obj = om.allocate<MyObject>(i*10);
     }
 
-    for (unsigned int i = 0; i < 10000; i += 2) {
+    for (unsigned int i = 1; i <= 10000; i += 2) {
         om.kill(i);
     }
 
-    for (unsigned int i = 1; i < 10000; i += 2) {
+    for (unsigned int i = 2; i <= 10000; i += 2) {
         MyObject *obj = om.get_safe<MyObject>(i);
         REQUIRE(obj);
+        CHECK(obj->object_id() == i);
         CHECK(obj->m_value == i*10);
     }
 }
@@ -140,7 +141,7 @@ TEST_CASE("sim/ObjectManager/random_dealloc_and_alloc")
 TEST_CASE("sim/ObjectManager/reverse_dealloc_forward_alloc")
 {
     sim::ObjectManager om;
-    for (unsigned int i = 0; i < 10000; i++) {
+    for (unsigned int i = 1; i <= 10000; i++) {
         MyObject &obj = om.allocate<MyObject>(i*10);
     }
 
@@ -158,7 +159,7 @@ TEST_CASE("sim/ObjectManager/reverse_dealloc_forward_alloc")
 TEST_CASE("sim/ObjectManager/forward_dealloc_forward_alloc")
 {
     sim::ObjectManager om;
-    for (unsigned int i = 0; i < 10000; i++) {
+    for (unsigned int i = 1; i <= 10000; i++) {
         MyObject &obj = om.allocate<MyObject>(i*10);
     }
 
@@ -177,6 +178,6 @@ TEST_CASE("sim/ObjectManager/alloc_exception_handling")
 {
     sim::ObjectManager om;
     CHECK_THROWS(om.allocate<OtherObject>());
-    CHECK(om.allocate<MyObject>().object_id() == 0);
+    CHECK(om.allocate<MyObject>().object_id() == 1);
 }
 

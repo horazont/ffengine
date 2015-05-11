@@ -122,6 +122,63 @@ private:
     std::vector<ObjectChunk> m_chunks;
     std::vector<ObjectIDRegion> m_free_list;
 
+private:
+    /**
+     * Return a pointer to the ObjectChunk which holds the given ObjectID.
+     *
+     * If the addressed ObjectID is out of the currently reserved range,
+     * nullptr is returned. If the \a object_id is the NULL_OBJECT_ID, nullptr
+     * is returned.
+     *
+     * @param object_id ObjectID to look up
+     * @return Pointer to the ObjectChunk or nullptr.
+     */
+    ObjectChunk *get_object_chunk(ObjectID object_id);
+
+    /**
+     * Return the a pointer to the std::unique_ptr for the object with the
+     * given ObjectID.
+     *
+     * If the ObjectID is out of the currently reserved range, nullptr is
+     * returned. If \a object_id is NULL_OBJECT_ID, nullptr is returned.
+     * Otherwise, a pointer to a valid std::unique_ptr instance is returned.
+     * That instance may itself be a nullptr, if no object is currently
+     * associated with the given object id.
+     *
+     * @param object_id ObjectID to look up
+     * @return Pointer to an std::unique_ptr object for the object or nullptr.
+     */
+    std::unique_ptr<Object> *get_object_ptr(ObjectID object_id);
+
+    /**
+     * Return a reference to the ObjectChunk which holds the given ObjectID.
+     *
+     * If the addressed ObjectID is out of the currently reserved range,
+     * the range is extended accordingly. If \a object_id is NULL_OBJECT_ID,
+     * std::runtime_error is thrown.
+     *
+     * @param object_id ObjectID to look up
+     * @return Pointer to the ObjectChunk or nullptr.
+     * @throws std::runtime_error if \a object_id is NULL_OBJECT_ID.
+     */
+    ObjectChunk &require_object_chunk(ObjectID object_id);
+
+    /**
+     * Return the a reference to the std::unique_ptr for the object with the
+     * given ObjectID.
+     *
+     * If the ObjectID is out of the currently reserved range, the range is
+     * extended to cover the ObjectID. This results in a possibly large
+     * reallocation.
+     *
+     * If the ObjectID is the NULL_OBJECT_ID, std::runtime_error is thrown.
+     *
+     * @param object_id ObjectID to look up
+     * @return Pointer to an std::unique_ptr object for the object or nullptr.
+     * @throws std::runtime_error if the ObjectID is NULL_OBJECT_ID.
+     */
+    std::unique_ptr<Object> &require_object_ptr(ObjectID object_id);
+
 protected:
     /**
      * Allocate an unused ObjectID.
