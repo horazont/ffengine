@@ -170,7 +170,7 @@ private:
     const unsigned int m_max_depth;
 
     const sim::Terrain &m_terrain;
-    sim::NTMapGenerator &m_terrain_nt;
+    NTMapGenerator &m_terrain_nt;
 
     sigc::connection m_clear_cache_conn;
 

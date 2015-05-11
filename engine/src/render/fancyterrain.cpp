@@ -458,7 +458,7 @@ void FancyTerrainNode::sync(RenderContext &context)
 
         m_normalt.bind();
         {
-            const sim::NTMapGenerator::NTField *ntfield = nullptr;
+            const NTMapGenerator::NTField *ntfield = nullptr;
             auto nt_lock = m_terrain_nt.readonly_field(ntfield);
 
             glTexSubImage2D(GL_TEXTURE_2D, 0,

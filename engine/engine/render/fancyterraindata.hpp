@@ -32,6 +32,43 @@ the AUTHORS file.
 
 namespace engine {
 
+class NTMapGenerator: public sim::TerrainWorker
+{
+public:
+    typedef Vector4f element_t;
+    typedef std::vector<element_t> NTField;
+
+public:
+    NTMapGenerator(const sim::Terrain &source);
+    ~NTMapGenerator() override;
+
+private:
+    const sim::Terrain &m_source;
+
+    mutable std::shared_timed_mutex m_data_mutex;
+    NTField m_field;
+
+    sigc::signal<void, sim::TerrainRect> m_field_updated;
+
+protected:
+    void worker_impl(const sim::TerrainRect &updated) override;
+
+public:
+    inline sigc::signal<void, sim::TerrainRect> &field_updated()
+    {
+        return m_field_updated;
+    }
+
+    std::shared_lock<std::shared_timed_mutex> readonly_field(
+            const NTField *&field) const;
+
+    inline unsigned int size() const
+    {
+        return m_source.size();
+    }
+
+};
+
 /**
  * A helper class to provide data which is derived from the main heightmap in
  * near realtime.
@@ -53,7 +90,7 @@ private:
     const unsigned int m_grid_size;
 
     const sim::Terrain &m_terrain;
-    sim::NTMapGenerator m_terrain_nt;
+    NTMapGenerator m_terrain_nt;
 
     sigc::connection m_terrain_nt_conn;
 
@@ -80,7 +117,7 @@ public:
         return m_terrain;
     }
 
-    inline sim::NTMapGenerator &ntmap()
+    inline NTMapGenerator &ntmap()
     {
         return m_terrain_nt;
     }

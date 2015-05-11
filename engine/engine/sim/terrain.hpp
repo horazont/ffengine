@@ -151,44 +151,6 @@ public:
 };
 
 
-class NTMapGenerator: public TerrainWorker
-{
-public:
-    typedef Vector4f element_t;
-    typedef std::vector<element_t> NTField;
-
-public:
-    NTMapGenerator(const Terrain &source);
-    ~NTMapGenerator() override;
-
-private:
-    const Terrain &m_source;
-
-    mutable std::shared_timed_mutex m_data_mutex;
-    NTField m_field;
-
-    sigc::signal<void, TerrainRect> m_field_updated;
-
-protected:
-    void worker_impl(const TerrainRect &updated) override;
-
-public:
-    inline sigc::signal<void, TerrainRect> &field_updated()
-    {
-        return m_field_updated;
-    }
-
-    std::shared_lock<std::shared_timed_mutex> readonly_field(
-            const NTField *&field) const;
-
-    inline unsigned int size() const
-    {
-        return m_source.size();
-    }
-
-};
-
-
 void copy_heightfield_rect(const Terrain::HeightField &src,
                            const unsigned int x0,
                            const unsigned int y0,
