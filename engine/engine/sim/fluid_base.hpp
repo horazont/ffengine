@@ -145,36 +145,6 @@ struct FluidCell
 
 
 /**
- * Fluid source/sink.
- *
- * The simulation sets the fluid to the given absolute height, so it may also
- * act as a sink if placed correctly.
- */
-struct FluidSource
-{
-    /**
-     * X origin (center) of the fluid source.
-     */
-    float x0;
-
-    /**
-     * Y origin (center) of the fluid source.
-     */
-    float y0;
-
-    /**
-     * Radius of the fluid source.
-     */
-    float radius;
-
-    /**
-     * Absolute height of the fluid at the source.
-     */
-    FluidFloat absolute_height;
-};
-
-
-/**
  * Metadata for a fluid engine block
  *
  * A block is a square group of cells. Each block can be active or inactive,
