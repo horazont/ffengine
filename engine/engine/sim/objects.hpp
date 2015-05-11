@@ -348,6 +348,10 @@ public:
      * If the ID is already in use by a different object, std::runtime_error
      * is thrown.
      *
+     * If the requested ID is equal to Object::NULL_OBJECT_ID, the call
+     * behaves like allocate() and sources an unused ID from the allocation
+     * pool.
+     *
      * @param object_id Object::ID to use for the new object.
      * @return Reference to the new \a T instance.
      * @throws std::runtime_error on ID conflict
@@ -355,6 +359,10 @@ public:
     template <typename T, typename... arg_ts>
     T &emplace(const Object::ID object_id, arg_ts&&... args)
     {
+        if (object_id == Object::NULL_OBJECT_ID) {
+            return allocate<T>(std::forward<arg_ts>(args)...);
+        }
+
         auto obj_ptr = std::make_unique<T>(object_id,
                                            std::forward<arg_ts>(args)...);
         T &obj = *obj_ptr;

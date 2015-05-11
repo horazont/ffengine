@@ -243,3 +243,11 @@ TEST_CASE("sim/ObjectManager/emplace/conflict")
     MyObject &obj1 = om.allocate<MyObject>();
     CHECK_THROWS(om.emplace<MyObject>(obj1.object_id()));
 }
+
+TEST_CASE("sim/ObjectManager/emplace/null_id_allocates_new_id")
+{
+    sim::ObjectManager om;
+    MyObject &obj1 = om.allocate<MyObject>();
+    MyObject &obj2 = om.emplace<MyObject>(sim::Object::NULL_OBJECT_ID);
+    CHECK(obj2.object_id() == 2);
+}
