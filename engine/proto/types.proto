@@ -2,4 +2,5 @@ package sim;
 
 enum WorldOperationResult {
     NO_ERROR = 0;
+    NO_SUCH_OBJECT = 1;
 };

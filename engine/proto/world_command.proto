@@ -38,6 +38,23 @@ message FluidSource_Create {
     optional uint64 object_id = 6;
 };
 
+message FluidSource_SetPos {
+    required uint64 object_id = 1;
+    required float new_x = 2;
+    required float new_y = 3;
+};
+
+message FluidSource_SetParams {
+    required uint64 object_id = 1;
+    required float new_radius = 2;
+    required float new_height = 3;
+    required float new_capacity = 4;
+};
+
+message FluidSource_Delete {
+    required uint64 object_id = 1;
+};
+
 message WorldCommandResponse {
     required uint32 token = 1;
     optional .sim.WorldOperationResult result = 2;

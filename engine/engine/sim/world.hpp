@@ -176,6 +176,7 @@ public:
                                      const unsigned int brush_size,
                                      const std::vector<float> &density_map,
                                      const float brush_strength);
+
 };
 
 
