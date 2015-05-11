@@ -60,12 +60,15 @@ FluidCell::FluidCell():
 const FluidFloat FluidBlock::CHANGE_BACKLOG_FILTER_CONSTANT = 0.9f;
 const FluidFloat FluidBlock::CHANGE_BACKLOG_THRESHOLD  = 0.0001f;
 const FluidFloat FluidBlock::REACTIVATION_THRESHOLD = 0.00012f;
+const FluidFloat FluidBlock::CHANGE_TRANSFER_FACTOR = 1.f;
+
 
 FluidBlock::FluidBlock(const unsigned int x,
                        const unsigned int y):
     m_x(x),
     m_y(y),
     m_change_backlog(0.f),
+    m_front_change(0.f),
     m_active(false),
     m_meta_cells(IFluidSim::block_size*IFluidSim::block_size),
     m_back_cells(m_meta_cells.size()),

@@ -377,7 +377,34 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
     }
     block.accum_change(change_accum);
 
-    if (block.change() < FluidBlock::CHANGE_BACKLOG_THRESHOLD) {
+    FluidFloat change_plus_neighbours = block.change();
+
+    if (block.x() > 0) {
+        FluidBlock &neighbour = *m_blocks.block(block.x()-1, block.y());
+        if (neighbour.active()) {
+            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        }
+    }
+    if (block.y() > 0) {
+        FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()-1);
+        if (neighbour.active()) {
+            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        }
+    }
+    if (block.x() < m_blocks.blocks_per_axis()-1) {
+        FluidBlock &neighbour = *m_blocks.block(block.x()+1, block.y());
+        if (neighbour.active()) {
+            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        }
+    }
+    if (block.y() < m_blocks.blocks_per_axis()-1) {
+        FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()+1);
+        if (neighbour.active()) {
+            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        }
+    }
+
+    if (change_plus_neighbours < FluidBlock::CHANGE_BACKLOG_THRESHOLD) {
         logger.logf(io::LOG_DEBUG, "disabling block %u,%u after change of %.4f",
                     block.x(), block.y(),
                     block.change());

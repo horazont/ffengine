@@ -180,6 +180,7 @@ public:
     static const FluidFloat CHANGE_BACKLOG_FILTER_CONSTANT;
     static const FluidFloat CHANGE_BACKLOG_THRESHOLD;
     static const FluidFloat REACTIVATION_THRESHOLD;
+    static const FluidFloat CHANGE_TRANSFER_FACTOR;
 
 public:
     FluidBlock(const unsigned int x,
@@ -190,6 +191,7 @@ private:
     const unsigned int m_y;
 
     float m_change_backlog;
+    float m_front_change;
     bool m_active;
 
     std::vector<FluidCellMeta> m_meta_cells;
@@ -262,9 +264,15 @@ public:
         return m_change_backlog;
     }
 
+    inline FluidFloat front_change() const
+    {
+        return m_front_change;
+    }
+
     inline void swap_buffers()
     {
         m_back_cells.swap(m_front_cells);
+        m_front_change = m_change_backlog;
     }
 
 };
