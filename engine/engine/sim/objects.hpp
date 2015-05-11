@@ -42,8 +42,19 @@ class ObjectManager;
  * Each object has its own unique \a object_id. No two objects with the same
  * object id exist at the same time within the same ObjectManager.
  *
- * To delete an object, do not call delete. Use the ObjectManager::kill()
- * method.
+ * To create Object (or dervied) instances, use ObjectManager::allocate() or
+ * ObjectManager::emplace(). To delete Object instances, use
+ * ObjectManager::kill(). Directly deleting an Object will bring an army of
+ * rampaging dragons upon you.
+ *
+ * Generally, client and server share the same view of the object IDs, as
+ * the server dictates which IDs to use for a new object and clients have
+ * no word to say here. This allows clients and servers to refer to objects
+ * in messages using the IDs.
+ *
+ * @see ObjectManager::allocate()
+ * @see ObjectManager::emplace()
+ * @see ObjectManager::kill()
  */
 class Object
 {
@@ -63,15 +74,28 @@ public:
 
 public:
     /**
-     * Create a new Object with the given Object::ID.
+     * Create a new Object with the given ID.
      *
      * Generally, it is not advisable to create objects this way. Use
      * ObjectManager::allocate() instead, which will also allocate the
-     * Object::ID for you.
+     * ID for you. If you already have an object ID, use
+     * ObjectManager::emplace().
      *
      * @param object_id Object::ID as allocated by an ObjectManager.
+     *
+     * @see ObjectManager::allocate()
+     * @see ObjectManager::emplace()
      */
     explicit Object(const ID object_id);
+
+    /**
+     * Delete the Object.
+     *
+     * Generally, deleting an Object (or subclass) directly is not supported.
+     * Use ObjectManager::kill().
+     *
+     * @see ObjectManager::kill()
+     */
     virtual ~Object();
 
 private:
@@ -79,7 +103,10 @@ private:
 
 public:
     /**
-     * Object::ID of this object.
+     * ID of this object.
+     *
+     * Note that object IDs are scoped within ObjectManager instances and have
+     * no meaning outside that scope.
      */
     inline ID object_id() const
     {
