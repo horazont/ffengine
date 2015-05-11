@@ -40,7 +40,9 @@ IFluidSim::~IFluidSim()
 /* sim::FluidCellMeta */
 
 FluidCellMeta::FluidCellMeta():
-    terrain_height(0)
+    terrain_height(0),
+    source_height(-1),
+    source_capacity(0)
 {
 
 }

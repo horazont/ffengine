@@ -108,6 +108,17 @@ struct FluidCellMeta
      * based on the height of the four adjacent vertices.
      */
     FluidFloat terrain_height;
+
+    /**
+     * Absolute height of a source working in this cell.
+     */
+    FluidFloat source_height;
+
+    /**
+     * Strength (Height Units per Frame) the source can source. If no source
+     * is present in this cell, this is set to 0.
+     */
+    FluidFloat source_capacity;
 };
 
 

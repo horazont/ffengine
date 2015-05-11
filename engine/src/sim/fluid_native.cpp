@@ -348,6 +348,18 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
                             *right, right_meta);
             }
 
+            if (meta->source_capacity > 0) {
+                const float source_fluid_height = meta->source_height - meta->terrain_height;
+                const float source_flow = clamp(
+                            source_fluid_height - back->fluid_height,
+                            -meta->source_capacity,
+                            meta->source_capacity);
+                back->fluid_height += source_flow;
+                if (back->fluid_height < 0) {
+                    back->fluid_height = 0;
+                }
+            }
+
             change_accum += std::abs(back->fluid_height - front->fluid_height);
 
             ++back;
