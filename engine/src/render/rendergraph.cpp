@@ -137,6 +137,9 @@ void RenderContext::sync()
                 m_viewport_width,
                 m_viewport_height);
     m_matrix_ubo.set<1>(m_render_view);
+    m_inv_matrix_ubo.set<1>(inv_view);
+    m_inv_matrix_ubo.bind();
+    m_inv_matrix_ubo.update_bound();
 
     Matrix4f projview = m_matrix_ubo.get_ref<0>()/* * m_render_view*/;
     m_frustum[0] = Plane(projview * Vector4f(1, 0, 0, -1));
