@@ -32,7 +32,7 @@ the AUTHORS file.
 
 #include "engine/sim/fluid_native.hpp"
 
-#define TIMELOG_FLUIDFRONTEND
+// #define TIMELOG_FLUIDFRONTEND
 
 #ifdef TIMELOG_FLUIDFRONTEND
 #include <chrono>

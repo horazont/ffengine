@@ -27,7 +27,7 @@ the AUTHORS file.
 
 #include "engine/math/algo.hpp"
 
-#define TIMELOG_FLUIDSIM
+// #define TIMELOG_FLUIDSIM
 
 #ifdef TIMELOG_FLUIDSIM
 #include <chrono>
