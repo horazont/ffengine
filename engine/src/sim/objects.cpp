@@ -60,7 +60,7 @@ inline std::unique_ptr<Object> *ObjectManager::get_object_ptr(Object::ID object_
     if (!chunk) {
         return nullptr;
     }
-    return &(chunk->objects[object_id % Chunk::CHUNK_SIZE]);
+    return &(chunk->objects[(object_id-1) % Chunk::CHUNK_SIZE]);
 }
 
 inline ObjectManager::Chunk &ObjectManager::require_object_chunk(Object::ID object_id)
@@ -84,7 +84,7 @@ inline ObjectManager::Chunk &ObjectManager::require_object_chunk(Object::ID obje
 
 inline std::unique_ptr<Object> &ObjectManager::require_object_ptr(Object::ID object_id)
 {
-    return require_object_chunk(object_id).objects[object_id % Chunk::CHUNK_SIZE];
+    return require_object_chunk(object_id).objects[(object_id-1) % Chunk::CHUNK_SIZE];
 }
 
 Object::ID ObjectManager::allocate_object_id()
