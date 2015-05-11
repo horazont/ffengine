@@ -162,35 +162,43 @@ void Fluid::start()
 
 void Fluid::to_gl_texture() const
 {
-    const unsigned int total_cells = m_blocks.cells_per_axis()*m_blocks.cells_per_axis();
+    const unsigned int block_cells = IFluidSim::block_size*IFluidSim::block_size;
 
     // terrain_height, fluid_height, flowx, flowy
-    std::vector<Vector4f> buffer(total_cells);
+    std::vector<Vector4f> buffer(block_cells);
 
     {
         auto lock = m_blocks.read_frontbuffer();
-        Vector4f *dest = &buffer.front();
-        for (unsigned int y = 0; y < m_blocks.cells_per_axis(); ++y)
+        for (unsigned int y = 0; y < m_blocks.blocks_per_axis(); ++y)
         {
-            for (unsigned int x = 0; x < m_blocks.cells_per_axis(); ++x)
+            for (unsigned int x = 0; x < m_blocks.blocks_per_axis(); ++x)
             {
-                const FluidCellMeta *meta = m_blocks.cell_meta(x, y);
-                const FluidCell *cell = m_blocks.cell_front(x, y);
-                *dest = Vector4f(meta->terrain_height, cell->fluid_height,
-                                 cell->fluid_flow[0], cell->fluid_flow[1]);
+                const FluidBlock *block = m_blocks.block(x, y);
+                if (!block->active()) {
+                    continue;
+                }
 
-                ++dest;
+                Vector4f *dest = &buffer.front();
+                const FluidCellMeta *meta = block->local_cell_meta(0, 0);
+                const FluidCell *cell = block->local_cell_front(0, 0);
+                for (unsigned int i = 0; i < block_cells; ++i) {
+                    *dest = Vector4f(meta->terrain_height, cell->fluid_height,
+                                     cell->fluid_flow[0], cell->fluid_flow[1]);
+
+                    ++dest;
+                    ++meta;
+                    ++cell;
+                }
+                glTexSubImage2D(GL_TEXTURE_2D, 0,
+                                x*IFluidSim::block_size, y*IFluidSim::block_size,
+                                IFluidSim::block_size,
+                                IFluidSim::block_size,
+                                GL_RGBA,
+                                GL_FLOAT,
+                                buffer.data());
             }
         }
     }
-
-    glTexSubImage2D(GL_TEXTURE_2D, 0,
-                    0, 0,
-                    m_blocks.cells_per_axis(),
-                    m_blocks.cells_per_axis(),
-                    GL_RGBA,
-                    GL_FLOAT,
-                    buffer.data());
     engine::raise_last_gl_error();
 }
 
