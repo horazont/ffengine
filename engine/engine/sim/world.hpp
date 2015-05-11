@@ -120,6 +120,12 @@ protected:
                                     const unsigned int brush_size);
 
 public:
+    inline WorldState &state()
+    {
+        return m_state;
+    }
+
+public:
     /**
      * Raise the terrain around \a xc, \a yc.
      *

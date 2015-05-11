@@ -99,6 +99,34 @@ public:
 
 };
 
+
+class FluidSourceCreate: public ObjectWorldOperation
+{
+public:
+    FluidSourceCreate(
+            const float x, const float y,
+            const float radius,
+            const float height,
+            const float capacity,
+            const Object::ID object_id = Object::NULL_OBJECT_ID);
+
+private:
+    const float m_x;
+    const float m_y;
+    const float m_radius;
+    const float m_height;
+    const float m_capacity;
+
+public:
+    WorldOperationResult execute(WorldMutator &mutator) override;
+
+public:
+    static std::unique_ptr<FluidSourceCreate> from_source(
+            Fluid::Source *source);
+
+};
+
+
 }
 }
 

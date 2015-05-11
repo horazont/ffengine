@@ -26,6 +26,18 @@ message TerraformLevel {
     required float reference_height = 6;
 };
 
+message FluidSource_Create {
+    required float x = 1;
+    required float y = 2;
+    required float radius = 3;
+    required float height = 4;
+    required float capacity = 5;
+    /** servers send the object_id; if a client sets the object_id, it is
+     * ignored (and the client possibly disconnected for violating the
+     * protocol) */
+    optional uint64 object_id = 6;
+};
+
 message WorldCommandResponse {
     required uint32 token = 1;
     optional .sim.WorldOperationResult result = 2;

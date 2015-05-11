@@ -96,5 +96,34 @@ WorldOperationResult FluidRaise::execute(WorldMutator &mutator)
 }
 
 
+/* sim::ops::FluidSourceCreate */
+
+FluidSourceCreate::FluidSourceCreate(const float x, const float y,
+        const float radius,
+        const float height,
+        const float capacity,
+        const Object::ID object_id):
+    ObjectWorldOperation(object_id),
+    m_x(x),
+    m_y(y),
+    m_radius(radius),
+    m_height(height),
+    m_capacity(capacity)
+{
+
+}
+
+WorldOperationResult FluidSourceCreate::execute(WorldMutator &mutator)
+{
+    Fluid::Source &obj = mutator.state().objects().allocate<Fluid::Source>(
+                m_x, m_y,
+                m_radius,
+                m_height,
+                m_capacity);
+    mutator.state().fluid().add_source(&obj);
+    return NO_ERROR;
+}
+
+
 }
 }
