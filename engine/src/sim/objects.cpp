@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <iomanip>
 #include <limits>
 
 
@@ -105,6 +105,70 @@ Object::ID ObjectManager::allocate_object_id()
     return result;
 }
 
+void ObjectManager::emplace_object(std::unique_ptr<Object> &&obj)
+{
+    const Object::ID object_id = obj->object_id();
+
+    auto match = std::lower_bound(
+                m_free_list.begin(),
+                m_free_list.end(),
+                object_id,
+                [](const IDRegion &region, const Object::ID object_id)
+    {
+        return (region.first <= object_id);
+    });
+
+    if (match == m_free_list.begin()) {
+        // the match is above the object_id, but it is the first entry in the
+        // free list
+        throw std::runtime_error("emplace_object id not in free list");
+    }
+    --match;
+
+    IDRegion &region = *match;
+    // we know that region.first < obj->object_id(), as per std::lower_bound
+    assert(region.first <= object_id);
+
+    if (region.first + region.count <= object_id) {
+        // the object id is above the region, and the next region is above the
+        // object id.
+        throw std::runtime_error("emplace_object id not in free list");
+    }
+
+    require_object_ptr(object_id) = std::move(obj);
+
+    // first the easy cases:
+    if (region.first == object_id) {
+        // id is at the beginning of the region
+        region.first++;
+        region.count--;
+        if (region.count == 0) {
+            m_free_list.erase(match);
+        }
+        return;
+    } else if (region.first + region.count - 1 == object_id) {
+        // id is at the end of the region
+        region.count--;
+        // otherwise, this must had been handled by the previous if!
+        assert(region.count > 0);
+        return;
+    } else {
+        // the general case. I hate the general cases. We have to split the
+        // region. For ease of inserting, we use the current region for the
+        // upper range and create a new one for the lower range.
+        IDRegion new_region;
+        new_region.first = region.first;
+        new_region.count = object_id - region.first;
+
+        region.first = object_id + 1;
+        region.count = region.count - (new_region.count + 1);
+
+        // take care to emplace into the free_list at the end, otherwise the
+        // region reference invalidates.
+        m_free_list.emplace(match, new_region);
+    }
+}
+
 Object *ObjectManager::get_base(Object::ID object_id)
 {
     std::unique_ptr<Object> *object_ptr = get_object_ptr(object_id);
@@ -178,6 +242,22 @@ void ObjectManager::kill(Object::ID object_id)
 
     *object_ptr = nullptr;
     release_object_id(object_id);
+}
+
+std::ostream &ObjectManager::dump_free_list(std::ostream &out)
+{
+    unsigned int i = 0;
+    for (auto &region: m_free_list)
+    {
+        out << "entry " << std::setfill(' ') << std::setw(3) << i << std::endl;
+        out << "  first = 0x"
+            << std::setbase(16) << std::setw(16) << std::setfill('0') << region.first
+            << "  count = 0x"
+            << std::setbase(16) << std::setw(16) << region.count
+            << std::endl;
+        ++i;
+    }
+    return out;
 }
 
 

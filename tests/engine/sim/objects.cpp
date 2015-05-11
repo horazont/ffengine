@@ -25,6 +25,8 @@ the AUTHORS file.
 
 #include "engine/sim/objects.hpp"
 
+#include <iostream>
+
 
 class MyObject: public sim::Object
 {
@@ -181,3 +183,63 @@ TEST_CASE("sim/ObjectManager/alloc_exception_handling")
     CHECK(om.allocate<MyObject>().object_id() == 1);
 }
 
+TEST_CASE("sim/ObjectManager/emplace")
+{
+    sim::ObjectManager om;
+    MyObject &obj1 = om.allocate<MyObject>();
+    MyObject &obj2 = om.emplace<MyObject>(3);
+
+    // make sure the objects still exist
+    REQUIRE(om.get_safe<MyObject>(1));
+    REQUIRE(om.get_safe<MyObject>(3));
+
+    CHECK(obj1.object_id() == 1);
+    CHECK(obj2.object_id() == 3);
+
+    CHECK(om.allocate<MyObject>().object_id() == 2);
+    CHECK(om.allocate<MyObject>().object_id() == 4);
+}
+
+TEST_CASE("sim/ObjectManager/emplace/freelist_case_beginning")
+{
+    sim::ObjectManager om;
+    MyObject &obj1 = om.allocate<MyObject>();
+    MyObject &obj2 = om.emplace<MyObject>(2);
+
+    // make sure the objects still exist
+    REQUIRE(om.get_safe<MyObject>(1));
+    REQUIRE(om.get_safe<MyObject>(2));
+
+    CHECK(obj1.object_id() == 1);
+    CHECK(obj2.object_id() == 2);
+
+    CHECK(om.allocate<MyObject>().object_id() == 3);
+    CHECK(om.allocate<MyObject>().object_id() == 4);
+}
+
+TEST_CASE("sim/ObjectManager/emplace/freelist_case_end")
+{
+    sim::ObjectManager om;
+    MyObject &obj1 = om.allocate<MyObject>();
+    MyObject &obj2 = om.emplace<MyObject>(4);
+    MyObject &obj3 = om.emplace<MyObject>(3);
+
+    // make sure the objects still exist
+    REQUIRE(om.get_safe<MyObject>(1));
+    REQUIRE(om.get_safe<MyObject>(4));
+    REQUIRE(om.get_safe<MyObject>(3));
+
+    CHECK(obj1.object_id() == 1);
+    CHECK(obj2.object_id() == 4);
+    CHECK(obj3.object_id() == 3);
+
+    CHECK(om.allocate<MyObject>().object_id() == 2);
+    CHECK(om.allocate<MyObject>().object_id() == 5);
+}
+
+TEST_CASE("sim/ObjectManager/emplace/conflict")
+{
+    sim::ObjectManager om;
+    MyObject &obj1 = om.allocate<MyObject>();
+    CHECK_THROWS(om.emplace<MyObject>(obj1.object_id()));
+}

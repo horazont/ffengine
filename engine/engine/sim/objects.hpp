@@ -28,6 +28,7 @@ the AUTHORS file.
 #include <cstdint>
 #include <list>
 #include <memory>
+#include <ostream>
 #include <vector>
 
 namespace sim {
@@ -217,6 +218,17 @@ protected:
     Object::ID allocate_object_id();
 
     /**
+     * Emplace the given object into the ObjectManager.
+     *
+     * If the object refers to an Object::ID which is already in use in this
+     * ObjectManager, std::runtime_error is thrown.
+     *
+     * @param obj Object to emplace.
+     * @throws std::runtime_error on ID conflict.
+     */
+    void emplace_object(std::unique_ptr<Object> &&obj);
+
+    /**
      * Return a pointer to the Object associated with a given Object::ID.
      *
      * @param object_id ID to look up
@@ -246,13 +258,41 @@ protected:
 
 public:
     /**
-     * Allocate a new object of type \a T.
+     * @name Management functions
+     * These functions are used to allocate and release objects and
+     * corresponding Object::ID numbers.
+     */
+
+    /**@{*/
+
+    /**
+     * Allocate a new object of type \a T and auto-assign an Object::ID.
      *
-     * The arguments are passed to the constructor of \a T, prepended with the
-     * new objects ID.
+     * Object::ID assignment is implementation-defined; an ID may be
+     * reassigned after the object to which it belongs has been deleted. IDs
+     * are not used for multiple objects at the same time within the same
+     * ObjectManager.
+     *
+     * The arguments are forwarded to the constructor of \a T, prepended with
+     * the newly allocated Object::ID.
+     *
+     * The \a T instance is owned by the ObjectManager and will be deleted
+     * automatically when ObjectManager is deleted. If you want to delete the
+     * instance before that happens, use the kill().
+     *
+     * This method has strong exception safety against exceptions from the
+     * constructor of \a T and those exceptions also propagate unchanged.
+     *
+     * If the ObjectManager runs out of IDs, std::runtime_error is thrown and
+     * you are doomed. IDs are 64 bit integers. You do not simply run out of
+     * 64 bit integers to identify objects. You simply cannot on current
+     * architectures.
+     *
+     * @return Reference to the new \a T instance.
+     * @throws std::runtime_error If the ObjectManager runs out of IDs.
      */
     template <typename T, typename... arg_ts>
-    T &allocate(arg_ts... args)
+    T &allocate(arg_ts&&... args)
     {
         const Object::ID object_id = allocate_object_id();
         T *obj = nullptr;
@@ -269,6 +309,30 @@ public:
         }
         set_object(std::move(instance));
         return *obj;
+    }
+
+    /**
+     * Allocate a new object of type \a T with the given \a object_id.
+     *
+     * The basic functionality is identical to allocate(), but instead of
+     * pulling the Object::ID from the internal pool of unused IDs, the given
+     * ID is used.
+     *
+     * If the ID is already in use by a different object, std::runtime_error
+     * is thrown.
+     *
+     * @param object_id Object::ID to use for the new object.
+     * @return Reference to the new \a T instance.
+     * @throws std::runtime_error on ID conflict
+     */
+    template <typename T, typename... arg_ts>
+    T &emplace(const Object::ID object_id, arg_ts&&... args)
+    {
+        auto obj_ptr = std::make_unique<T>(object_id,
+                                           std::forward<arg_ts>(args)...);
+        T &obj = *obj_ptr;
+        emplace_object(std::move(obj_ptr));
+        return obj;
     }
 
     /**
@@ -315,6 +379,37 @@ public:
      */
     void kill(Object::ID object_id);
 
+    /**
+     * Delete the given object managed by this ObjectManager.
+     *
+     * This call is equivalent to calling kill(Object::ID) with
+     * ``object.object_id()``; the implications which follow from this if the
+     * Object is owned by a different ObjectManager do apply (i.e. you will
+     * either kill a different object or it is a no-op).
+     *
+     * @param object Object to kill.
+     */
+    inline void kill(Object &object)
+    {
+        kill(object.object_id());
+    }
+
+    /**@}*/
+
+public:
+    /** @name Debugging
+     * Methods used for debugging
+     */
+    /**@{*/
+
+    /**
+     * Dump the free list to the given output stream.
+     *
+     * @param out Output stream to write the free list to.
+     */
+    std::ostream &dump_free_list(std::ostream &out);
+
+    /**@}*/
 };
 
 
