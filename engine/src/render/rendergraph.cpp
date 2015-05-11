@@ -156,7 +156,7 @@ void RenderContext::configure_shader(ShaderProgram &shader)
                     MATRIX_BLOCK_UBO_SLOT);
     }
     if (shader.uniform_block_location("InvMatrixBlock") >= 0) {
-        shader.check_uniform_block<MatrixUBO>("InvMatrixBlock");
+        shader.check_uniform_block<InvMatrixUBO>("InvMatrixBlock");
         shader.bind_uniform_block(
                     "InvMatrixBlock",
                     INV_MATRIX_BLOCK_UBO_SLOT);
