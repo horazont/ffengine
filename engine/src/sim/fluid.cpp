@@ -32,6 +32,15 @@ the AUTHORS file.
 
 #include "engine/sim/fluid_native.hpp"
 
+#define TIMELOG_FLUIDFRONTEND
+
+#ifdef TIMELOG_FLUIDFRONTEND
+#include <chrono>
+typedef std::chrono::steady_clock timelog_clock;
+
+#define TIMELOG_ms(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x).count()
+#endif
+
 namespace sim {
 
 static io::Logger &logger = io::logging().get_logger("sim.fluid");
@@ -164,6 +173,11 @@ void Fluid::to_gl_texture() const
 {
     const unsigned int block_cells = IFluidSim::block_size*IFluidSim::block_size;
 
+#ifdef TIMELOG_FLUIDFRONTEND
+    timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_upload;
+#endif
+
     // terrain_height, fluid_height, flowx, flowy
     std::vector<Vector4f> buffer(block_cells);
 
@@ -200,6 +214,13 @@ void Fluid::to_gl_texture() const
         }
     }
     engine::raise_last_gl_error();
+
+#ifdef TIMELOG_FLUIDFRONTEND
+    t_upload = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "fluid: texture upload: %.2f ms",
+                TIMELOG_ms(t_upload - t0));
+#endif
+
 }
 
 void Fluid::wait_for()
