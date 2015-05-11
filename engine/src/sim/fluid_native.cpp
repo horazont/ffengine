@@ -313,6 +313,7 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
     std::array<const FluidCellMeta*, 8> neigh_meta;
 
     float change_accum = 0.f;
+    float wet_cells = 0.f;
 
     FluidCell *back = block.local_cell_back(0, 0);
     const FluidCell *front = block.local_cell_front(0, 0);
@@ -361,6 +362,9 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
             }
 
             change_accum += std::abs(back->fluid_height - front->fluid_height);
+            if (back->fluid_height > 0.f || front->fluid_height > 0.f) {
+                wet_cells += 1.f;
+            }
 
             ++back;
             ++front;
@@ -368,7 +372,11 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
         }
     }
 
+    if (wet_cells > 0.f) {
+        change_accum /= wet_cells;
+    }
     block.accum_change(change_accum);
+
     if (block.change() < FluidBlock::CHANGE_BACKLOG_THRESHOLD) {
         logger.logf(io::LOG_DEBUG, "disabling block %u,%u after change of %.4f",
                     block.x(), block.y(),
@@ -393,6 +401,7 @@ FluidFloat check_active_seams(FluidCell *local_seam_back,
     const unsigned int stride = (dir == 0 ? IFluidSim::block_size : 1);
 
     FluidFloat difference_accum = FluidFloat(0);
+    FluidFloat wet_cells = FluidFloat(0);
 
     for (unsigned int i = 0; i < IFluidSim::block_size; i++)
     {
@@ -422,6 +431,13 @@ FluidFloat check_active_seams(FluidCell *local_seam_back,
             }
         }
 
+        if (local_seam_back->fluid_height > 0.f ||
+                local_seam_front->fluid_height > 0.f ||
+                neighbour_seam_front->fluid_height > 0.f)
+        {
+            wet_cells += 1;
+        }
+
         local_seam_back += stride;
         local_seam_front += stride;
         local_seam_meta += stride;
@@ -430,6 +446,9 @@ FluidFloat check_active_seams(FluidCell *local_seam_back,
         flow_source_front += stride;
     }
 
+    if (wet_cells > 0) {
+        difference_accum /= wet_cells;
+    }
     return difference_accum;
 }
 
