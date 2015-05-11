@@ -57,8 +57,9 @@ FluidCell::FluidCell():
 
 /* sim::FluidBlock */
 
-const FluidFloat FluidBlock::CHANGE_BACKLOG_FILTER_CONSTANT = 0.6f;
-const FluidFloat FluidBlock::CHANGE_BACKLOG_THRESHOLD  = 0.1f;
+const FluidFloat FluidBlock::CHANGE_BACKLOG_FILTER_CONSTANT = 0.9f;
+const FluidFloat FluidBlock::CHANGE_BACKLOG_THRESHOLD  = 0.03f;
+const FluidFloat FluidBlock::REACTIVATION_THRESHOLD = 0.08f;
 
 FluidBlock::FluidBlock(const unsigned int x,
                        const unsigned int y):

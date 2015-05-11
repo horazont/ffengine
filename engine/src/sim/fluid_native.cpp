@@ -495,10 +495,12 @@ void NativeFluidSim::update_inactive_block(FluidBlock &block)
     }
 
     if (any) {
-        logger.logf(io::LOG_WARNING, "%.4f", difference_accum);
+        logger.logf(io::LOG_WARNING, "%d %d %.4f",
+                    block.x(), block.y(),
+                    difference_accum);
     }
 
-    if (difference_accum > 0.1f)
+    if (difference_accum > FluidBlock::REACTIVATION_THRESHOLD)
     {
         logger.logf(io::LOG_DEBUG,
                     "reenabled block %u,%u with difference of %.4f",

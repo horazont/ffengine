@@ -179,6 +179,7 @@ class FluidBlock
 public:
     static const FluidFloat CHANGE_BACKLOG_FILTER_CONSTANT;
     static const FluidFloat CHANGE_BACKLOG_THRESHOLD;
+    static const FluidFloat REACTIVATION_THRESHOLD;
 
 public:
     FluidBlock(const unsigned int x,
@@ -245,7 +246,7 @@ public:
     {
         if (new_active != m_active && new_active)
         {
-            m_change_backlog = CHANGE_BACKLOG_THRESHOLD / CHANGE_BACKLOG_FILTER_CONSTANT;
+            m_change_backlog = CHANGE_BACKLOG_THRESHOLD * 3.f;
         }
         m_active = new_active;
     }
