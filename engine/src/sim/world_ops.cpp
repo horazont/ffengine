@@ -42,6 +42,14 @@ BrushWorldOperation::BrushWorldOperation(
 
 }
 
+/* sim::ops::ObjectWorldOperation */
+
+ObjectWorldOperation::ObjectWorldOperation(const Object::ID object_id):
+    m_object_id(object_id)
+{
+
+}
+
 /* sim::ops::TerraformRaise */
 
 WorldOperationResult TerraformRaise::execute(WorldMutator &mutator)

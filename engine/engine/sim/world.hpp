@@ -30,6 +30,7 @@ the AUTHORS file.
 
 #include "engine/sim/terrain.hpp"
 #include "engine/sim/fluid.hpp"
+#include "engine/sim/objects.hpp"
 
 #include "types.pb.h"
 
@@ -62,6 +63,7 @@ public:
 protected:
     Terrain m_terrain;
     Fluid m_fluid;
+    ObjectManager m_objects;
 
 public:
     inline const Fluid &fluid() const
@@ -82,6 +84,16 @@ public:
     inline Terrain &terrain()
     {
         return m_terrain;
+    }
+
+    inline const ObjectManager &objects() const
+    {
+        return m_objects;
+    }
+
+    inline ObjectManager &objects()
+    {
+        return m_objects;
     }
 
 };

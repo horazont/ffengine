@@ -47,6 +47,19 @@ protected:
 
 };
 
+
+class ObjectWorldOperation: public WorldOperation
+{
+public:
+    ObjectWorldOperation(
+            const Object::ID object_id);
+
+protected:
+    const Object::ID m_object_id;
+
+};
+
+
 class TerraformRaise: public BrushWorldOperation
 {
 public:
