@@ -71,6 +71,10 @@ public:
 
 public:
     void attach_to_fbo(const GLenum target, const GLenum attachment) override;
+    void reinit(const GLenum internal_format,
+                const GLsizei width, const GLsizei height,
+                const GLenum init_format = 0,
+                const GLenum init_type = GL_UNSIGNED_BYTE);
 
 };
 

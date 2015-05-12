@@ -61,16 +61,11 @@ Texture2D::Texture2D(const GLenum internal_format,
     GLObject<GL_TEXTURE_BINDING_2D>(),
     GL2DArray(internal_format, width, height)
 {
-    const GLenum null_format = (init_format ? init_format : get_suitable_format_for_null(m_internal_format));
-    const GLenum null_type = init_type;
 
     glGenTextures(1, &m_glid);
     glBindTexture(GL_TEXTURE_2D, m_glid);
     raise_last_gl_error();
-    glTexImage2D(GL_TEXTURE_2D, 0, m_internal_format, m_width, m_height, 0,
-                 null_format,
-                 null_type,
-                 (const void*)0);
+    reinit(internal_format, width, height, init_format, init_type);
     raise_last_gl_error();
     bound();
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -137,6 +132,25 @@ GLenum Texture2D::target()
 void Texture2D::attach_to_fbo(const GLenum target, const GLenum attachment)
 {
     glFramebufferTexture2D(target, attachment, GL_TEXTURE_2D, m_glid, 0);
+}
+
+void Texture2D::reinit(const GLenum internal_format,
+                       const GLsizei width, const GLsizei height,
+                       const GLenum init_format,
+                       const GLenum init_type)
+{
+    const GLenum null_format = (init_format ? init_format : get_suitable_format_for_null(m_internal_format));
+    const GLenum null_type = init_type;
+
+    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0,
+                 null_format,
+                 null_type,
+                 (const void*)0);
+    raise_last_gl_error();
+    m_width = width;
+    m_height = height;
+    m_internal_format = internal_format;
+
 }
 
 }
