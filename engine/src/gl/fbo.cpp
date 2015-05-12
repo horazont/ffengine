@@ -220,7 +220,6 @@ FBO::FBO(const GLsizei width, const GLsizei height):
 
 FBO &FBO::operator =(FBO &&ref)
 {
-    std::cout << "moving (" << m_owned_renderbuffers.size() << ")" << std::endl;
     if (m_glid != 0) {
         delete_globject();
     }
@@ -230,7 +229,6 @@ FBO &FBO::operator =(FBO &&ref)
     m_owned_renderbuffers = std::move(ref.m_owned_renderbuffers);
     m_width = ref.m_width;
     m_height = ref.m_height;
-    std::cout << "moved (" << m_owned_renderbuffers.size() << ")" << std::endl;
     ref.m_glid = 0;
     ref.m_dirty = false;
     ref.m_height = 0;
