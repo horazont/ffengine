@@ -140,6 +140,30 @@ public:
 
 };
 
+class TerraformRamp: public BrushWorldOperation
+{
+public:
+    TerraformRamp(
+            const float xc, const float yc,
+            const unsigned int brush_size,
+            const std::vector<float> &density_map,
+            const float brush_strength,
+            const Vector2f source_point,
+            const Terrain::height_t source_height,
+            const Vector2f destination_point,
+            const Terrain::height_t destination_height);
+
+private:
+    const Vector2f m_source_point;
+    const Terrain::height_t m_source_height;
+    const Vector2f m_destination_point;
+    const Terrain::height_t m_destination_height;
+
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
 
 class FluidRaise: public BrushWorldOperation
 {

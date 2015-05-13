@@ -80,7 +80,9 @@ void apply_brush_masked_tool(sim::Terrain::HeightField &field,
             sim::Terrain::height_t &h = field[yterrain*terrain_size+xterrain];
             h = std::max(sim::Terrain::min_height,
                          std::min(sim::Terrain::max_height,
-                                  impl.paint(h, brush_strength*sampled[y*size+x])));
+                                  impl.paint(
+                                      h, brush_strength*sampled[y*size+x],
+                                      xterrain, yterrain)));
         }
     }
 }
@@ -147,7 +149,8 @@ void apply_brush_masked_tool(FluidBlocks &field,
 struct raise_tool
 {
     sim::Terrain::height_t paint(sim::Terrain::height_t h,
-                                 float brush_density) const
+                                 float brush_density,
+                                 int, int) const
     {
         return h + brush_density;
     }
@@ -169,9 +172,46 @@ struct flatten_tool
     sim::Terrain::height_t new_value;
 
     sim::Terrain::height_t paint(sim::Terrain::height_t h,
-                                 float brush_density) const
+                                 float brush_density,
+                                 int, int) const
     {
         return interp_linear(h, new_value, brush_density);
+    }
+};
+
+/**
+ * Tool implementation for creating a ramp on the terrain
+ *
+ * For use with apply_brush_masked_tool().
+ */
+struct ramp_tool
+{
+    ramp_tool(const Vector2f source_point,
+              const Terrain::height_t source_height,
+              const Vector2f destination_point,
+              const Terrain::height_t destination_height):
+        origin(source_point),
+        direction((destination_point - source_point).normalized()),
+        length((destination_point - source_point).length()),
+        source_height(source_height),
+        destination_height(destination_height)
+    {
+
+    }
+
+    Vector2f origin;
+    Vector2f direction;
+    float length;
+    Terrain::height_t source_height, destination_height;
+
+    sim::Terrain::height_t paint(sim::Terrain::height_t h,
+                                 float brush_density,
+                                 int x, int y) const
+    {
+        Vector2f p_in_origin_space = Vector2f(x, y) - origin;
+        const float interp = clamp((p_in_origin_space * direction) / length,
+                                   0.f, 1.f);
+        return interp_linear(h, interp_linear(source_height, destination_height, interp), brush_density);
     }
 };
 
@@ -383,6 +423,41 @@ WorldOperationResult TerraformSmooth::execute(WorldState &state)
     return NO_ERROR;
 }
 
+
+/* sim::ops::TerraformRamp */
+
+TerraformRamp::TerraformRamp(const float xc, const float yc,
+                             const unsigned int brush_size,
+                             const std::vector<float> &density_map,
+                             const float brush_strength,
+                             const Vector2f source_point,
+                             const Terrain::height_t source_height,
+                             const Vector2f destination_point,
+                             const Terrain::height_t destination_height):
+    BrushWorldOperation(xc, yc, brush_size, density_map, brush_strength),
+    m_source_point(source_point),
+    m_source_height(source_height),
+    m_destination_point(destination_point),
+    m_destination_height(destination_height)
+{
+
+}
+
+WorldOperationResult TerraformRamp::execute(WorldState &state)
+{
+    {
+        sim::Terrain::HeightField *field = nullptr;
+        auto lock = state.terrain().writable_field(field);
+        apply_brush_masked_tool(*field,
+                                m_brush_size, m_density_map, m_brush_strength,
+                                state.terrain().size(),
+                                m_xc, m_yc,
+                                ramp_tool(m_source_point, m_source_height,
+                                          m_destination_point, m_destination_height));
+    }
+    notify_update_terrain_rect(state.terrain(), m_xc, m_yc, m_brush_size);
+    return NO_ERROR;
+}
 
 
 /* sim::ops::FluidRaise */
