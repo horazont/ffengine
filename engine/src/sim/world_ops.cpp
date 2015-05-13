@@ -282,6 +282,109 @@ WorldOperationResult TerraformLevel::execute(WorldState &state)
 }
 
 
+/* sim::ops::TerraformSmooth */
+
+Terrain::height_t TerraformSmooth::sample_parzen_rect(
+        const Terrain::HeightField &field,
+        const unsigned int terrain_size,
+        const unsigned int xc, const unsigned int yc,
+        const unsigned int size)
+{
+    TerrainRect r(0, 0, xc+size, yc+size);
+    if (xc < size) {
+        r.set_x0(0);
+    } else {
+        r.set_x0(xc-size);
+    }
+    if (yc < size) {
+        r.set_y0(0);
+    } else {
+        r.set_y0(yc-size);
+    }
+
+    if (r.x1() > terrain_size) {
+        r.set_x1(terrain_size);
+    }
+    if (r.y1() > terrain_size) {
+        r.set_y1(terrain_size);
+    }
+
+
+    float total_weight = 0;
+    float total_weighted_height = 0;
+    for (unsigned int y = r.y0(); y < r.y1(); ++y) {
+        for (unsigned int x = r.x0(); x < r.x1(); ++x) {
+            const float d = std::sqrt(
+                        sqr((float)x-(float)xc)+sqr((float)y-(float)yc)) / size;
+            const float weight = parzen(d);
+            total_weight += weight;
+            Terrain::height_t height = field[y*terrain_size+x];
+            total_weighted_height += height*weight;
+        }
+    }
+
+    if (total_weight == 0) {
+        return NAN;
+    }
+
+    return total_weighted_height / total_weight;
+}
+
+WorldOperationResult TerraformSmooth::execute(WorldState &state)
+{
+    {
+        sim::Terrain::HeightField *field = nullptr;
+        auto lock = state.terrain().writable_field(field);
+
+        // we cannot use apply_brush_masked_tool here, because we need
+        // information about our surroundings
+        const int size = m_brush_size;
+        const float radius = size / 2.f;
+        const int terrain_xbase = std::round(m_xc - radius);
+        const int terrain_ybase = std::round(m_yc - radius);
+        const unsigned int terrain_size = state.terrain().size();
+
+        for (int y = 0; y < size; y++) {
+            const int yterrain = y + terrain_ybase;
+            if (yterrain < 0) {
+                continue;
+            }
+            if (yterrain >= (int)terrain_size) {
+                break;
+            }
+            for (int x = 0; x < size; x++) {
+                const int xterrain = x + terrain_xbase;
+                if (xterrain < 0) {
+                    continue;
+                }
+                if (xterrain >= (int)terrain_size) {
+                    break;
+                }
+
+                Terrain::height_t &h = (*field)[yterrain*terrain_size+xterrain];
+
+                Terrain::height_t new_h = sample_parzen_rect(
+                            *field, terrain_size, xterrain, yterrain, 3);
+                if (isnan(new_h)) {
+                    continue;
+                }
+
+                h = std::max(
+                            sim::Terrain::min_height,
+                            std::min(
+                                sim::Terrain::max_height,
+                                interp_linear(
+                                    h, new_h,
+                                    m_brush_strength*m_density_map[y*size+x])));
+            }
+        }
+    }
+    notify_update_terrain_rect(state.terrain(), m_xc, m_yc, m_brush_size);
+    return NO_ERROR;
+}
+
+
+
 /* sim::ops::FluidRaise */
 
 WorldOperationResult FluidRaise::execute(WorldState &state)
