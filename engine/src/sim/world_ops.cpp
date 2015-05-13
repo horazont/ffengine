@@ -23,8 +23,192 @@ the AUTHORS file.
 **********************************************************************/
 #include "engine/sim/world_ops.hpp"
 
+#include "engine/math/algo.hpp"
+
+
 namespace sim {
 namespace ops {
+
+
+/**
+ * Apply a terrain tool using a brush mask.
+ *
+ * @param field The heightfield to work on
+ * @param brush_size Diameter of the brush
+ * @param sampled Density map of the brush
+ * @param brush_strength Factor which is applied to the density map for each
+ * painted pixel.
+ * @param terrain_size Size of the terrain, for clipping
+ * @param x0 X center for painting
+ * @param y0 Y center for painting
+ * @param impl Tool implementation
+ *
+ * @see flatten_tool, raise_tool
+ */
+template <typename impl_t>
+void apply_brush_masked_tool(sim::Terrain::HeightField &field,
+                             const unsigned int brush_size,
+                             const std::vector<float> &sampled,
+                             const float brush_strength,
+                             const unsigned int terrain_size,
+                             const float x0,
+                             const float y0,
+                             const impl_t &impl)
+{
+    const int size = brush_size;
+    const float radius = size / 2.f;
+    const int terrain_xbase = std::round(x0 - radius);
+    const int terrain_ybase = std::round(y0 - radius);
+
+    for (int y = 0; y < size; y++) {
+        const int yterrain = y + terrain_ybase;
+        if (yterrain < 0) {
+            continue;
+        }
+        if (yterrain >= (int)terrain_size) {
+            break;
+        }
+        for (int x = 0; x < size; x++) {
+            const int xterrain = x + terrain_xbase;
+            if (xterrain < 0) {
+                continue;
+            }
+            if (xterrain >= (int)terrain_size) {
+                break;
+            }
+
+            sim::Terrain::height_t &h = field[yterrain*terrain_size+xterrain];
+            h = std::max(sim::Terrain::min_height,
+                         std::min(sim::Terrain::max_height,
+                                  impl.paint(h, brush_strength*sampled[y*size+x])));
+        }
+    }
+}
+
+/**
+ * Apply a fluid tool using a brush mask.
+ *
+ * @param field The fluid grid to work on
+ * @param brush_size Diameter of the brush
+ * @param sampled Density map of the brush
+ * @param brush_strength Factor which is applied to the density map for each
+ * painted pixel.
+ * @param terrain_size Size of the terrain, for clipping
+ * @param x0 X center for painting
+ * @param y0 Y center for painting
+ * @param impl Tool implementation
+ *
+ * @see flatten_tool, raise_tool
+ */
+template <typename impl_t>
+void apply_brush_masked_tool(FluidBlocks &field,
+                             const unsigned int brush_size,
+                             const std::vector<float> &sampled,
+                             const float brush_strength,
+                             const float x0,
+                             const float y0,
+                             const impl_t &impl)
+{
+    const int fluid_size = field.cells_per_axis();
+    const int size = brush_size;
+    const float radius = size / 2.f;
+    const int fluid_xbase = std::round(x0 - radius);
+    const int fluid_ybase = std::round(y0 - radius);
+
+    for (int y = 0; y < size; y++) {
+        const int yfluid = y + fluid_ybase;
+        if (yfluid < 0) {
+            continue;
+        }
+        if (yfluid >= (int)fluid_size) {
+            break;
+        }
+        for (int x = 0; x < size; x++) {
+            const int xfluid = x + fluid_xbase;
+            if (xfluid < 0) {
+                continue;
+            }
+            if (xfluid >= (int)fluid_size) {
+                break;
+            }
+
+            impl.apply(*field.cell_back(xfluid, yfluid),
+                       brush_strength*sampled[y*size+x]);
+            field.block_for_cell(xfluid, yfluid)->set_active(true);
+        }
+    }
+}
+
+/**
+ * Tool implementation for raising / lowering the terrain based on a brush.
+ *
+ * For use with apply_brush_masked_tool().
+ */
+struct raise_tool
+{
+    sim::Terrain::height_t paint(sim::Terrain::height_t h,
+                                 float brush_density) const
+    {
+        return h + brush_density;
+    }
+};
+
+/**
+ * Tool implementation for flattening the terrain based on a brush.
+ *
+ * For use with apply_brush_masked_tool().
+ */
+struct flatten_tool
+{
+    flatten_tool(sim::Terrain::height_t new_value):
+        new_value(new_value)
+    {
+
+    }
+
+    sim::Terrain::height_t new_value;
+
+    sim::Terrain::height_t paint(sim::Terrain::height_t h,
+                                 float brush_density) const
+    {
+        return interp_linear(h, new_value, brush_density);
+    }
+};
+
+struct fluid_raise_tool
+{
+    void apply(FluidCell &cell, float brush_density) const
+    {
+        cell.fluid_height = std::max(FluidFloat(0.), cell.fluid_height+brush_density);
+    }
+};
+
+
+void notify_update_terrain_rect(const Terrain &terrain,
+                                const float xc, const float yc,
+                                const unsigned int brush_size)
+{
+    const float brush_radius = brush_size/2.f;
+    sim::TerrainRect r(xc, yc, std::ceil(xc+brush_radius), std::ceil(yc+brush_radius));
+    if (xc < std::ceil(brush_radius)) {
+        r.set_x0(0);
+    } else {
+        r.set_x0(xc-std::ceil(brush_radius));
+    }
+    if (yc < std::ceil(brush_radius)) {
+        r.set_y0(0);
+    } else {
+        r.set_y0(yc-std::ceil(brush_radius));
+    }
+    if (r.x1() > terrain.size()) {
+        r.set_x1(terrain.size());
+    }
+    if (r.y1() > terrain.size()) {
+        r.set_y1(terrain.size());
+    }
+    terrain.notify_heightmap_changed(r);
+}
+
 
 /* sim::ops::BrushWorldOperation */
 
@@ -52,12 +236,19 @@ ObjectWorldOperation::ObjectWorldOperation(const Object::ID object_id):
 
 /* sim::ops::TerraformRaise */
 
-WorldOperationResult TerraformRaise::execute(WorldMutator &mutator)
+WorldOperationResult TerraformRaise::execute(WorldState &state)
 {
-    return mutator.tf_raise(m_xc, m_yc,
-                            m_brush_size,
-                            m_density_map,
-                            m_brush_strength);
+    {
+        sim::Terrain::HeightField *field = nullptr;
+        auto lock = state.terrain().writable_field(field);
+        apply_brush_masked_tool(*field,
+                                m_brush_size, m_density_map, m_brush_strength,
+                                state.terrain().size(),
+                                m_xc, m_yc,
+                                raise_tool());
+    }
+    notify_update_terrain_rect(state.terrain(), m_xc, m_yc, m_brush_size);
+    return NO_ERROR;
 }
 
 
@@ -75,24 +266,32 @@ TerraformLevel::TerraformLevel(
 
 }
 
-WorldOperationResult TerraformLevel::execute(WorldMutator &mutator)
+WorldOperationResult TerraformLevel::execute(WorldState &state)
 {
-    return mutator.tf_level(m_xc, m_yc,
-                            m_brush_size,
-                            m_density_map,
-                            m_brush_strength,
-                            m_reference_height);
+    {
+        sim::Terrain::HeightField *field = nullptr;
+        auto lock = state.terrain().writable_field(field);
+        apply_brush_masked_tool(*field,
+                                m_brush_size, m_density_map, m_brush_strength,
+                                state.terrain().size(),
+                                m_xc, m_yc,
+                                flatten_tool(m_reference_height));
+    }
+    notify_update_terrain_rect(state.terrain(), m_xc, m_yc, m_brush_size);
+    return NO_ERROR;
 }
 
 
 /* sim::ops::FluidRaise */
 
-WorldOperationResult FluidRaise::execute(WorldMutator &mutator)
+WorldOperationResult FluidRaise::execute(WorldState &state)
 {
-    return mutator.fluid_raise(m_xc, m_yc,
-                               m_brush_size,
-                               m_density_map,
-                               m_brush_strength);
+    apply_brush_masked_tool(state.fluid().blocks(),
+                            m_brush_size, m_density_map,
+                            m_brush_strength,
+                            m_xc, m_yc,
+                            fluid_raise_tool());
+    return NO_ERROR;
 }
 
 
@@ -113,14 +312,14 @@ FluidSourceCreate::FluidSourceCreate(const float x, const float y,
 
 }
 
-WorldOperationResult FluidSourceCreate::execute(WorldMutator &mutator)
+WorldOperationResult FluidSourceCreate::execute(WorldState &state)
 {
-    Fluid::Source &obj = mutator.state().objects().allocate<Fluid::Source>(
+    Fluid::Source &obj = state.objects().allocate<Fluid::Source>(
                 m_x, m_y,
                 m_radius,
                 m_height,
                 m_capacity);
-    mutator.state().fluid().add_source(&obj);
+    state.fluid().add_source(&obj);
     return NO_ERROR;
 }
 

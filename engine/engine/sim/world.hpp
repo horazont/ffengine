@@ -100,87 +100,6 @@ public:
 
 
 /**
- * Actual implementation of all mutation operations which affect the world
- * state.
- *
- * This does not implement the IAsyncWorldMutator interface, which is made
- * for asynchronous operations. The methods of this class block until the
- * operation has completed and return a status code.
- */
-class WorldMutator
-{
-public:
-    WorldMutator(WorldState &world);
-
-private:
-    WorldState &m_state;
-
-protected:
-    void notify_update_terrain_rect(const float xc, const float yc,
-                                    const unsigned int brush_size);
-
-public:
-    inline WorldState &state()
-    {
-        return m_state;
-    }
-
-public:
-    /**
-     * Raise the terrain around \a xc, \a yc.
-     *
-     * This uses the given brush, determined by the \a brush_size and the
-     * \a density_map, multiplied with \a brush_strength. \a brush_strength
-     * may be negative to create a lowering effect.
-     *
-     * @param xc X center of the effect
-     * @param yc Y center of the effect
-     * @param brush_size Diameter of the brush
-     * @param density_map Density values of the brush (must have \a brush_size
-     * times \a brush_size entries).
-     * @param brush_strength Strength factor for applying the brush, should be
-     * in the range [-1.0, 1.0].
-     */
-    WorldOperationResult tf_raise(const float xc, const float yc,
-                                  const unsigned int brush_size,
-                                  const std::vector<float> &density_map,
-                                  const float brush_strength);
-
-    /**
-     * Level the terrain around \a xc, \a yc to a specific reference height
-     * \a ref_height.
-     *
-     * This uses the given brush, determined by the \a brush_size and the
-     * \a density_map, multiplied with \a brush_strength. Using a negative
-     * brush strength will have the same effect as using a negative
-     * \a ref_height and will lead to clipping on the lower end of the terrain
-     * height dynamic range.
-     *
-     * @param xc X center of the effect
-     * @param yc Y center of the effect
-     * @param brush_size Diameter of the brush
-     * @param density_map Density values of the brush (must have \a brush_size
-     * times \a brush_size entries).
-     * @param brush_strength Strength factor for applying the brush, should be
-     * in the range [0.0, 1.0].
-     * @param ref_height Reference height to level the terrain to.
-     */
-    WorldOperationResult tf_level(const float xc, const float yc,
-                                  const unsigned int brush_size,
-                                  const std::vector<float> &density_map,
-                                  const float brush_strength,
-                                  const float ref_height);
-
-
-    WorldOperationResult fluid_raise(const float xc, const float yc,
-                                     const unsigned int brush_size,
-                                     const std::vector<float> &density_map,
-                                     const float brush_strength);
-
-};
-
-
-/**
  * Abstract base class for operations modifying the game state using a
  * WorldMutator.
  */
@@ -194,10 +113,10 @@ public:
      * Execute the world operation against the world which is mutated by the
      * given \a mutator.
      *
-     * @param mutator Mutator to use to access the world.
+     * @param state World state to manipulate.
      * @return The result of the operation, as returned by the mutator.
      */
-    virtual WorldOperationResult execute(WorldMutator &mutator) = 0;
+    virtual WorldOperationResult execute(WorldState &state) = 0;
 
 public:
     /**
@@ -280,7 +199,6 @@ public:
 
 private:
     WorldState m_state;
-    WorldMutator m_mutator;
 
     /* guarded by m_clients_mutex */
     std::mutex m_clients_mutex;
@@ -307,9 +225,9 @@ protected:
     void game_thread();
 
 public:
-    inline WorldMutator &mutator()
+    inline WorldState &state()
     {
-        return m_mutator;
+        return m_state;
     }
 
     inline const WorldState &state() const

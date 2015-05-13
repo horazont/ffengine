@@ -60,16 +60,50 @@ protected:
 };
 
 
+/**
+ * Raise the terrain around \a xc, \a yc.
+ *
+ * This uses the given brush, determined by the \a brush_size and the
+ * \a density_map, multiplied with \a brush_strength. \a brush_strength
+ * may be negative to create a lowering effect.
+ *
+ * @param xc X center of the effect
+ * @param yc Y center of the effect
+ * @param brush_size Diameter of the brush
+ * @param density_map Density values of the brush (must have \a brush_size
+ * times \a brush_size entries).
+ * @param brush_strength Strength factor for applying the brush, should be
+ * in the range [-1.0, 1.0].
+ */
 class TerraformRaise: public BrushWorldOperation
 {
 public:
     using BrushWorldOperation::BrushWorldOperation;
 
 public:
-    WorldOperationResult execute(WorldMutator &mutator) override;
+    WorldOperationResult execute(WorldState &state) override;
 
 };
 
+/**
+ * Level the terrain around \a xc, \a yc to a specific reference height
+ * \a ref_height.
+ *
+ * This uses the given brush, determined by the \a brush_size and the
+ * \a density_map, multiplied with \a brush_strength. Using a negative
+ * brush strength will have the same effect as using a negative
+ * \a ref_height and will lead to clipping on the lower end of the terrain
+ * height dynamic range.
+ *
+ * @param xc X center of the effect
+ * @param yc Y center of the effect
+ * @param brush_size Diameter of the brush
+ * @param density_map Density values of the brush (must have \a brush_size
+ * times \a brush_size entries).
+ * @param brush_strength Strength factor for applying the brush, should be
+ * in the range [0.0, 1.0].
+ * @param ref_height Reference height to level the terrain to.
+ */
 class TerraformLevel: public BrushWorldOperation
 {
 public:
@@ -85,7 +119,7 @@ private:
     const float m_reference_height;
 
 public:
-    WorldOperationResult execute(WorldMutator &mutator) override;
+    WorldOperationResult execute(WorldState &state) override;
 
 };
 
@@ -95,7 +129,7 @@ public:
     using BrushWorldOperation::BrushWorldOperation;
 
 public:
-    WorldOperationResult execute(WorldMutator &mutator) override;
+    WorldOperationResult execute(WorldState &state) override;
 
 };
 
@@ -118,7 +152,7 @@ private:
     const float m_capacity;
 
 public:
-    WorldOperationResult execute(WorldMutator &mutator) override;
+    WorldOperationResult execute(WorldState &state) override;
 
 public:
     static std::unique_ptr<FluidSourceCreate> from_source(
