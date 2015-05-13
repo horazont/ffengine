@@ -95,6 +95,29 @@ static inline numeric_t sgn(numeric_t v)
 
 
 /**
+ * Return a continous adaption of the Parzen (de la Vallée Poussin) window
+ * function.
+ *
+ * @param r Radius; the radius is interpreted as normalized, so that for values
+ * greater than or equal to 1, zero is returned. If r is less than or equal to
+ * 0, one is returned. Between those values, the parzen window is returned.
+ */
+template <typename numeric_t>
+static inline numeric_t parzen(numeric_t r)
+{
+    if (r > 1) {
+        return 0;
+    } else if (r >= 0.5) {
+        return 2.f*pow(1.f-r, 3.f);
+    } else if (r < 0) {
+        return 0;
+    } else {
+        return 1.f+6.f*(pow(r, 2.f)*(r-1.f));
+    }
+}
+
+
+/**
  * Rasterize a line using subpixel DDA, iterator style.
  *
  * Example usage:
