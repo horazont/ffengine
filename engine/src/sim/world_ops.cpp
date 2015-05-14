@@ -445,6 +445,9 @@ TerraformRamp::TerraformRamp(const float xc, const float yc,
 
 WorldOperationResult TerraformRamp::execute(WorldState &state)
 {
+    if ((m_destination_point - m_source_point).length() < 1) {
+        return INVALID_ARGUMENT;
+    }
     {
         sim::Terrain::HeightField *field = nullptr;
         auto lock = state.terrain().writable_field(field);
