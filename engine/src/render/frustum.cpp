@@ -55,7 +55,7 @@ void FrustumNode::render(RenderContext &context)
 
 void FrustumNode::sync(RenderContext &context)
 {
-    const float plane_size = 10.f;
+    const float plane_size = 100.f;
     {
         const std::array<Plane, 4> &frustum = context.frustum();
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
@@ -63,12 +63,12 @@ void FrustumNode::sync(RenderContext &context)
         {
             const Vector3f n = Vector3f(frustum[plane].homogenous);
             const Vector3f origin = n * frustum[plane].homogenous[eW];
-            std::cout << n << std::endl;
+            /*std::cout << n << std::endl;*/
             Vector3f u(-n[eY],  n[eX],     0);
             Vector3f v(     0, -n[eZ], n[eY]);
             u.normalize();
             v.normalize();
-            std::cout << u << " " << v << std::endl;
+            /*std::cout << u << " " << v << std::endl;*/
             if (u == Vector3f()) {
                 u = Vector3f(-n[eZ], 0, n[eX]);
                 u.normalize();
@@ -79,14 +79,14 @@ void FrustumNode::sync(RenderContext &context)
                 v = Vector3f(-n[eZ], 0, n[eX]);
                 v.normalize();
             }
-            std::cout << u << " " << v << std::endl;
+            /*std::cout << u << " " << v << std::endl;*/
 
             for (unsigned int t1 = 0; t1 < 2; t1++) {
                 const float t1f = float(t1*2*plane_size)-plane_size;
                 for (unsigned int t2 = 0; t2 < 2; t2++) {
                     const float t2f = float(t2*2*plane_size)-plane_size;
                     slice[plane*4+(t1*2)+t2] = origin + u*t1f + v*t2f;
-                    std::cout << plane*4+(t1*2)+t2 << " " << slice[plane*4+(t1*2)+t2] << std::endl;
+                    /*std::cout << plane*4+(t1*2)+t2 << " " << slice[plane*4+(t1*2)+t2] << std::endl;*/
                 }
             }
         }
