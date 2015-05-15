@@ -169,3 +169,15 @@ TEST_CASE("math/shapes/Plane/Plane(dist, normal)")
         CHECK(plane1 == Plane(Vector4f(0, 1, 0, 12)));
     }
 }
+
+TEST_CASE("math/shapes/Plane/Plane(homogenous)")
+{
+    {
+        Plane plane1(Vector4f(1, 0, 0, 2));
+        CHECK(plane1 == Plane(Vector4f(1, 0, 0, 2)));
+    }
+    {
+        Plane plane1(Vector4f(0, 4, 0, 3));
+        CHECK(plane1 == Plane(Vector4f(0, 1, 0, 12)));
+    }
+}
