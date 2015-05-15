@@ -61,10 +61,7 @@ Plane::Plane(const Vector4f &homogenous_vector):
                 sqr(homogenous.as_array[0])
             + sqr(homogenous.as_array[1])
             + sqr(homogenous.as_array[2]));
-    homogenous[eX] /= magnitude;
-    homogenous[eY] /= magnitude;
-    homogenous[eZ] /= magnitude;
-    homogenous[eW] *= magnitude;
+    homogenous /= magnitude;
 }
 
 PlaneSide Plane::side_of(const Sphere &other) const

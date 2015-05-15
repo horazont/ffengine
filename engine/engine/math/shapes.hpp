@@ -153,6 +153,21 @@ struct Plane
         return side_of(Sphere{center, radius});
     }
 
+    static Plane from_frustum_matrix(const Vector4f frustum_homogenous)
+    {
+        // we have to negate the W part, because given a test vector
+        // vX, vY, vZ and the homogenous plane vector X, Y, Z, W, our
+        // intersection is defined as:
+        //
+        //    X * vX + Y * vY + Z * vZ - W = 0
+        //
+        // whereas the vectors obtained from frustum matrices are for
+        //
+        //    X * vX + Y * vY + Z * vZ + W = 0
+        return Plane(Vector4f(Vector3f(frustum_homogenous),
+                              -frustum_homogenous[eW]));
+    }
+
 };
 
 inline bool operator==(const Plane &a, const Plane b)

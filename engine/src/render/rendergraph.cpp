@@ -141,49 +141,12 @@ void RenderContext::sync()
     m_inv_matrix_ubo.bind();
     m_inv_matrix_ubo.update_bound();
 
-    // begin of test matrix construction
-    // this is currently unused -- it is for testing a fixed view in the
-    // frustum calculation
-    const float distance = 40.f;
-    const Vector3f pos(20, 30, 20);
-    const Vector2f rot(60. / 180. * M_PI, 0);
-
-    Matrix4f fake_view = /*translation4(Vector3f(0, 0, -distance))
-            * rotation4(eX, rot[eX])
-            * rotation4(eZ, rot[eY])
-            * */translation4(-pos);
-    Matrix4f inv_fake_view = translation4(pos)
-            /* * rotation4(eZ, -rot[eY])
-            * rotation4(eX, -rot[eX])
-            * translation4(Vector3f(0, 0, distance))*/;
-
-    fake_view = fake_view;
-    inv_fake_view = inv_fake_view;
-    // end of test matrix construction
-
-    //                   projection                * view
     Matrix4f projview = (m_matrix_ubo.get_ref<0>() * m_render_view).transposed();
 
-    std::cout << m_matrix_ubo.get_ref<0>() << std::endl;
-    std::cout << fake_view << std::endl;
-    std::cout << projview << std::endl;
-
-    std::cout << (projview * Vector4f(1, 0, 0, 1)) << std::endl;
-
-    // Plane(Vector4f) constructs a plane using homogenous coordinates
-    // The first three components are normalized and used as normal;
-    // The last component is multiplied with the length of the first three
-    // components (before normalization) and then used as distance in the
-    // direction of the normal from (0, 0, 0).
-    m_frustum[0] = Plane(projview * Vector4f(1, 0, 0, -1));
-    m_frustum[1] = Plane(projview * Vector4f(-1, 0, 0, -1));
-    m_frustum[2] = Plane(projview * Vector4f(0, 1, 0, -1));
-    m_frustum[3] = Plane(projview * Vector4f(0, -1, 0, -1));
-
-    std::cout << m_frustum[0].homogenous << std::endl;
-    std::cout << m_frustum[1].homogenous << std::endl;
-    std::cout << m_frustum[2].homogenous << std::endl;
-    std::cout << m_frustum[3].homogenous << std::endl;
+    m_frustum[0] = Plane::from_frustum_matrix(projview * Vector4f(1, 0, 0, 1));
+    m_frustum[1] = Plane::from_frustum_matrix(projview * Vector4f(-1, 0, 0, 1));
+    m_frustum[2] = Plane::from_frustum_matrix(projview * Vector4f(0, 1, 0, 1));
+    m_frustum[3] = Plane::from_frustum_matrix(projview * Vector4f(0, -1, 0, 1));
 
     m_scenegraph.sync(*this);
 }
