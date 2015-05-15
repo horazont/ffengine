@@ -358,6 +358,18 @@ struct Matrix
         }
         return summed;
     }
+
+    Matrix transposed() const
+    {
+        Matrix<float_t, columns, rows> result;
+        for (unsigned int i = 0; i < rows; ++i) {
+            for (unsigned int j = 0; j < columns; ++j) {
+                result.component(j, i) = component(i, j);
+            }
+        }
+        return result;
+    }
+
 };
 
 typedef Matrix<float, 2, 2> Matrix2f;
