@@ -23,11 +23,13 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
+#include <iostream>
+
 #include <engine/math/matrix.hpp>
 
 #define EPSILON 10e-16
 
-#define CHECK_APPROX_ZERO(expr) CHECK((expr).abssum() < EPSILON)
+#define CHECK_APPROX_ZERO(expr) CHECK((expr).abssum() <= EPSILON)
 
 TEST_CASE("math/matrix/Matrix4/init0"
           "Test initialization with zeros")
@@ -191,4 +193,28 @@ TEST_CASE("math/matrix/invert_proj_matrix")
                              0, 0, 0, -1,
                              0, 0, -0.5, 0.5) - m);
     CHECK_APPROX_ZERO(diff);
+}
+
+TEST_CASE("math/matrix/matrix_matrix_product/2×4_4×2")
+{
+    Matrix<float, 2, 4> m1(
+                1, 2, 3, 4,
+                5, 6, 7, 8
+                );
+    Matrix<float, 4, 2> m2(
+                1, 0,
+                0, 1,
+                1, 1,
+                0, 0);
+
+    Matrix<float, 2, 2> result = m1 * m2;
+
+    Matrix<float, 2, 2> expected(4, 5, 12, 13);
+    CHECK_APPROX_ZERO(result - expected);
+}
+
+TEST_CASE("math/matrix/matrix_matrix_product/4×4_4×4")
+{
+    Matrix<float, 4, 4> t = translation4(-Vector3(30, 20, 30));
+    std::cout << t << std::endl;
 }
