@@ -131,3 +131,41 @@ TEST_CASE("math/shapes/Plane/side_of(Vector3f)/on")
     Plane plane(0, Vector3f(1, 0, 0));
     CHECK(plane.side_of(Vector3f(0, 0, 0)) == PlaneSide::BOTH);
 }
+
+TEST_CASE("math/shapes/Plane/comparision")
+{
+    Plane plane1(Vector4f(1, 0, 0, 10));
+    Plane plane2(Vector4f(1, 0, 0, 10));
+    Plane plane3(Vector4f(1, 0, 0, 4));
+
+    CHECK(plane1 == plane2);
+    CHECK_FALSE(plane1 != plane2);
+    CHECK(plane1 != plane3);
+    CHECK_FALSE(plane1 == plane3);
+    CHECK(plane2 != plane3);
+    CHECK_FALSE(plane2 == plane3);
+}
+
+TEST_CASE("math/shapes/Plane/Plane(origin, normal)")
+{
+    {
+        Plane plane1(Vector3f(10, 3, 3), Vector3f(0, 1, 0));
+        CHECK(plane1 == Plane(Vector4f(0, 1, 0, 3)));
+    }
+    {
+        Plane plane1(Vector3f(10, 3, 3), Vector3f(0, 4, 0));
+        CHECK(plane1 == Plane(Vector4f(0, 1, 0, 3)));
+    }
+}
+
+TEST_CASE("math/shapes/Plane/Plane(dist, normal)")
+{
+    {
+        Plane plane1(3, Vector3f(0, 1, 0));
+        CHECK(plane1 == Plane(Vector4f(0, 1, 0, 3)));
+    }
+    {
+        Plane plane1(3, Vector3f(0, 4, 0));
+        CHECK(plane1 == Plane(Vector4f(0, 1, 0, 12)));
+    }
+}

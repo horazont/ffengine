@@ -155,6 +155,17 @@ struct Plane
 
 };
 
+inline bool operator==(const Plane &a, const Plane b)
+{
+    return a.homogenous == b.homogenous;
+}
+
+inline bool operator!=(const Plane &a, const Plane b)
+{
+    return !(a == b);
+}
+
+std::ostream &operator<<(std::ostream &stream, const Plane &plane);
 std::ostream &operator<<(std::ostream &stream, const PlaneSide side);
 
 #endif

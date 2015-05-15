@@ -43,16 +43,15 @@ Ray::Ray(const Vector3f &origin, const Vector3f &direction):
 
 
 Plane::Plane(const float dist, const Vector3f &normal):
-    homogenous(normal / normal.length(), dist / normal.length())
+    Plane(Vector4f(normal.normalized(), dist * normal.length()))
 {
 
 }
 
 Plane::Plane(const Vector3f &origin, const Vector3f &normal):
-    homogenous()
+    Plane(Vector4f(normal.normalized(), normal.normalized()*origin))
 {
-    Vector3f normalized_normal = normal.normalized();
-    homogenous = Vector4f(normalized_normal, normalized_normal*origin);
+
 }
 
 Plane::Plane(const Vector4f &homogenous_vector):
@@ -62,7 +61,10 @@ Plane::Plane(const Vector4f &homogenous_vector):
                 sqr(homogenous.as_array[0])
             + sqr(homogenous.as_array[1])
             + sqr(homogenous.as_array[2]));
-    homogenous /= magnitude;
+    homogenous[eX] /= magnitude;
+    homogenous[eY] /= magnitude;
+    homogenous[eZ] /= magnitude;
+    homogenous[eW] *= magnitude;
 }
 
 PlaneSide Plane::side_of(const Sphere &other) const
@@ -92,6 +94,11 @@ PlaneSide Plane::side_of(const Vector3f &other) const
     }
 }
 
+
+std::ostream &operator<<(std::ostream &stream, const Plane &plane)
+{
+    return stream << "Plane(" << plane.homogenous << ")";
+}
 
 std::ostream &operator<<(std::ostream &stream, const PlaneSide side)
 {
