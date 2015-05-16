@@ -25,8 +25,6 @@ FrustumNode::FrustumNode():
     }
     m_ibo_alloc.mark_dirty();
     m_ibo.sync();
-    m_ibo.dump_remote_raw();
-
     bool success = m_material.shader().attach_resource(
                 GL_VERTEX_SHADER,
                 ":/shaders/frustum/main.vert");

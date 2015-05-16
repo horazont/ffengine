@@ -72,7 +72,6 @@ void RenderContext::draw_elements_base_vertex(
 {
     raise_last_gl_error();
     prepare_draw();
-    m_matrix_ubo.dump_local_as_floats();
     with_arrays.bind();
     using_material.bind();
     ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex);
