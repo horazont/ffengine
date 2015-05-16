@@ -360,9 +360,7 @@ std::tuple<Vector3f, bool> isect_terrain_ray(
         int x, y;
         std::tie(x, y) = *iter;
 
-        /* std::cout << x << " " << y << std::endl; */
-
-        if (x < 0 || y < 0) {
+        if (x < 0 || y < 0 || x >= size-1 || y >= size-1) {
             continue;
         }
 
