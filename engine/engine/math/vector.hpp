@@ -356,6 +356,10 @@ typedef Vector<float, 2> Vector2f;
 typedef Vector<float, 3> Vector3f;
 typedef Vector<float, 4> Vector4f;
 
+typedef Vector<double, 2> Vector2d;
+typedef Vector<double, 3> Vector3d;
+typedef Vector<double, 4> Vector4d;
+
 typedef Vector<VectorFloat, 2> Vector2;
 typedef Vector<VectorFloat, 3> Vector3;
 typedef Vector<VectorFloat, 4> Vector4;

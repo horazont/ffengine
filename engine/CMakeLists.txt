@@ -35,6 +35,7 @@ set(ENGINE_HEADERS
   engine/math/intersect.hpp
   engine/math/matrix.hpp
   engine/math/perlin.hpp
+  engine/math/quaternion.hpp
   engine/math/rect.hpp
   engine/math/shapes.hpp
   engine/math/variadic_initializer.inc.hpp
@@ -87,6 +88,7 @@ set(ENGINE_SRC
   src/math/intersect.cpp
   src/math/matrix.cpp
   src/math/perlin.cpp
+  src/math/quaternion.cpp
   src/math/rect.cpp
   src/math/shapes.cpp
   src/math/vector.cpp
