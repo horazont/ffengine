@@ -161,7 +161,8 @@ public:
     ~FancyTerrainNode() override;
 
 private:
-    static constexpr float lod_range_base = 269;
+    /*static constexpr float lod_range_base = 269;*/
+    static constexpr float lod_range_base = 119;
 
     FancyTerrainInterface &m_terrain_interface;
 

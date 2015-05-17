@@ -34,7 +34,7 @@ static io::Logger &logger = io::logging().get_logger("sim.world");
 /* sim::WorldState */
 
 WorldState::WorldState():
-    m_terrain(1081),
+    m_terrain(1921),
     m_fluid(m_terrain)
 {
 
