@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/fluid.hpp"
 
-#define TIMELOG_FLUID_RENDER
+// #define TIMELOG_FLUID_RENDER
 
 #ifdef TIMELOG_FLUID_RENDER
 #include <chrono>
