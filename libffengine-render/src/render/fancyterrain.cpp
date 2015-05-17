@@ -66,7 +66,7 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     m_terrain_interface(terrain_interface),
     m_grid_size(terrain_interface.grid_size()),
     m_tiles((terrain_interface.size()-1)/(terrain_interface.grid_size()-1)),
-    m_max_depth(log2_of_pot(terrain_interface.size()-1)),
+    m_max_depth(log2_of_pot((terrain_interface.size()-1)/(m_grid_size-1))),
     m_terrain(terrain_interface.terrain()),
     m_terrain_nt(terrain_interface.ntmap()),
     m_clear_cache_conn(terrain_interface.field_updated().connect(
