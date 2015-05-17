@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/sim/objects.hpp"
+#include "ffengine/sim/objects.hpp"
 
 #include <iostream>
 

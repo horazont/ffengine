@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/math/rect.hpp"
+#include "ffengine/math/rect.hpp"
 
 typedef GenericRect<unsigned int> Rect;
 

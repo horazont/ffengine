@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/math/algo.hpp"
+#include "ffengine/math/algo.hpp"
 
 
 typedef RasterIterator<float> TestIterator;

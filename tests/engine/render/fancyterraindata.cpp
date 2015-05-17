@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/render/fancyterraindata.hpp"
+#include "ffengine/render/fancyterraindata.hpp"
 
 using namespace engine;
 using namespace sim;

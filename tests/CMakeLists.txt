@@ -17,5 +17,5 @@ set(TEST_SRC
   )
 
 add_executable(tests ${TEST_SRC})
-target_link_libraries(tests engine)
+target_link_libraries(tests ffengine-core ffengine-render ffengine-sim)
 target_link_libraries(tests sigc++)

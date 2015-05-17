@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/math/shapes.hpp"
+#include "ffengine/math/shapes.hpp"
 
 
 TEST_CASE("math/shapes/Plane/side_of(Sphere)/positive_normal")

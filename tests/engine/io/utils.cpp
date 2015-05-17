@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/io/utils.hpp"
+#include "ffengine/io/utils.hpp"
 
 #include <iostream>
 

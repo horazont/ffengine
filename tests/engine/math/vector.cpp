@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include <engine/math/vector.hpp>
+#include <ffengine/math/vector.hpp>
 
 TEST_CASE("math/vector/Vector2/operations"
           "Test vector2 operations")

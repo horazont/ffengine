@@ -25,7 +25,7 @@ the AUTHORS file.
 
 #include <iostream>
 
-#include <engine/math/matrix.hpp>
+#include <ffengine/math/matrix.hpp>
 
 #define EPSILON 10e-16
 

@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/math/intersect.hpp"
+#include "ffengine/math/intersect.hpp"
 
 TEST_CASE("math/intersect/isect_ray_triangle/intersecting",
           "Test ray-triangle intersection")

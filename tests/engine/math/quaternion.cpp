@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "engine/math/quaternion.hpp"
+#include "ffengine/math/quaternion.hpp"
 
 static constexpr double check_epsilon = 1e-14;
 static constexpr double check_epsilon_bad = 1e-6;
