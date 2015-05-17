@@ -32,15 +32,6 @@ the AUTHORS file.
 
 #include "engine/sim/fluid_native.hpp"
 
-// #define TIMELOG_FLUIDFRONTEND
-
-#ifdef TIMELOG_FLUIDFRONTEND
-#include <chrono>
-typedef std::chrono::steady_clock timelog_clock;
-
-#define TIMELOG_ms(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x).count()
-#endif
-
 namespace sim {
 
 static io::Logger &logger = io::logging().get_logger("sim.fluid");
@@ -171,55 +162,6 @@ void Fluid::start()
 
 void Fluid::to_gl_texture() const
 {
-    const unsigned int block_cells = IFluidSim::block_size*IFluidSim::block_size;
-
-#ifdef TIMELOG_FLUIDFRONTEND
-    timelog_clock::time_point t0 = timelog_clock::now();
-    timelog_clock::time_point t_upload;
-#endif
-
-    // terrain_height, fluid_height, flowx, flowy
-    std::vector<Vector4f> buffer(block_cells);
-
-    {
-        auto lock = m_blocks.read_frontbuffer();
-        for (unsigned int y = 0; y < m_blocks.blocks_per_axis(); ++y)
-        {
-            for (unsigned int x = 0; x < m_blocks.blocks_per_axis(); ++x)
-            {
-                const FluidBlock *block = m_blocks.block(x, y);
-                if (!block->active()) {
-                    continue;
-                }
-
-                Vector4f *dest = &buffer.front();
-                const FluidCellMeta *meta = block->local_cell_meta(0, 0);
-                const FluidCell *cell = block->local_cell_front(0, 0);
-                for (unsigned int i = 0; i < block_cells; ++i) {
-                    *dest = Vector4f(meta->terrain_height, cell->fluid_height,
-                                     cell->fluid_flow[0], cell->fluid_flow[1]);
-
-                    ++dest;
-                    ++meta;
-                    ++cell;
-                }
-                glTexSubImage2D(GL_TEXTURE_2D, 0,
-                                x*IFluidSim::block_size, y*IFluidSim::block_size,
-                                IFluidSim::block_size,
-                                IFluidSim::block_size,
-                                GL_RGBA,
-                                GL_FLOAT,
-                                buffer.data());
-            }
-        }
-    }
-    engine::raise_last_gl_error();
-
-#ifdef TIMELOG_FLUIDFRONTEND
-    t_upload = timelog_clock::now();
-    logger.logf(io::LOG_DEBUG, "fluid: texture upload: %.2f ms",
-                TIMELOG_ms(t_upload - t0));
-#endif
 
 }
 

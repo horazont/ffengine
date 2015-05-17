@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: plane.hpp
+File name: fluid.hpp
 This file is part of: SCC (working title)
 
 LICENSE
@@ -21,23 +21,29 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#ifndef SCC_ENGINE_RENDER_PLANE_H
-#define SCC_ENGINE_RENDER_PLANE_H
+#ifndef SCC_ENGINE_RENDER_FLUID_H
+#define SCC_ENGINE_RENDER_FLUID_H
+
+#include "engine/sim/fluid.hpp"
 
 #include "engine/render/scenegraph.hpp"
 
 namespace engine {
 
 /**
- * Render a simple z-up plane.
+ * Render the frontbuffer of a sim::Fluid simulation.
  */
-class ZUpPlaneNode: public scenegraph::Node
+class FluidNode: public scenegraph::Node
 {
 public:
-    ZUpPlaneNode(const float width, const float height,
-                 const unsigned int cells);
+    FluidNode(sim::Fluid &fluidsim);
 
 private:
+    sim::Fluid &m_fluidsim;
+    double m_t;
+
+    Texture2D m_fluiddata;
+
     VBO m_vbo;
     IBO m_ibo;
     Material m_material;
@@ -46,11 +52,19 @@ private:
     VBOAllocation m_vbo_alloc;
     IBOAllocation m_ibo_alloc;
 
-public:
-    Material &material();
-    void setup_vao();
+    std::vector<Vector4f> m_transfer_buffer;
+
+protected:
+    void fluidsim_to_gl_texture();
 
 public:
+    void attach_waves_texture(Texture2D *tex);
+    void attach_scene_colour_texture(Texture2D *tex);
+    void attach_scene_depth_texture(Texture2D *tex);
+
+
+public:
+    void advance(TimeInterval seconds) override;
     void render(RenderContext &context) override;
     void sync(RenderContext &context) override;
 

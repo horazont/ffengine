@@ -46,7 +46,7 @@ set(ENGINE_HEADERS
   engine/render/frustum.hpp
   engine/render/grid.hpp
   engine/render/overlay.hpp
-  engine/render/plane.hpp
+  engine/render/fluid.hpp
   engine/render/pointer.hpp
   engine/render/rendergraph.hpp
   engine/render/scenegraph.hpp
@@ -98,7 +98,7 @@ set(ENGINE_SRC
   src/render/frustum.cpp
   src/render/grid.cpp
   src/render/overlay.cpp
-  src/render/plane.cpp
+  src/render/fluid.cpp
   src/render/pointer.cpp
   src/render/rendergraph.cpp
   src/render/scenegraph.cpp
