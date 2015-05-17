@@ -69,9 +69,9 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     m_max_depth(log2_of_pot((terrain_interface.size()-1)/(m_grid_size-1))),
     m_terrain(terrain_interface.terrain()),
     m_terrain_nt(terrain_interface.ntmap()),
-    m_clear_cache_conn(terrain_interface.field_updated().connect(
+    m_invalidate_cache_conn(terrain_interface.field_updated().connect(
                            sigc::mem_fun(*this,
-                                         &FancyTerrainNode::clear_cache))),
+                                         &FancyTerrainNode::invalidate_cache))),
     m_heightmap(GL_R32F,
                 m_terrain.size(),
                 m_terrain.size(),
@@ -87,7 +87,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
                     })),
     m_ibo(),
     m_vbo_allocation(m_vbo.allocate(m_grid_size*m_grid_size)),
-    m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*4))
+    m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*4)),
+    m_cache_invalidation(0, 0, m_terrain.size(), m_terrain.size())
 {
     uint16_t *dest = m_ibo_allocation.get();
     for (unsigned int y = 0; y < m_grid_size-1; y++) {
@@ -196,7 +197,7 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
 
 FancyTerrainNode::~FancyTerrainNode()
 {
-    m_clear_cache_conn.disconnect();
+    m_invalidate_cache_conn.disconnect();
 }
 
 void FancyTerrainNode::collect_slices(
@@ -350,10 +351,11 @@ void FancyTerrainNode::remove_overlay(Material &mat)
     m_overlays.erase(iter);
 }
 
-void FancyTerrainNode::clear_cache()
+void FancyTerrainNode::invalidate_cache(sim::TerrainRect part)
 {
     logger.log(io::LOG_INFO, "GPU terrain data cache invalidated");
-    m_cache_invalidated = true;
+    std::lock_guard<std::mutex> lock(m_cache_invalidation_mutex);
+    m_cache_invalidation = bounds(part, m_cache_invalidation);
 }
 
 void FancyTerrainNode::render(RenderContext &context)
@@ -449,20 +451,27 @@ void FancyTerrainNode::sync(RenderContext &context)
     t_allocate = timelog_clock::now();
 #endif
 
-    if (m_cache_invalidated)
+    sim::TerrainRect updated;
     {
-        m_cache_invalidated = false;
+        std::lock_guard<std::mutex> lock(m_cache_invalidation_mutex);
+        updated = m_cache_invalidation;
+        m_cache_invalidation = NotARect;
+    }
+    if (updated.is_a_rect())
+    {
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, m_terrain.size());
         m_heightmap.bind();
         {
             const sim::Terrain::HeightField *heightfield = nullptr;
             auto hf_lock = m_terrain.readonly_field(heightfield);
 
             glTexSubImage2D(GL_TEXTURE_2D, 0,
-                            0, 0,
-                            m_terrain.size(),
-                            m_terrain.size(),
+                            updated.x0(),
+                            updated.y0(),
+                            updated.x1() - updated.x0(),
+                            updated.y1() - updated.y0(),
                             GL_RED, GL_FLOAT,
-                            heightfield->data());
+                            &heightfield->data()[updated.y0()*m_terrain.size()+updated.x0()]);
 
         }
 
@@ -472,12 +481,14 @@ void FancyTerrainNode::sync(RenderContext &context)
             auto nt_lock = m_terrain_nt.readonly_field(ntfield);
 
             glTexSubImage2D(GL_TEXTURE_2D, 0,
-                            0, 0,
-                            m_terrain.size(),
-                            m_terrain.size(),
+                            updated.x0(),
+                            updated.y0(),
+                            updated.x1() - updated.x0(),
+                            updated.y1() - updated.y0(),
                             GL_RGBA, GL_FLOAT,
-                            ntfield->data());
+                            &ntfield->data()[updated.y0()*m_terrain.size()+updated.x0()]);
         }
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     }
 
 #ifdef TIMELOG_SYNC

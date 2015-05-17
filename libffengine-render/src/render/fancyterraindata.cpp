@@ -273,10 +273,10 @@ FancyTerrainInterface::~FancyTerrainInterface()
     m_terrain_nt_conn.disconnect();
 }
 
-void FancyTerrainInterface::any_updated(const sim::TerrainRect&)
+void FancyTerrainInterface::any_updated(const sim::TerrainRect &part)
 {
     logger.log(io::LOG_INFO, "Terrain LOD updated");
-    m_field_updated.emit();
+    m_field_updated.emit(part);
 }
 
 std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)

@@ -96,7 +96,7 @@ private:
 
     std::vector<sigc::connection> m_any_updated_conns;
 
-    sigc::signal<void> m_field_updated;
+    sigc::signal<void, sim::TerrainRect> m_field_updated;
 
 protected:
     void any_updated(const sim::TerrainRect &at);
@@ -122,7 +122,7 @@ public:
         return m_terrain_nt;
     }
 
-    inline sigc::signal<void> &field_updated()
+    inline sigc::signal<void, sim::TerrainRect> &field_updated()
     {
         return m_field_updated;
     }

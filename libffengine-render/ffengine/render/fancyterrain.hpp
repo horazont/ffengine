@@ -172,7 +172,7 @@ private:
     const sim::Terrain &m_terrain;
     NTMapGenerator &m_terrain_nt;
 
-    sigc::connection m_clear_cache_conn;
+    sigc::connection m_invalidate_cache_conn;
 
     Texture2D m_heightmap;
     Texture2D m_normalt;
@@ -189,7 +189,9 @@ private:
     std::unique_ptr<VAO> m_vao;
     std::unique_ptr<VAO> m_nd_vao;
 
-    std::atomic<bool> m_cache_invalidated;
+    std::mutex m_cache_invalidation_mutex;
+    sim::TerrainRect m_cache_invalidation;
+
     std::vector<HeightmapSliceMeta> m_render_slices;
 
     std::unordered_map<Material*, OverlayConfig> m_overlays;
@@ -221,8 +223,11 @@ public:
      * Mark the GPU side texture cache as invalid.
      *
      * The textures will be re-transferred on the next sync().
+     *
+     * @param part The part of the terrain which was changed. This is used to
+     * optimize the amount of data which needs to be re-transferred.
      */
-    void clear_cache();
+    void invalidate_cache(sim::TerrainRect part);
 
     /**
      * Register and/or configure an overlay for rendering. If an overlay with
