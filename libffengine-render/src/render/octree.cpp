@@ -23,42 +23,189 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/octree.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <iostream>
+
+#include "ffengine/math/intersect.hpp"
 
 
 namespace engine {
+
+
+Vector3f comp_min(const Vector3f &a, const Vector3f &b)
+{
+    return Vector3f(
+                std::min(a[eX], b[eX]),
+                std::min(a[eY], b[eY]),
+                std::min(a[eZ], b[eZ]));
+}
+
+Vector3f comp_max(const Vector3f &a, const Vector3f &b)
+{
+    return Vector3f(
+                std::max(a[eX], b[eX]),
+                std::max(a[eY], b[eY]),
+                std::max(a[eZ], b[eZ]));
+}
+
+
+/* engine::OctreeObject */
+
+OctreeObject::OctreeObject():
+    m_parent(nullptr),
+    m_bounding_sphere{Vector3f(0, 0, 0), 0.f}
+{
+
+}
+
+OctreeObject::~OctreeObject()
+{
+    if (m_parent) {
+        m_parent->tree().remove_object(this);
+    }
+}
+
+void OctreeObject::update_bounds(Sphere new_bounds)
+{
+    Octree *tree = nullptr;
+    if (m_parent) {
+        tree = &m_parent->tree();
+        tree->remove_object(this);
+    }
+    m_bounding_sphere = new_bounds;
+    if (tree) {
+        tree->insert_object(this);
+    }
+}
+
+const Octree *OctreeObject::octree() const
+{
+    if (m_parent) {
+        return &m_parent->tree();
+    }
+    return nullptr;
+}
+
+Octree *OctreeObject::octree()
+{
+    if (m_parent) {
+        return &m_parent->tree();
+    }
+    return nullptr;
+}
 
 /* engine::OctreeNode */
 
 const unsigned int OctreeNode::SPLIT_THRESHOLD = 8*2;
 const unsigned int OctreeNode::STRADDLE_THRESHOLD_DIVISOR = 4;
 
+OctreeNode::OctreeNode(Octree &tree):
+    m_tree(tree),
+    m_parent(nullptr),
+    m_index_at_parent(CHILD_SELF),
+    m_bounds_valid(false),
+    m_is_split(false),
+    m_nonempty_children(0)
+{
+
+}
+
+OctreeNode::OctreeNode(Octree &tree, OctreeNode *parent, unsigned int index):
+    m_tree(tree),
+    m_parent(parent),
+    m_index_at_parent(index),
+    m_bounds_valid(false),
+    m_is_split(false),
+    m_nonempty_children(0)
+{
+
+}
+
+OctreeNode::~OctreeNode()
+{
+    for (auto &obj: m_objects)
+    {
+        // unlink objects in case they’re still linked
+        obj->m_parent = nullptr;
+    }
+}
+
 OctreeNode &OctreeNode::autocreate_child(unsigned int i)
 {
     assert(i < 8);
     if (!m_children[i]) {
-        m_children[i] = std::make_unique<OctreeNode>(m_root, this);
+        m_children[i] = std::make_unique<OctreeNode>(m_tree, this, i);
+        m_nonempty_children += 1;
     }
     return *m_children[i];
 }
 
+const AABB &OctreeNode::updated_bounds() const
+{
+    if (m_bounds_valid) {
+        return m_bounds;
+    }
+
+    m_bounds = AABB::Empty;
+
+    if (m_is_split) {
+        for (auto &child: m_children)
+        {
+            if (child) {
+                m_bounds.extend_to_cover(child->bounds());
+            }
+        }
+    }
+
+    for (const OctreeObject *object: m_objects)
+    {
+        const Sphere &bounds = object->m_bounding_sphere;
+        m_bounds.extend_to_cover(
+                    AABB{bounds.center - Vector3f(bounds.radius, bounds.radius, bounds.radius),
+                         bounds.center + Vector3f(bounds.radius, bounds.radius, bounds.radius)});
+    }
+
+    m_bounds_valid = true;
+
+    return m_bounds;
+}
+
+void OctreeNode::delete_if_empty()
+{
+    if (!m_parent) {
+        return;
+    }
+    if (!m_objects.empty()) {
+        return;
+    }
+    if (m_is_split && m_nonempty_children > 0) {
+        return;
+    }
+
+    // this deletes!
+    m_parent->notify_empty_child(m_index_at_parent);
+}
+
 unsigned int OctreeNode::find_child_for(const OctreeObject *obj)
 {
+    const Sphere &bounding_sphere = obj->m_bounding_sphere;
+
     unsigned int destination = 0;
     for (unsigned int i = 0; i < 3; ++i)
     {
+        destination <<= 1;
         if (!m_split_planes[i].enabled) {
-            destination <<= 1;
             continue;
         }
 
-        PlaneSide side = m_split_planes[i].plane.side_of(obj->m_bounding_sphere);
+        PlaneSide side = m_split_planes[i].plane.side_of(bounding_sphere);
+
         if (side == PlaneSide::POSITIVE_NORMAL) {
             destination |= 1;
         } else if (side == PlaneSide::BOTH) {
             return CHILD_SELF;
         }
-        destination <<= 1;
     }
 
     return destination;
@@ -81,9 +228,13 @@ bool OctreeNode::merge()
             continue;
         }
 
-        std::move(child->m_objects.begin(),
-                  child->m_objects.end(),
-                  std::back_inserter(m_objects));
+        m_objects.reserve(m_objects.size() + child->m_objects.size());
+        for (OctreeObject *obj: child->m_objects)
+        {
+            obj->m_parent = this;
+            m_objects.push_back(obj);
+        }
+        child->m_objects.clear();
 
         m_children[i] = nullptr;
     }
@@ -94,6 +245,44 @@ bool OctreeNode::merge()
 
     m_is_split = false;
     return true;
+}
+
+void OctreeNode::notify_empty_child(unsigned int index)
+{
+    assert(index < 8);
+    assert(m_children[index]);
+    assert(m_nonempty_children > 0);
+
+    m_children[index] = nullptr;
+    --m_nonempty_children;
+
+    if (m_nonempty_children == 0) {
+        merge();
+        if (m_objects.size() >= SPLIT_THRESHOLD) {
+            split();
+        }
+    }
+
+    delete_if_empty();
+}
+
+void OctreeNode::remove_object(OctreeObject *obj)
+{
+    auto iter = std::find(m_objects.begin(),
+                          m_objects.end(),
+                          obj);
+    if (iter == m_objects.end())
+    {
+        return;
+    }
+    assert(obj->m_parent == this);
+    m_objects.erase(iter);
+
+    obj->m_parent = nullptr;
+    // TODO: only invalidate bounds if the object was flush against the edges
+    m_bounds_valid = false;
+
+    delete_if_empty();
 }
 
 bool OctreeNode::split()
@@ -107,9 +296,12 @@ bool OctreeNode::split()
     Vector3f mean(0, 0, 0);
     float mean_sum = 0.f;
     for (auto &child: m_objects) {
-        float weight = 1.f / child->m_bounding_sphere.radius;
-        mean_sum += weight;
-        mean += child->m_bounding_sphere.center * weight;
+        if (child->m_bounding_sphere.radius >= std::numeric_limits<float>::epsilon())
+        {
+            float weight = 1.f / child->m_bounding_sphere.radius;
+            mean_sum += weight;
+            mean += child->m_bounding_sphere.center * weight;
+        }
     }
 
     mean /= mean_sum;
@@ -156,19 +348,23 @@ bool OctreeNode::split()
         }
     }
 
-    if (disabled_count == 3) {
+    if (disabled_count >= 2) {
         // re-enable all planes but the one with most straddling
         for (unsigned int i = 0; i < 3; ++i) {
-            if (i != max_straddling_plane) {
-                m_split_planes[i].enabled = true;
-            }
+            m_split_planes[i].enabled = (i != max_straddling_plane);
         }
     }
 
+    /*for (unsigned int i = 0; i < 3; ++i) {
+        std::cout << "split plane " << i << ": "
+                  << m_split_planes[i].plane
+                  << " (enabled: " << m_split_planes[i].enabled << ")"
+                  << std::endl;
+    }*/
+
     // now, sort all objects into children
-    for (auto iter = m_objects.begin();
-         iter != m_objects.end();
-         ++iter)
+    auto iter = m_objects.begin();
+    while (iter != m_objects.end())
     {
         OctreeObject *obj = *iter;
         unsigned int destination;
@@ -176,6 +372,8 @@ bool OctreeNode::split()
         if (destination != CHILD_SELF) {
             iter = m_objects.erase(iter);
             autocreate_child(destination).insert_object(obj);
+        } else {
+            ++iter;
         }
     }
 
@@ -185,10 +383,19 @@ bool OctreeNode::split()
 
 OctreeNode *OctreeNode::insert_object(OctreeObject *obj)
 {
-    unsigned int destination = find_child_for(obj);
+    unsigned int destination;
+    if (m_is_split) {
+        destination = find_child_for(obj);
+    } else {
+        destination = CHILD_SELF;
+    }
+
     if (destination == CHILD_SELF) {
         m_objects.push_back(obj);
         obj->m_parent = this;
+        if (!m_is_split && m_objects.size() >= SPLIT_THRESHOLD) {
+            split();
+        }
     } else {
         return autocreate_child(destination).insert_object(obj);
     }
@@ -201,6 +408,20 @@ Octree::Octree():
     m_root(*this)
 {
 
+}
+
+OctreeNode *Octree::insert_object(OctreeObject *obj)
+{
+    assert(!obj->m_parent);
+    return m_root.insert_object(obj);
+}
+
+void Octree::remove_object(OctreeObject *obj)
+{
+    if (!obj->m_parent) {
+        return;
+    }
+    obj->m_parent->remove_object(obj);
 }
 
 }

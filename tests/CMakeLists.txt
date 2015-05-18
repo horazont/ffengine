@@ -12,6 +12,7 @@ set(TEST_SRC
   engine/math/shapes.cpp
   engine/math/vector.cpp
   engine/render/fancyterraindata.cpp
+  engine/render/octree.cpp
   engine/sim/objects.cpp
   main.cpp
   )

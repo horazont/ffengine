@@ -47,6 +47,11 @@ private:
     Sphere m_bounding_sphere;
 
 protected:
+    void update_bounds(Sphere new_bounds);
+
+public:
+    const Octree *octree() const;
+    Octree *octree();
 
     friend class Octree;
     friend class OctreeNode;
@@ -70,21 +75,28 @@ private:
     };
 
 public:
-    explicit OctreeNode(Octree &root, OctreeNode *parent = nullptr);
+    explicit OctreeNode(Octree &tree);
+    OctreeNode(Octree &tree,
+               OctreeNode *parent,
+               unsigned int index);
 
     OctreeNode(const OctreeNode &ref) = delete;
     OctreeNode &operator=(const OctreeNode &ref) = delete;
     OctreeNode(OctreeNode &&src) = delete;
     OctreeNode &operator=(OctreeNode &&src) = delete;
 
-private:
-    Octree &m_root;
-    const OctreeNode *const m_parent;
+    ~OctreeNode();
 
-    AABB m_bounds;
-    bool m_bounds_valid;
+private:
+    Octree &m_tree;
+    OctreeNode *const m_parent;
+    const unsigned int m_index_at_parent;
+
+    mutable AABB m_bounds;
+    mutable bool m_bounds_valid;
 
     bool m_is_split;
+    unsigned int m_nonempty_children;
 
     std::array<SplitPlane, 3> m_split_planes;
 
@@ -93,9 +105,12 @@ private:
 
 protected:
     OctreeNode &autocreate_child(unsigned int i);
+    const AABB &updated_bounds() const;
+    void delete_if_empty();
     unsigned int find_child_for(const OctreeObject *obj);
     OctreeNode *insert_object(OctreeObject *obj);
     bool merge();
+    void notify_empty_child(unsigned int index);
     void remove_object(OctreeObject *obj);
     bool split();
 
@@ -105,19 +120,49 @@ public:
         return m_parent;
     }
 
+    inline Octree &tree()
+    {
+        return m_tree;
+    }
+
+    inline AABB bounds() const
+    {
+        return updated_bounds();
+    }
+
+    inline bool is_split() const
+    {
+        return m_is_split;
+    }
+
+    inline OctreeNode *child(unsigned int i)
+    {
+        return m_children[i].get();
+    }
+
 public:
     container_type::iterator begin();
-    container_type::const_iterator cbegin() const;
+    container_type::const_iterator cbegin() const
+    {
+        return m_objects.cbegin();
+    }
+
     container_type::reverse_iterator rbegin();
     container_type::const_reverse_iterator crbegin() const;
     container_type::iterator end();
-    container_type::const_iterator cend() const;
+
+    container_type::const_iterator cend() const
+    {
+        return m_objects.cend();
+    }
+
     container_type::reverse_iterator rend();
     container_type::const_reverse_iterator crend() const;
 
-    container_type::iterator erase(container_type::iterator el);
-    container_type::iterator erase(container_type::iterator first,
-                                   container_type::iterator last);
+    inline container_type::size_type size() const
+    {
+        return m_objects.size();
+    }
 
     friend class Octree;
 };
@@ -132,8 +177,15 @@ private:
     OctreeNode m_root;
 
 public:
-    OctreeNode &root();
-    const OctreeNode &root() const;
+    inline OctreeNode &root()
+    {
+        return m_root;
+    }
+
+    inline const OctreeNode &root() const
+    {
+        return m_root;
+    }
 
     OctreeNode *insert_object(OctreeObject *obj);
     void remove_object(OctreeObject *obj);
