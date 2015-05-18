@@ -266,6 +266,7 @@ inline bool operator!=(const Plane &a, const Plane b)
 
 std::ostream &operator<<(std::ostream &stream, const Plane &plane);
 std::ostream &operator<<(std::ostream &stream, const PlaneSide side);
+std::ostream &operator<<(std::ostream &stream, const Sphere &sphere);
 
 template <typename float_t>
 static inline std::ostream &operator<<(std::ostream &stream, const GenericAABB<float_t> &aabb)

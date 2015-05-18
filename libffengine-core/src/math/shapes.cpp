@@ -116,3 +116,8 @@ std::ostream &operator<<(std::ostream &stream, const PlaneSide side)
     }
     return stream << "PlaneSide(" << static_cast<long int>(side) << ")";
 }
+
+std::ostream &operator<<(std::ostream &stream, const Sphere &sphere)
+{
+    return stream << "Sphere(" << sphere.center << ", " << sphere.radius << ")";
+}
