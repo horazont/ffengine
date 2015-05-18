@@ -72,21 +72,105 @@ struct Sphere
     float radius;
 };
 
+
 /**
  * Axis-aligned bounding box structure.
  */
-struct AABB
+template <typename float_t>
+struct GenericAABB
 {
-    /**
-     * The minimum point of the AABB.
-     */
-    Vector3f min;
+    enum empty_t {
+        Empty
+    };
 
-    /**
-     * The maximum point of the AABB.
-     */
-    Vector3f max;
+    GenericAABB():
+        GenericAABB(Empty)
+    {
+
+    }
+
+    GenericAABB(empty_t):
+        min(Vector3f(1, 1, 1)),
+        max(Vector3f(0, 0, 0))
+    {
+
+    }
+
+    template <typename float_1_t, typename float_2_t>
+    GenericAABB(const Vector<float_1_t, 3> &v1,
+         const Vector<float_2_t, 3> &v2):
+        min(v1),
+        max(v2)
+    {
+
+    }
+
+    template <typename other_float_t>
+    GenericAABB(const GenericAABB<other_float_t> &ref):
+        GenericAABB(ref.min, ref.max)
+    {
+
+    }
+
+    template <typename other_float_t>
+    GenericAABB &operator=(const GenericAABB<other_float_t> &ref)
+    {
+        min = ref.min;
+        max = ref.max;
+        return *this;
+    }
+
+    Vector<float_t, 3> min;
+    Vector<float_t, 3> max;
+
+    inline bool empty() const
+    {
+        return (max[eX] < min[eX] || max[eY] < min[eY] || max[eZ] < min[eZ]);
+    }
+
+    template <typename other_float_t>
+    inline bool operator==(const GenericAABB<other_float_t> &other) const
+    {
+        if (empty() && other.empty()) {
+            return true;
+        }
+        return (min == other.min) && (max == other.max);
+    }
+
+    template <typename other_float_t>
+    inline bool operator!=(const GenericAABB<other_float_t> &other) const
+    {
+        return !((*this) == other);
+    }
+
+    inline void extend_to_cover(const GenericAABB &other)
+    {
+        if (empty()) {
+            *this = other;
+            return;
+        }
+
+        for (unsigned int i = 0; i < 3; ++i) {
+            min.as_array[i] = std::min(min.as_array[i], other.min.as_array[i]);
+        }
+        for (unsigned int i = 0; i < 3; ++i) {
+            max.as_array[i] = std::max(max.as_array[i], other.max.as_array[i]);
+        }
+    }
+
 };
+
+template <typename float_t>
+static inline GenericAABB<float_t> bounds(const GenericAABB<float_t> &a,
+                                          const GenericAABB<float_t> &b)
+{
+    GenericAABB<float_t> result(a);
+    result.extend_to_cover(b);
+    return result;
+}
+
+using AABB = GenericAABB<float>;
+
 
 /**
  * A plane.
@@ -182,5 +266,11 @@ inline bool operator!=(const Plane &a, const Plane b)
 
 std::ostream &operator<<(std::ostream &stream, const Plane &plane);
 std::ostream &operator<<(std::ostream &stream, const PlaneSide side);
+
+template <typename float_t>
+static inline std::ostream &operator<<(std::ostream &stream, const GenericAABB<float_t> &aabb)
+{
+    return stream << "aabb(" << aabb.min << ", " << aabb.max << ")";
+}
 
 #endif
