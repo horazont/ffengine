@@ -97,6 +97,12 @@ PlaneSide isect_aabb_frustum(
         const AABB &aabb,
         const std::array<Plane, 4> &frustum);
 
+bool isect_ray_sphere(
+        const Ray &r,
+        const Sphere &sphere,
+        float &t0,
+        float &t1);
+
 /**
  * Epsilon to determine floating point equality in intersection algorithms.
  */

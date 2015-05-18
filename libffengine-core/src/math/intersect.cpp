@@ -23,6 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/math/intersect.hpp"
 
+#include <iostream>
 #include <limits>
 #include <tuple>
 
@@ -189,4 +190,36 @@ PlaneSide isect_aabb_frustum(const AABB &aabb,
         }
     }
     return result;
+}
+
+bool isect_ray_sphere(const Ray &r, const Sphere &sphere,
+                      float &t0, float &t1)
+{
+    const Vector3f local_sphere_center = sphere.center - r.origin;
+
+    const float projected_center_distance = local_sphere_center * r.direction;
+
+    if (projected_center_distance < -sphere.radius) {
+        // sphere behind starting point
+        return false;
+    }
+
+    const Vector3f projected_sphere_center = projected_center_distance * r.direction;
+
+    const float dist = (projected_sphere_center - local_sphere_center).length();
+    if (dist > sphere.radius) {
+        return false;
+    }
+
+    const float dist_to_entry_point = std::sqrt(sqr(sphere.radius) - sqr(dist));
+
+    if (local_sphere_center.length() < sphere.radius) {
+        t0 = 0.f;
+        t1 = projected_center_distance + dist_to_entry_point;
+    } else {
+        t0 = projected_center_distance - dist_to_entry_point;
+        t1 = projected_center_distance + dist_to_entry_point;
+    }
+
+    return true;
 }

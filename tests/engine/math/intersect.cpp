@@ -25,6 +25,9 @@ the AUTHORS file.
 
 #include "ffengine/math/intersect.hpp"
 
+
+#define CHECK_APPROX_EQUAL(a, b) CHECK((a-b) < 1e-6)
+
 TEST_CASE("math/intersect/isect_ray_triangle/intersecting",
           "Test ray-triangle intersection")
 {
@@ -375,6 +378,17 @@ TEST_CASE("math/intersect/isect_aabb_ray/general0")
     CHECK(hit);
 }
 
+TEST_CASE("math/intersect/isect_aabb_ray/empty")
+{
+    Ray r(Vector3f(-2, 0, 0), Vector3f(1, 0, 0));
+    AABB aabb(AABB::Empty);
+
+    float t0, t1;
+    bool hit = isect_aabb_ray(aabb, r, t0, t1);
+
+    CHECK_FALSE(hit);
+}
+
 TEST_CASE("math/intersect/isect_aabb_frustum/inside")
 {
     std::array<Plane, 4> frustum({{
@@ -416,3 +430,67 @@ TEST_CASE("math/intersect/isect_aabb_frustum/outside")
     PlaneSide side = isect_aabb_frustum(aabb, frustum);
     CHECK(side == PlaneSide::NEGATIVE_NORMAL);
 }
+
+TEST_CASE("math/intersect/isect_ray_sphere/non_intersect")
+{
+    Ray r(Vector3f(10, 10, -10), Vector3f(0, 0, 1));
+    Sphere s{Vector3f(0, 0, 0), 5.f};
+
+    float t0, t1;
+    bool hit = isect_ray_sphere(r, s, t0, t1);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_ray_sphere/intersect_through_center")
+{
+    Ray r(Vector3f(0, 0, -10), Vector3f(0, 0, 1));
+    Sphere s{Vector3f(0, 0, 0), 5.f};
+
+    float t0, t1;
+    bool hit = isect_ray_sphere(r, s, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 5);
+    CHECK(t1 == 15);
+}
+
+TEST_CASE("math/intersect/isect_ray_sphere/start_inside_in_front_of_center")
+{
+    Ray r(Vector3f(0, 0, -2.5), Vector3f(0, 0, 1));
+    Sphere s{Vector3f(0, 0, 0), 5.f};
+
+    float t0, t1;
+    bool hit = isect_ray_sphere(r, s, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 0);
+    CHECK(t1 == 7.5);
+}
+
+TEST_CASE("math/intersect/isect_ray_sphere/start_inside_behind_center")
+{
+    Ray r(Vector3f(0, 0, 2.5), Vector3f(0, 0, 1));
+    Sphere s{Vector3f(0, 0, 0), 5.f};
+
+    float t0, t1;
+    bool hit = isect_ray_sphere(r, s, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 0);
+    CHECK(t1 == 2.5);
+}
+
+TEST_CASE("math/intersect/isect_ray_sphere/hit_the_edge")
+{
+    Ray r(Vector3f(-5, 0, -10), Vector3f(0, 0, 1));
+    Sphere s{Vector3f(0, 0, 0), 5.f};
+
+    float t0, t1;
+    bool hit = isect_ray_sphere(r, s, t0, t1);
+
+    CHECK(hit);
+    CHECK(t0 == 10);
+    CHECK(t1 == 10);
+}
+
