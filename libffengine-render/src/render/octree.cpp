@@ -33,23 +33,6 @@ the AUTHORS file.
 namespace engine {
 
 
-Vector3f comp_min(const Vector3f &a, const Vector3f &b)
-{
-    return Vector3f(
-                std::min(a[eX], b[eX]),
-                std::min(a[eY], b[eY]),
-                std::min(a[eZ], b[eZ]));
-}
-
-Vector3f comp_max(const Vector3f &a, const Vector3f &b)
-{
-    return Vector3f(
-                std::max(a[eX], b[eX]),
-                std::max(a[eY], b[eY]),
-                std::max(a[eZ], b[eZ]));
-}
-
-
 /* engine::OctreeObject */
 
 OctreeObject::OctreeObject():
@@ -285,6 +268,26 @@ void OctreeNode::remove_object(OctreeObject *obj)
     delete_if_empty();
 }
 
+void OctreeNode::select_nodes_by_ray(const Ray &r,
+                                     std::vector<OctreeRayHitInfo> &hitset)
+{
+    float t0, t1;
+    if (!isect_aabb_ray(bounds(), r, t0, t1)) {
+        return;
+    }
+
+    if (!m_objects.empty()) {
+        hitset.push_back(OctreeRayHitInfo{this, t0, t1});
+    }
+
+    for (std::unique_ptr<OctreeNode> &child: m_children)
+    {
+        if (child) {
+            child->select_nodes_by_ray(r, hitset);
+        }
+    }
+}
+
 bool OctreeNode::split()
 {
     assert(!m_is_split);
@@ -418,10 +421,17 @@ OctreeNode *Octree::insert_object(OctreeObject *obj)
 
 void Octree::remove_object(OctreeObject *obj)
 {
-    if (!obj->m_parent) {
+    if (!obj->m_parent || &obj->m_parent->tree() != this) {
         return;
     }
     obj->m_parent->remove_object(obj);
+}
+
+void Octree::select_nodes_by_ray(
+        const Ray &r,
+        std::vector<OctreeRayHitInfo> &objs)
+{
+    m_root.select_nodes_by_ray(r, objs);
 }
 
 }

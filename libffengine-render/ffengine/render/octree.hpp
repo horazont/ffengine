@@ -58,6 +58,14 @@ public:
 };
 
 
+struct OctreeRayHitInfo
+{
+    OctreeNode *node;
+    float tmin;
+    float tmax;
+};
+
+
 class OctreeNode
 {
 public:
@@ -112,6 +120,8 @@ protected:
     bool merge();
     void notify_empty_child(unsigned int index);
     void remove_object(OctreeObject *obj);
+    void select_nodes_by_ray(const Ray &r,
+                             std::vector<OctreeRayHitInfo> &hitset);
     bool split();
 
 public:
@@ -187,9 +197,42 @@ public:
         return m_root;
     }
 
+    /**
+     * Insert an OctreeObject into the octree.
+     *
+     * The object is inserted using its current internal bounding sphere.
+     *
+     * @param obj The object to insert
+     * @return
+     */
     OctreeNode *insert_object(OctreeObject *obj);
+
+    /**
+     * Remove an object from the octree.
+     *
+     * If the object is not part of the octree, this is a no-op.
+     *
+     * Removing an object from the tree invalidates all pointers to tree
+     * nodes, as the tree may arbitrarily reorganize itself. There may be
+     * ways to handle this gracefully in future versions.
+     *
+     * @param obj The object to remove.
+     */
     void remove_object(OctreeObject *obj);
 
+    /**
+     * Select octree nodes using a ray intersection test.
+     *
+     * Only those octree nodes which both intersect the given Ray \a r and
+     * directly contain objects are selected. Thus, parent nodes without
+     * objects of non-empty leaves are not contained in the hit set.
+     *
+     * @param r The ray to use for the ray intersection test
+     * @param hitset A vector to store the
+     */
+    void select_nodes_by_ray(
+            const Ray &r,
+            std::vector<OctreeRayHitInfo> &hitset);
 };
 
 

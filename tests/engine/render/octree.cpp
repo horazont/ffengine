@@ -287,3 +287,53 @@ TEST_CASE("render/octree/Octree/remove_object/parent_auto_resplit")
     }
 
 }
+
+TEST_CASE("render/octree/Octree/select_objects_by_ray")
+{
+    std::vector<Vector3f> coords;
+    coords.emplace_back(-1, -1, -1);
+    coords.emplace_back(-1, -1, 1);
+    coords.emplace_back(-1, 1, -1);
+    coords.emplace_back(-1, 1, 1);
+    coords.emplace_back(1, -1, -1);
+    coords.emplace_back(1, -1, 1);
+    coords.emplace_back(1, 1, -1);
+    coords.emplace_back(1, 1, 1);
+
+    engine::Octree tree;
+
+    CHECK(!tree.root().is_split());
+
+    std::vector<std::unique_ptr<TestObject> > objects;
+    for (float radius = 0.1f; radius < 0.35f; radius += 0.2f)
+    {
+        for (auto &coord: coords)
+        {
+            auto obj = std::make_unique<TestObject>();
+            obj->set_bounding_sphere(Sphere{coord, radius});
+            tree.insert_object(obj.get());
+            objects.emplace_back(std::move(obj));
+        }
+    }
+
+    Ray r(Vector3f(-1, -1.25, 2), Vector3f(0, 0, -1));
+
+    // selected objects shall be ordered by ray hit order
+    std::vector<engine::OctreeNode*> expected_nodes;
+    expected_nodes.push_back(&tree.root());
+    expected_nodes.push_back(tree.root().child(0b000));
+    expected_nodes.push_back(tree.root().child(0b001));
+
+    std::vector<engine::OctreeRayHitInfo> hitset;
+
+    tree.select_nodes_by_ray(r, hitset);
+
+    std::vector<engine::OctreeNode*> selected_nodes;
+
+    for (auto &entry: hitset)
+    {
+        selected_nodes.push_back(entry.node);
+    }
+
+    CHECK(selected_nodes == expected_nodes);
+}
