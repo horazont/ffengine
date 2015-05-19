@@ -94,9 +94,9 @@ OctreeNode::OctreeNode(Octree &tree):
 
 }
 
-OctreeNode::OctreeNode(Octree &tree, OctreeNode *parent, unsigned int index):
-    m_tree(tree),
-    m_parent(parent),
+OctreeNode::OctreeNode(OctreeNode &parent, unsigned int index):
+    m_tree(parent.tree()),
+    m_parent(&parent),
     m_index_at_parent(index),
     m_bounds_valid(false),
     m_is_split(false),
@@ -118,7 +118,7 @@ OctreeNode &OctreeNode::autocreate_child(unsigned int i)
 {
     assert(i < 8);
     if (!m_children[i]) {
-        m_children[i] = std::make_unique<OctreeNode>(m_tree, this, i);
+        m_children[i] = std::unique_ptr<OctreeNode>(new OctreeNode(*this, i));
         m_nonempty_children += 1;
     }
     return *m_children[i];
@@ -196,7 +196,9 @@ unsigned int OctreeNode::find_child_for(const OctreeObject *obj)
 
 bool OctreeNode::merge()
 {
-    assert(m_is_split);
+    if (!m_is_split) {
+        return true;
+    }
 
     for (unsigned int i = 0; i < 8; ++i) {
         if (m_children[i] && !m_children[i]->m_is_split) {
@@ -290,7 +292,9 @@ void OctreeNode::select_nodes_by_ray(const Ray &r,
 
 bool OctreeNode::split()
 {
-    assert(!m_is_split);
+    if (m_is_split) {
+        return true;
+    }
 
     if (m_objects.size() == 0) {
         return false;
