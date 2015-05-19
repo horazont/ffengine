@@ -21,7 +21,7 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "ffengine/render/octree.hpp"
+#include "ffengine/math/octree.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -30,10 +30,9 @@ the AUTHORS file.
 #include "ffengine/math/intersect.hpp"
 
 
-namespace engine {
+namespace ffe {
 
-
-/* engine::OctreeObject */
+/* ffe::OctreeObject */
 
 OctreeObject::OctreeObject():
     m_parent(nullptr),
@@ -78,7 +77,7 @@ Octree *OctreeObject::octree()
     return nullptr;
 }
 
-/* engine::OctreeNode */
+/* ffe::OctreeNode */
 
 const unsigned int OctreeNode::SPLIT_THRESHOLD = 8*2;
 const unsigned int OctreeNode::STRADDLE_THRESHOLD_DIVISOR = 4;
@@ -409,7 +408,7 @@ OctreeNode *OctreeNode::insert_object(OctreeObject *obj)
     return this;
 }
 
-/* engine::Octree */
+/* ffe::Octree */
 
 Octree::Octree():
     m_root(*this)

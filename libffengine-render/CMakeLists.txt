@@ -22,7 +22,6 @@ set(ENGINE_HEADERS
   ffengine/render/fluid.hpp
   ffengine/render/frustum.hpp
   ffengine/render/grid.hpp
-  ffengine/render/octree.hpp
   ffengine/render/overlay.hpp
   ffengine/render/pointer.hpp
   ffengine/render/rendergraph.hpp
@@ -48,7 +47,6 @@ set(ENGINE_SRC
   src/render/fluid.cpp
   src/render/frustum.cpp
   src/render/grid.cpp
-  src/render/octree.cpp
   src/render/overlay.cpp
   src/render/pointer.cpp
   src/render/rendergraph.cpp

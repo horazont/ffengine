@@ -7,12 +7,12 @@ set(TEST_SRC
   engine/math/algo.cpp
   engine/math/intersect.cpp
   engine/math/matrix.cpp
+  engine/math/octree.cpp
   engine/math/quaternion.cpp
   engine/math/rect.cpp
   engine/math/shapes.cpp
   engine/math/vector.cpp
   engine/render/fancyterraindata.cpp
-  engine/render/octree.cpp
   engine/sim/objects.cpp
   main.cpp
   )

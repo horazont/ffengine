@@ -23,12 +23,12 @@ the AUTHORS file.
 **********************************************************************/
 #include <catch.hpp>
 
-#include "ffengine/render/octree.hpp"
+#include "ffengine/math/octree.hpp"
 
 #include <iostream>
 
 
-class TestObject: public engine::OctreeObject
+class TestObject: public ffe::OctreeObject
 {
 public:
     void set_bounding_sphere(const Sphere &sph)
@@ -38,39 +38,39 @@ public:
 };
 
 
-TEST_CASE("render/octree/Octree/insert_object")
+TEST_CASE("math/octree/Octree/insert_object")
 {
     TestObject obj;
     obj.set_bounding_sphere(Sphere{Vector3f(-1, 0, 0), 0.5f});
-    engine::Octree tree;
-    engine::OctreeNode *node = tree.insert_object(&obj);
+    ffe::Octree tree;
+    ffe::OctreeNode *node = tree.insert_object(&obj);
     REQUIRE(node);
     CHECK(node->bounds().min == Vector3f(-1.5, -0.5, -0.5));
     CHECK(node->bounds().max == Vector3f(-0.5, 0.5, 0.5));
 }
 
-TEST_CASE("render/octree/Octree/auto_remove_object_on_deletion_of_object")
+TEST_CASE("math/octree/Octree/auto_remove_object_on_deletion_of_object")
 {
     std::unique_ptr<TestObject> obj(new TestObject());
-    engine::Octree tree;
-    engine::OctreeNode *node = tree.insert_object(obj.get());
+    ffe::Octree tree;
+    ffe::OctreeNode *node = tree.insert_object(obj.get());
     CHECK(!node->bounds().empty());
     obj = nullptr;
     CHECK(node->bounds().empty());
 }
 
-TEST_CASE("render/octree/Octree/auto_disassociate_object_on_deletion")
+TEST_CASE("math/octree/Octree/auto_disassociate_object_on_deletion")
 {
     TestObject obj;
     {
-        engine::Octree tree;
-        engine::OctreeNode *node = tree.insert_object(&obj);
+        ffe::Octree tree;
+        ffe::OctreeNode *node = tree.insert_object(&obj);
         CHECK(obj.octree() == &tree);
     }
     CHECK(!obj.octree());
 }
 
-TEST_CASE("render/octree/Octree/insert_object/autosplit")
+TEST_CASE("math/octree/Octree/insert_object/autosplit")
 {
     std::vector<Vector3f> coords;
     coords.emplace_back(-1, -1, -1);
@@ -92,7 +92,7 @@ TEST_CASE("render/octree/Octree/insert_object/autosplit")
     expected_bounds.emplace_back(Vector3f(0.7, 0.7, -1.3), Vector3f(1.3, 1.3, -0.7));
     expected_bounds.emplace_back(Vector3f(0.7, 0.7, 0.7), Vector3f(1.3, 1.3, 1.3));
 
-    engine::Octree tree;
+    ffe::Octree tree;
 
     CHECK(!tree.root().is_split());
 
@@ -109,7 +109,7 @@ TEST_CASE("render/octree/Octree/insert_object/autosplit")
     }
 
     CHECK(tree.root().is_split());
-    engine::OctreeNode &root = tree.root();
+    ffe::OctreeNode &root = tree.root();
     CHECK(root.bounds() ==
           AABB(Vector3f(-1.3, -1.3, -1.3), Vector3f(1.3, 1.3, 1.3)));
 
@@ -117,7 +117,7 @@ TEST_CASE("render/octree/Octree/insert_object/autosplit")
     {
         unsigned int child_index = i % 8;
         TestObject &obj = *objects[i];
-        engine::OctreeNode *child = root.child(child_index);
+        ffe::OctreeNode *child = root.child(child_index);
         REQUIRE(child);
         CHECK(std::find(child->cbegin(), child->cend(), &obj) != child->cend());
     }
@@ -128,7 +128,7 @@ TEST_CASE("render/octree/Octree/insert_object/autosplit")
     }
 }
 
-TEST_CASE("render/octree/Octree/remove_object/remerge")
+TEST_CASE("math/octree/Octree/remove_object/remerge")
 {
     std::vector<Vector3f> coords;
     coords.emplace_back(-1, -1, 0);
@@ -140,7 +140,7 @@ TEST_CASE("render/octree/Octree/remove_object/remerge")
     coords.emplace_back(1, 1, 0);
     coords.emplace_back(1, 1, 0);
 
-    engine::Octree tree;
+    ffe::Octree tree;
 
     CHECK(!tree.root().is_split());
 
@@ -163,7 +163,7 @@ TEST_CASE("render/octree/Octree/remove_object/remerge")
     CHECK(!tree.root().is_split());
 }
 
-TEST_CASE("render/octree/Octree/split/degrade_to_quadtree")
+TEST_CASE("math/octree/Octree/split/degrade_to_quadtree")
 {
     std::vector<Vector3f> coords;
     coords.emplace_back(-1, -1, 0);
@@ -175,7 +175,7 @@ TEST_CASE("render/octree/Octree/split/degrade_to_quadtree")
     coords.emplace_back(1, -1, 0);
     coords.emplace_back(1, 1, 0);
 
-    engine::Octree tree;
+    ffe::Octree tree;
 
     CHECK(!tree.root().is_split());
 
@@ -192,7 +192,7 @@ TEST_CASE("render/octree/Octree/split/degrade_to_quadtree")
     }
 
     CHECK(tree.root().is_split());
-    engine::OctreeNode &root = tree.root();
+    ffe::OctreeNode &root = tree.root();
 
     for (unsigned int i = 0; i < 16; ++i)
     {
@@ -201,13 +201,13 @@ TEST_CASE("render/octree/Octree/split/degrade_to_quadtree")
         // might have changed
         unsigned int child_index = (i % 4) << 1;
         TestObject &obj = *objects[i];
-        engine::OctreeNode *child = root.child(child_index);
+        ffe::OctreeNode *child = root.child(child_index);
         REQUIRE(child);
         CHECK(std::find(child->cbegin(), child->cend(), &obj) != child->cend());
     }
 }
 
-TEST_CASE("render/octree/Octree/remove_object/parent_auto_resplit")
+TEST_CASE("math/octree/Octree/remove_object/parent_auto_resplit")
 {
     std::vector<Vector3f> coords;
     coords.emplace_back(-1, -1, -1);
@@ -219,7 +219,7 @@ TEST_CASE("render/octree/Octree/remove_object/parent_auto_resplit")
     coords.emplace_back(1, 1, -1);
     coords.emplace_back(1, 1, 1);
 
-    engine::Octree tree;
+    ffe::Octree tree;
 
     CHECK(!tree.root().is_split());
 
@@ -272,7 +272,7 @@ TEST_CASE("render/octree/Octree/remove_object/parent_auto_resplit")
     }
 
     CHECK(tree.root().is_split());
-    engine::OctreeNode &root = tree.root();
+    ffe::OctreeNode &root = tree.root();
 
     for (unsigned int i = 0; i < 16; ++i)
     {
@@ -281,14 +281,14 @@ TEST_CASE("render/octree/Octree/remove_object/parent_auto_resplit")
         // might have changed
         unsigned int child_index = (i % 4) << 1;
         TestObject &obj = *objects[i];
-        engine::OctreeNode *child = root.child(child_index);
+        ffe::OctreeNode *child = root.child(child_index);
         REQUIRE(child);
         CHECK(std::find(child->cbegin(), child->cend(), &obj) != child->cend());
     }
 
 }
 
-TEST_CASE("render/octree/Octree/select_objects_by_ray")
+TEST_CASE("math/octree/Octree/select_nodes_by_ray")
 {
     std::vector<Vector3f> coords;
     coords.emplace_back(-1, -1, -1);
@@ -300,7 +300,7 @@ TEST_CASE("render/octree/Octree/select_objects_by_ray")
     coords.emplace_back(1, 1, -1);
     coords.emplace_back(1, 1, 1);
 
-    engine::Octree tree;
+    ffe::Octree tree;
 
     CHECK(!tree.root().is_split());
 
@@ -319,16 +319,16 @@ TEST_CASE("render/octree/Octree/select_objects_by_ray")
     Ray r(Vector3f(-1, -1.25, 2), Vector3f(0, 0, -1));
 
     // selected objects shall be ordered by ray hit order
-    std::vector<engine::OctreeNode*> expected_nodes;
+    std::vector<ffe::OctreeNode*> expected_nodes;
     expected_nodes.push_back(&tree.root());
     expected_nodes.push_back(tree.root().child(0b000));
     expected_nodes.push_back(tree.root().child(0b001));
 
-    std::vector<engine::OctreeRayHitInfo> hitset;
+    std::vector<ffe::OctreeRayHitInfo> hitset;
 
     tree.select_nodes_by_ray(r, hitset);
 
-    std::vector<engine::OctreeNode*> selected_nodes;
+    std::vector<ffe::OctreeNode*> selected_nodes;
 
     for (auto &entry: hitset)
     {

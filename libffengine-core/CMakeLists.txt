@@ -17,6 +17,7 @@ set(ENGINE_HEADERS
   ffengine/math/algo.hpp
   ffengine/math/intersect.hpp
   ffengine/math/matrix.hpp
+  ffengine/math/octree.hpp
   ffengine/math/perlin.hpp
   ffengine/math/quaternion.hpp
   ffengine/math/rect.hpp
@@ -41,6 +42,7 @@ set(ENGINE_SRC
   src/math/algo.cpp
   src/math/intersect.cpp
   src/math/matrix.cpp
+  src/math/octree.cpp
   src/math/perlin.cpp
   src/math/quaternion.cpp
   src/math/rect.cpp

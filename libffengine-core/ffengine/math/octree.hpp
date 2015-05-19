@@ -31,7 +31,7 @@ the AUTHORS file.
 #include "ffengine/math/shapes.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class Octree;
 class OctreeNode;
