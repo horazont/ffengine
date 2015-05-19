@@ -320,7 +320,6 @@ TEST_CASE("math/octree/Octree/select_nodes_by_ray")
 
     // selected objects shall be ordered by ray hit order
     std::vector<ffe::OctreeNode*> expected_nodes;
-    expected_nodes.push_back(&tree.root());
     expected_nodes.push_back(tree.root().child(0b000));
     expected_nodes.push_back(tree.root().child(0b001));
 
