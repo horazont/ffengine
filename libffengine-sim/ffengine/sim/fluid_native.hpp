@@ -47,6 +47,11 @@ private:
     std::mutex m_terrain_update_mutex;
     TerrainRect m_terrain_update;
 
+    /* guarded by m_ocean_level_update_mutex */
+    std::mutex m_ocean_level_update_mutex;
+    FluidFloat m_ocean_level_update;
+    bool m_ocean_level_update_set;
+
     /* guarded by m_control_mutex */
     std::mutex m_control_mutex;
     std::condition_variable m_control_wakeup;
@@ -76,6 +81,7 @@ private:
 
     /* owned by m_coordinator_thread */
     std::vector<std::thread> m_worker_threads;
+    FluidFloat m_ocean_level;
 
 protected:
     void coordinator_impl();
@@ -91,6 +97,7 @@ protected:
 public:
     void start_frame() override;
     void terrain_update(TerrainRect r) override;
+    void set_ocean_level(const FluidFloat level) override;
     void wait_for_frame() override;
 
 };

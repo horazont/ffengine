@@ -148,6 +148,14 @@ void NativeFluidSim::coordinator_impl()
             sync_terrain(updated_rect);
         }
 
+        {
+            std::lock_guard<std::mutex> lock(m_ocean_level_update_mutex);
+            if (m_ocean_level_update_set) {
+                m_ocean_level = m_ocean_level_update;
+                m_ocean_level_update_set = false;
+            }
+        }
+
 #ifdef TIMELOG_FLUIDSIM
         t_sync = timelog_clock::now();
 #endif
@@ -361,12 +369,23 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
                             *right, right_meta);
             }
 
-            if (meta->source_capacity > 0) {
-                const float source_fluid_height = meta->source_height - meta->terrain_height;
+            if (meta->source_capacity > 0 || meta->terrain_height < m_ocean_level) {
+                float source_height;
+                float source_capacity;
+                if (meta->terrain_height < m_ocean_level) {
+                    // ocean is really just a very strong source/sink
+                    source_height = m_ocean_level;
+                    source_capacity = 100.f;
+                } else {
+                    source_height = meta->source_height;
+                    source_capacity = meta->source_capacity;
+                }
+                const float source_fluid_height = source_height - meta->terrain_height;
                 const float source_flow = clamp(
                             source_fluid_height - back->fluid_height,
-                            -meta->source_capacity,
-                            meta->source_capacity);
+                            -source_capacity,
+                            source_capacity);
+
                 back->fluid_height += source_flow;
                 if (back->fluid_height < 0) {
                     back->fluid_height = 0;
@@ -664,6 +683,13 @@ void NativeFluidSim::terrain_update(TerrainRect r)
 {
     std::lock_guard<std::mutex> lock(m_terrain_update_mutex);
     m_terrain_update = bounds(r, m_terrain_update);
+}
+
+void NativeFluidSim::set_ocean_level(const FluidFloat level)
+{
+    std::lock_guard<std::mutex> lock(m_ocean_level_update_mutex);
+    m_ocean_level_update = level;
+    m_ocean_level_update_set = true;
 }
 
 void NativeFluidSim::wait_for_frame()

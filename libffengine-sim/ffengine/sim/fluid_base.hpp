@@ -95,6 +95,17 @@ public:
     virtual void terrain_update(TerrainRect r) = 0;
 
     /**
+     * Change the ocean level.
+     *
+     * The change is qued until the next frame starts.
+     *
+     * This method is thread-safe, but not neccessarily reentrant.
+     *
+     * @param level
+     */
+    virtual void set_ocean_level(const FluidFloat level) = 0;
+
+    /**
      * Wait until the previously started frame has completed.
      *
      * This method, or the destructor, must be called exactly once per
