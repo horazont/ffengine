@@ -48,6 +48,13 @@ public:
      * The damping is unitless.
      */
     static const FluidFloat flow_damping;
+
+    /**
+     * The threshold for cells to be considered to carry a visible amount of
+     * fluid.
+     */
+    static const FluidFloat visualization_threshold;
+
     static const unsigned int block_size;
 
 public:

@@ -51,6 +51,14 @@ T first(T v1, T v2)
     return v2;
 }
 
+template <typename float_t>
+constexpr bool is_close(float_t base_value, float_t other_value, float_t relative_factor)
+{
+    static_assert(std::numeric_limits<float_t>::is_iec559,
+                  "float_t must be iec559 floating point");
+    return std::abs(base_value - other_value) < relative_factor*std::abs(base_value);
+}
+
 static unsigned int determine_worker_count()
 {
     unsigned int thread_count = std::thread::hardware_concurrency();
@@ -315,6 +323,10 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
     float change_accum = 0.f;
     float wet_cells = 0.f;
 
+    float average_height = 0.f;
+    float min_abs_height = std::numeric_limits<float>::max();
+    float max_abs_height = std::numeric_limits<float>::lowest();
+
     FluidCell *back = block.local_cell_back(0, 0);
     const FluidCell *front = block.local_cell_front(0, 0);
     const FluidCellMeta *meta = block.local_cell_meta(0, 0);
@@ -362,8 +374,15 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
             }
 
             change_accum += std::abs(back->fluid_height - front->fluid_height);
-            if (back->fluid_height > 0.f || front->fluid_height > 0.f) {
+            if (back->fluid_height > IFluidSim::visualization_threshold ||
+                    front->fluid_height > IFluidSim::visualization_threshold)
+            {
                 wet_cells += 1.f;
+
+                const FluidFloat abs_height = back->fluid_height + meta->terrain_height;
+                average_height += abs_height;
+                max_abs_height = std::max(abs_height, max_abs_height);
+                min_abs_height = std::min(abs_height, min_abs_height);
             }
 
             ++back;
@@ -374,7 +393,13 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
 
     if (wet_cells > 0.f) {
         change_accum /= wet_cells;
+        average_height /= wet_cells;
+    } else {
+        average_height = -1.f;
+        min_abs_height = -1.f;
+        max_abs_height = -1.f;
     }
+
     block.accum_change(change_accum);
 
     FluidFloat change_plus_neighbours = block.back_meta().change;
@@ -405,10 +430,29 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
     }
 
     if (change_plus_neighbours < FluidBlock::CHANGE_BACKLOG_THRESHOLD) {
-        logger.logf(io::LOG_DEBUG, "disabling block %u,%u after change of %.4f",
+        logger.logf(io::LOG_DEBUG, "disabling block %u,%u after change of %.4f"
+                    " (average_height=%.5f, min_abs_height=%.5f, "
+                    "max_abs_height=%.5f)",
                     block.x(), block.y(),
-                    block.back_meta().change);
+                    block.back_meta().change,
+                    average_height,
+                    min_abs_height,
+                    max_abs_height);
         block.set_active(false);
+    }
+
+    if (is_close(average_height, min_abs_height, 0.001f) &&
+            is_close(average_height, max_abs_height, 0.001f))
+    {
+        if (!block.back_meta().flat) {
+            logger.logf(io::LOG_DEBUG, "block %u,%u became flat (height=%.2f)",
+                        block.x(), block.y(),
+                        average_height);
+        }
+        block.back_meta().flat = true;
+        block.back_meta().flat_absolute_height = average_height;
+    } else {
+        block.back_meta().flat = false;
     }
 }
 
