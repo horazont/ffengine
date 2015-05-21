@@ -55,6 +55,17 @@ FluidCell::FluidCell():
 
 }
 
+/* sim::FluidBlockMeta */
+
+FluidBlockMeta::FluidBlockMeta():
+    active(true),
+    change(FluidBlock::CHANGE_BACKLOG_THRESHOLD*3.f),
+    flat(true),
+    flat_absolute_height(-1.f)
+{
+
+}
+
 /* sim::FluidBlock */
 
 const FluidFloat FluidBlock::CHANGE_BACKLOG_FILTER_CONSTANT = 0.9f;
@@ -67,15 +78,13 @@ FluidBlock::FluidBlock(const unsigned int x,
                        const unsigned int y):
     m_x(x),
     m_y(y),
-    m_change_backlog(0.f),
-    m_front_change(0.f),
-    m_active(false),
+    m_front_meta(new FluidBlockMeta()),
+    m_back_meta(new FluidBlockMeta()),
     m_meta_cells(IFluidSim::block_size*IFluidSim::block_size),
     m_back_cells(m_meta_cells.size()),
     m_front_cells(m_meta_cells.size())
 {
-    // set_active has side effects which we leverage here
-    set_active(true);
+
 }
 
 /* sim::FluidBlocks */

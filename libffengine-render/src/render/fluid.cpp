@@ -143,7 +143,7 @@ void FluidNode::fluidsim_to_gl_texture()
             for (unsigned int x = 0; x < blocks.blocks_per_axis(); ++x)
             {
                 const sim::FluidBlock *block = blocks.block(x, y);
-                if (!block->active()) {
+                if (!block->front_meta().active) {
                     continue;
                 }
 

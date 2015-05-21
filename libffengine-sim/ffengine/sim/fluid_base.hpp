@@ -119,6 +119,7 @@ struct FluidCellMeta
      * is present in this cell, this is set to 0.
      */
     FluidFloat source_capacity;
+
 };
 
 
@@ -144,24 +145,6 @@ struct FluidCell
 };
 
 
-/**
- * Metadata for a fluid engine block
- *
- * A block is a square group of cells. Each block can be active or inactive,
- * which describes whether it is fully simulated in a frame or not.
- */
-struct FluidBlockMeta
-{
-    FluidBlockMeta();
-
-    /**
-     * Is the block active? If so, it is fully simulated in a frame. Blocks
-     * become inactive if there has been no significant change in a frame.
-     */
-    bool active;
-};
-
-
 enum FluidNeighbours {
     Top = 0,
     TopRight = 1,
@@ -171,6 +154,39 @@ enum FluidNeighbours {
     BottomLeft = 5,
     Left = 6,
     TopLeft = 7
+};
+
+
+/**
+ * Metadata of a fluid block. This is kept in a separate structure for
+ * double-buffering.
+ */
+struct FluidBlockMeta
+{
+    FluidBlockMeta();
+
+    /**
+     * true if the block is currently actively simulated, false otherwise.
+     */
+    bool active;
+
+    /**
+     * An internally scaled accumulated value which reflects the change which
+     * happened during the last frames.
+     */
+    float change;
+
+    /**
+     * Whether the fluid block is a flat plane (within a certain margin of
+     * error, typically std::numeric_limits<float>::epsilon()*
+     * flat_absolute_height).
+     */
+    bool flat;
+
+    /**
+     * The absolute height of the block, if it is a flat plane.
+     */
+    float flat_absolute_height;
 };
 
 
@@ -190,9 +206,8 @@ private:
     const unsigned int m_x;
     const unsigned int m_y;
 
-    float m_change_backlog;
-    float m_front_change;
-    bool m_active;
+    std::unique_ptr<FluidBlockMeta> m_front_meta;
+    std::unique_ptr<FluidBlockMeta> m_back_meta;
 
     std::vector<FluidCellMeta> m_meta_cells;
     std::vector<FluidCell> m_back_cells;
@@ -239,40 +254,41 @@ public:
         return &m_meta_cells[y*IFluidSim::block_size+x];
     }
 
-    inline bool active() const
+    inline const FluidBlockMeta &front_meta() const
     {
-        return m_active;
+        return *m_front_meta;
+    }
+
+    inline FluidBlockMeta &front_meta()
+    {
+        return *m_front_meta;
+    }
+
+    inline FluidBlockMeta &back_meta()
+    {
+        return *m_back_meta;
     }
 
     inline void set_active(bool new_active)
     {
-        if (new_active != m_active && new_active)
+        if (new_active != m_front_meta->active && new_active)
         {
-            m_change_backlog = CHANGE_BACKLOG_THRESHOLD * 3.f;
+            m_back_meta->active = CHANGE_BACKLOG_THRESHOLD * 3.f;
         }
-        m_active = new_active;
+        m_back_meta->active = new_active;
     }
 
     inline void accum_change(FluidFloat change)
     {
-        m_change_backlog = m_change_backlog * CHANGE_BACKLOG_FILTER_CONSTANT
+        m_back_meta->change =
+                m_front_meta->change * CHANGE_BACKLOG_FILTER_CONSTANT
                 + change * (FluidFloat(1) - CHANGE_BACKLOG_FILTER_CONSTANT);
-    }
-
-    inline FluidFloat change() const
-    {
-        return m_change_backlog;
-    }
-
-    inline FluidFloat front_change() const
-    {
-        return m_front_change;
     }
 
     inline void swap_buffers()
     {
         m_back_cells.swap(m_front_cells);
-        m_front_change = m_change_backlog;
+        *m_front_meta = *m_back_meta;
     }
 
 };
@@ -455,7 +471,7 @@ public:
         std::unique_lock<std::shared_timed_mutex> lock(m_frontbuffer_mutex);
         for (FluidBlock &block: m_blocks)
         {
-            if (block.active())
+            if (block.back_meta().active || block.front_meta().active)
             {
                 block.swap_buffers();
             }

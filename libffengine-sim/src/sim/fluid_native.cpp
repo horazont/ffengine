@@ -377,37 +377,37 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
     }
     block.accum_change(change_accum);
 
-    FluidFloat change_plus_neighbours = block.change();
+    FluidFloat change_plus_neighbours = block.back_meta().change;
 
     if (block.x() > 0) {
         FluidBlock &neighbour = *m_blocks.block(block.x()-1, block.y());
-        if (neighbour.active()) {
-            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        if (neighbour.front_meta().active) {
+            change_plus_neighbours += neighbour.front_meta().change * FluidBlock::CHANGE_TRANSFER_FACTOR;
         }
     }
     if (block.y() > 0) {
         FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()-1);
-        if (neighbour.active()) {
-            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        if (neighbour.front_meta().active) {
+            change_plus_neighbours += neighbour.front_meta().change * FluidBlock::CHANGE_TRANSFER_FACTOR;
         }
     }
     if (block.x() < m_blocks.blocks_per_axis()-1) {
         FluidBlock &neighbour = *m_blocks.block(block.x()+1, block.y());
-        if (neighbour.active()) {
-            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        if (neighbour.front_meta().active) {
+            change_plus_neighbours += neighbour.front_meta().change * FluidBlock::CHANGE_TRANSFER_FACTOR;
         }
     }
     if (block.y() < m_blocks.blocks_per_axis()-1) {
         FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()+1);
-        if (neighbour.active()) {
-            change_plus_neighbours += neighbour.front_change() * FluidBlock::CHANGE_TRANSFER_FACTOR;
+        if (neighbour.front_meta().active) {
+            change_plus_neighbours += neighbour.front_meta().change * FluidBlock::CHANGE_TRANSFER_FACTOR;
         }
     }
 
     if (change_plus_neighbours < FluidBlock::CHANGE_BACKLOG_THRESHOLD) {
         logger.logf(io::LOG_DEBUG, "disabling block %u,%u after change of %.4f",
                     block.x(), block.y(),
-                    block.change());
+                    block.back_meta().change);
         block.set_active(false);
     }
 }
@@ -489,7 +489,7 @@ void NativeFluidSim::update_inactive_block(FluidBlock &block)
 
     if (block.x() > 0) {
         FluidBlock &neighbour = *m_blocks.block(block.x()-1, block.y());
-        if (neighbour.active()) {
+        if (neighbour.front_meta().active) {
             any = true;
             difference_accum += check_active_seams<0, -1>(
                         block.local_cell_back(0, 0),
@@ -502,7 +502,7 @@ void NativeFluidSim::update_inactive_block(FluidBlock &block)
     }
     if (block.y() > 0) {
         FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()-1);
-        if (neighbour.active()) {
+        if (neighbour.front_meta().active) {
             any = true;
             difference_accum += check_active_seams<1, -1>(
                         block.local_cell_back(0, 0),
@@ -515,7 +515,7 @@ void NativeFluidSim::update_inactive_block(FluidBlock &block)
     }
     if (block.x() < m_blocks.blocks_per_axis()-1) {
         FluidBlock &neighbour = *m_blocks.block(block.x()+1, block.y());
-        if (neighbour.active()) {
+        if (neighbour.front_meta().active) {
             any = true;
             difference_accum += check_active_seams<0, 1>(
                         block.local_cell_back(IFluidSim::block_size-1, 0),
@@ -528,7 +528,7 @@ void NativeFluidSim::update_inactive_block(FluidBlock &block)
     }
     if (block.y() < m_blocks.blocks_per_axis()-1) {
         FluidBlock &neighbour = *m_blocks.block(block.x(), block.y()+1);
-        if (neighbour.active()) {
+        if (neighbour.front_meta().active) {
             any = true;
             difference_accum += check_active_seams<1, -1>(
                         block.local_cell_back(0, IFluidSim::block_size-1),
@@ -585,9 +585,10 @@ void NativeFluidSim::worker_impl()
 
             const unsigned int x = my_block % m_blocks.blocks_per_axis();
             const unsigned int y = my_block / m_blocks.blocks_per_axis();
-            /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u %u", this, x, y);*/
             FluidBlock &block = *m_blocks.block(x, y);
-            if (block.active()) {
+            /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u %u, active = %d",
+                        this, x, y, block.front_meta().active);*/
+            if (block.front_meta().active) {
                 update_active_block(block);
             } else {
                 update_inactive_block(block);

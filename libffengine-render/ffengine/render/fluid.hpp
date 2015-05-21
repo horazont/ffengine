@@ -63,7 +63,6 @@ public:
     void attach_scene_colour_texture(Texture2D *tex);
     void attach_scene_depth_texture(Texture2D *tex);
 
-
 public:
     void advance(TimeInterval seconds) override;
     void render(RenderContext &context) override;
