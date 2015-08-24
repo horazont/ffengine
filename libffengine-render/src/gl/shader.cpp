@@ -318,8 +318,10 @@ void ShaderProgram::introspect_uniforms()
                            "found uniform %s: loc=%d, type=%d, size=%d",
                            name.c_str(), i, type, size);
 
+        GLint loc = glGetUniformLocation(m_glid, name.c_str());
+
         ShaderUniform &uniform = (m_uniforms[name] = ShaderUniform());
-        uniform.loc = i;
+        uniform.loc = loc;
         uniform.name = name;
         uniform.size = size;
         uniform.type = type;
