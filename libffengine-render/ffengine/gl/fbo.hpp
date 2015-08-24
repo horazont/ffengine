@@ -145,13 +145,18 @@ class WindowRenderTarget: public RenderTarget
 {
 public:
     WindowRenderTarget();
-    WindowRenderTarget(GLsizei width, GLsizei height);
+    WindowRenderTarget(GLsizei width, GLsizei height, GLint fbo_id = 0);
+
+private:
+    GLint m_fbo_id;
 
 public:
     /**
      * Change the size of the render target.
      */
     void set_size(const GLsizei width, const GLsizei height);
+
+    void set_fbo_id(const GLint fbo_id);
 
 public:
     void bind(Usage usage = Usage::BOTH) override;

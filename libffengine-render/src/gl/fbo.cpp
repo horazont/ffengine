@@ -178,8 +178,9 @@ WindowRenderTarget::WindowRenderTarget():
 
 }
 
-WindowRenderTarget::WindowRenderTarget(GLsizei width, GLsizei height):
-    RenderTarget(width, height)
+WindowRenderTarget::WindowRenderTarget(GLsizei width, GLsizei height, GLint fbo_id):
+    RenderTarget(width, height),
+    m_fbo_id(fbo_id)
 {
 
 }
@@ -191,9 +192,18 @@ void WindowRenderTarget::set_size(const GLsizei width, const GLsizei height)
     m_height = height;
 }
 
+void WindowRenderTarget::set_fbo_id(const GLint fbo_id)
+{
+    if (m_fbo_id == fbo_id) {
+        return;
+    }
+    unbound(Usage::BOTH);
+    m_fbo_id = fbo_id;
+}
+
 void WindowRenderTarget::bind(Usage usage)
 {
-    glBindFramebuffer(int(usage), 0);
+    glBindFramebuffer(int(usage), m_fbo_id);
     raise_last_gl_error();
     RenderTarget::bind(usage);
 }
@@ -201,10 +211,10 @@ void WindowRenderTarget::bind(Usage usage)
 void WindowRenderTarget::bound(Usage usage)
 {
     RenderTarget::bound(usage);
-    if (m_draw_bound == this) {
+    if (m_draw_bound == this && m_fbo_id == 0) {
         glDrawBuffer(GL_BACK);
     }
-    if (m_read_bound == this) {
+    if (m_read_bound == this && m_fbo_id == 0) {
         glReadBuffer(GL_BACK);
     }
 }
