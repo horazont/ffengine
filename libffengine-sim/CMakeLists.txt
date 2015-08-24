@@ -35,6 +35,7 @@ PROTOBUF_GENERATE_CPP(
 add_library(ffengine-sim STATIC ${ENGINE_SRC} ${PROTO_SRCS})
 
 target_link_libraries(ffengine-sim ffengine-core sigc++)
+target_link_libraries(ffengine-sim "atomic")
 target_include_directories(
   ffengine-sim
   PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

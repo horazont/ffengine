@@ -55,6 +55,7 @@ add_library(ffengine-core STATIC ${ENGINE_SRC} ${PROTO_SRCS})
 target_link_libraries(
   ffengine-core
   sigc++)
+target_link_libraries(ffengine-core "atomic")
 target_include_directories(
   ffengine-core
   PUBLIC ${INCLUDE_DIRS})
