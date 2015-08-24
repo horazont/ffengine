@@ -294,6 +294,9 @@ void ShaderProgram::introspect_uniforms()
                   });
     }
 
+    shader_logger.logf(io::LOG_DEBUG, "found %zu uniform blocks",
+                       m_uniform_blocks.size());
+
     for (GLuint i = 0; i < (GLuint)active_uniforms; i++)
     {
         GLint block_index;
@@ -311,12 +314,19 @@ void ShaderProgram::introspect_uniforms()
         std::string name(name_length-1, ' ');
         glGetActiveUniformName(m_glid, i, name.size()+1, nullptr, &name.front());
 
+        shader_logger.logf(io::LOG_DEBUG,
+                           "found uniform %s: loc=%d, type=%d, size=%d",
+                           name.c_str(), i, type, size);
+
         ShaderUniform &uniform = (m_uniforms[name] = ShaderUniform());
         uniform.loc = i;
         uniform.name = name;
         uniform.size = size;
         uniform.type = type;
     }
+
+    shader_logger.logf(io::LOG_DEBUG, "found %zu uniforms",
+                       m_uniforms.size());
 }
 
 bool ShaderProgram::attach(GLenum shader_type, const std::string &source)

@@ -28,6 +28,8 @@ the AUTHORS file.
 
 namespace engine {
 
+io::Logger &logger = io::logging().get_logger("gl.material");
+
 Material::Material():
     m_max_texture_units(gl_get_integer(GL_MAX_TEXTURE_IMAGE_UNITS)),
     m_base_free_unit(0)
@@ -58,6 +60,8 @@ GLint Material::attach_texture(const std::string &name, Texture2D *tex)
     }
 
     GLint unit = get_next_texture_unit();
+    logger.logf(io::LOG_DEBUG, "binding %p: with name '%s'' at unit %d",
+                tex, name.c_str(), unit);
     m_texture_bindings.emplace(
                 name,
                 TextureAttachment{name, unit, tex});
@@ -71,8 +75,19 @@ GLint Material::attach_texture(const std::string &name, Texture2D *tex)
         }
 
         m_shader.bind();
+        engine::raise_last_gl_error();
+        std::cout << m_shader.glid() << std::endl;
+        std::cout << gl_get_integer(GL_CURRENT_PROGRAM) << std::endl;
+        logger.logf(io::LOG_DEBUG,
+                    "assigning unit %d to sampler at location %d",
+                    unit, uniform_info.loc);
         glUniform1i(uniform_info.loc, unit);
+        engine::raise_last_gl_error();
+    } else {
+        logger.logf(io::LOG_DEBUG, "could not detect uniform location "
+                                   "(may be inactive)");
     }
+
     return unit;
 }
 
