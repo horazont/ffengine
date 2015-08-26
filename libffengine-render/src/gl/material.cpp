@@ -76,8 +76,6 @@ GLint Material::attach_texture(const std::string &name, Texture2D *tex)
 
         m_shader.bind();
         engine::raise_last_gl_error();
-        std::cout << m_shader.glid() << std::endl;
-        std::cout << gl_get_integer(GL_CURRENT_PROGRAM) << std::endl;
         logger.logf(io::LOG_DEBUG,
                     "assigning unit %d to sampler at location %d",
                     unit, uniform_info.loc);
