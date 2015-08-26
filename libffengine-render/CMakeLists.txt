@@ -16,6 +16,7 @@ set(ENGINE_HEADERS
   ffengine/gl/util.hpp
   ffengine/gl/vao.hpp
   ffengine/gl/vbo.hpp
+  ffengine/render/aabb.hpp
   ffengine/render/camera.hpp
   ffengine/render/fancyterrain.hpp
   ffengine/render/fancyterraindata.hpp
@@ -41,6 +42,7 @@ set(ENGINE_SRC
   src/gl/util.cpp
   src/gl/vao.cpp
   src/gl/vbo.cpp
+  src/render/aabb.cpp
   src/render/camera.cpp
   src/render/fancyterrain.cpp
   src/render/fancyterraindata.cpp
