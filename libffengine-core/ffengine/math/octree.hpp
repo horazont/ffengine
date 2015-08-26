@@ -370,6 +370,11 @@ public:
         return m_children[i].get();
     }
 
+    inline OctreeNode *child(unsigned int i) const
+    {
+        return m_children[i].get();
+    }
+
 public:
     container_type::iterator begin();
     container_type::const_iterator cbegin() const
