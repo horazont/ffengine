@@ -41,6 +41,21 @@ TEST_CASE("math/quaternion/Quaternion(raw)")
     CHECK(q.as_array[3] == 4);
 }
 
+TEST_CASE("math/quaternion/Quaternion()")
+{
+    Quaterniond q1;
+    Quaterniond q(1, 2, 3, 4);
+
+    CHECK(q1.as_array[0] == 1);
+    CHECK(q1.as_array[1] == 0);
+    CHECK(q1.as_array[2] == 0);
+    CHECK(q1.as_array[3] == 0);
+
+    Quaterniond q2 = q1 * q;
+
+    CHECK(q2 == q);
+}
+
 TEST_CASE("math/quaternion/Quaternion(Quaternion)")
 {
     Quaterniond q1(1, 2, 3, 4);

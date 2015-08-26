@@ -36,6 +36,12 @@ struct Quaternion
     static_assert(std::is_arithmetic<float_t>::value,
                   "Quaternion base type must be arithmetic");
 
+    Quaternion():
+        Quaternion(1, 0, 0, 0)
+    {
+
+    }
+
     Quaternion(const float_t real,
                const float_t imag_i,
                const float_t imag_j,
