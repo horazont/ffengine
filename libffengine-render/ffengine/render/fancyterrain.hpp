@@ -205,10 +205,10 @@ protected:
             const unsigned int relative_x,
             const unsigned int relative_y,
             const Vector3f &viewpoint,
-            const std::array<Plane, 4> &frustum);
+            const std::array<Plane, 6> &frustum);
     void collect_slices(
             std::vector<HeightmapSliceMeta> &requested_slices,
-            const std::array<Plane, 4> &frustum,
+            const std::array<Plane, 6> &frustum,
             const Vector3f &viewpoint);
     void compute_heightmap_lod(unsigned int basex,
                                unsigned int basey,

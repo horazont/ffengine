@@ -391,11 +391,13 @@ TEST_CASE("math/intersect/isect_aabb_ray/empty")
 
 TEST_CASE("math/intersect/isect_aabb_frustum/inside")
 {
-    std::array<Plane, 4> frustum({{
-                                     Plane(-1, Vector3f(1, 0, 0)),
-                                     Plane(-1, Vector3f(-1, 0, 0)),
-                                     Plane(-1, Vector3f(0, 1, 0)),
-                                     Plane(-1, Vector3f(0, -1, 0)),
+    std::array<Plane, 6> frustum({{
+                                      Plane(-1, Vector3f(1, 0, 0)),
+                                      Plane(-1, Vector3f(-1, 0, 0)),
+                                      Plane(-1, Vector3f(0, 1, 0)),
+                                      Plane(-1, Vector3f(0, -1, 0)),
+                                      Plane(-1, Vector3f(0, 0, 1)),
+                                      Plane(-1, Vector3f(0, 0, -1)),
                                  }});
     AABB aabb{Vector3f(-0.1, -0.1, -0.1), Vector3f(0.1, 0.1, 0.1)};
 
@@ -405,11 +407,13 @@ TEST_CASE("math/intersect/isect_aabb_frustum/inside")
 
 TEST_CASE("math/intersect/isect_aabb_frustum/intersect")
 {
-    std::array<Plane, 4> frustum({{
-                                     Plane(Vector4f(1, 0, 0, -1)),
-                                     Plane(Vector4f(-1, 0, 0, -1)),
-                                     Plane(Vector4f(0, 1, 0, -1)),
-                                     Plane(Vector4f(0, -1, 0, -1)),
+    std::array<Plane, 6> frustum({{
+                                      Plane(Vector4f(1, 0, 0, -1)),
+                                      Plane(Vector4f(-1, 0, 0, -1)),
+                                      Plane(Vector4f(0, 1, 0, -1)),
+                                      Plane(Vector4f(0, -1, 0, -1)),
+                                      Plane(Vector4f(0, 0, 1, -1)),
+                                      Plane(Vector4f(0, 0, -1, -1)),
                                  }});
     AABB aabb{Vector3f(-1.5, -1.5, -1.5), Vector3f(0.5, 0.5, 0.5)};
 
@@ -419,13 +423,31 @@ TEST_CASE("math/intersect/isect_aabb_frustum/intersect")
 
 TEST_CASE("math/intersect/isect_aabb_frustum/outside")
 {
-    std::array<Plane, 4> frustum({{
-                                     Plane(Vector4f(1, 0, 0, -1)),
-                                     Plane(Vector4f(-1, 0, 0, -1)),
-                                     Plane(Vector4f(0, 1, 0, -1)),
-                                     Plane(Vector4f(0, -1, 0, -1)),
+    std::array<Plane, 6> frustum({{
+                                      Plane(Vector4f(1, 0, 0, -1)),
+                                      Plane(Vector4f(-1, 0, 0, -1)),
+                                      Plane(Vector4f(0, 1, 0, -1)),
+                                      Plane(Vector4f(0, -1, 0, -1)),
+                                      Plane(Vector4f(0, 0, 1, -1)),
+                                      Plane(Vector4f(0, 0, -1, -1)),
                                  }});
     AABB aabb{Vector3f(-2, -2, -2), Vector3f(-1.5, -1.5, -1.5)};
+
+    PlaneSide side = isect_aabb_frustum(aabb, frustum);
+    CHECK(side == PlaneSide::NEGATIVE_NORMAL);
+}
+
+TEST_CASE("math/intersect/isect_aabb_frustum/outside2")
+{
+    std::array<Plane, 6> frustum({{
+                                      Plane(Vector4f(1, 0, 0, -1)),
+                                      Plane(Vector4f(-1, 0, 0, -1)),
+                                      Plane(Vector4f(0, 1, 0, -1)),
+                                      Plane(Vector4f(0, -1, 0, -1)),
+                                      Plane(Vector4f(0, 0, 1, -1)),
+                                      Plane(Vector4f(0, 0, -1, -1)),
+                                 }});
+    AABB aabb{Vector3f(-10, -2, -2), Vector3f(-9.5, 2, 2)};
 
     PlaneSide side = isect_aabb_frustum(aabb, frustum);
     CHECK(side == PlaneSide::NEGATIVE_NORMAL);

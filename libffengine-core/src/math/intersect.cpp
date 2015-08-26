@@ -176,16 +176,16 @@ bool isect_aabb_ray(const AABB &aabb, const Ray &ray, float &t0, float &t1)
 }
 
 PlaneSide isect_aabb_frustum(const AABB &aabb,
-                             const std::array<Plane, 4> &frustum)
+                             const std::array<Plane, 6> &frustum)
 {
     PlaneSide result = PlaneSide::POSITIVE_NORMAL;
-    for (unsigned int i = 0; i < 4; i++) {
+    for (unsigned int i = 0; i < 6; i++) {
         PlaneSide tmp = frustum[i].side_of_fast(aabb);
         /* std::cout << tmp << std::endl; */
-        if (tmp == PlaneSide::BOTH) {
-            return PlaneSide::BOTH;
-        }
         if (tmp == PlaneSide::NEGATIVE_NORMAL) {
+            return tmp;
+        }
+        if (tmp == PlaneSide::BOTH) {
             result = tmp;
         }
     }

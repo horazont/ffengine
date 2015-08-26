@@ -160,6 +160,8 @@ void RenderContext::sync()
     m_frustum[1] = Plane::from_frustum_matrix(projview * Vector4f(-1, 0, 0, 1));
     m_frustum[2] = Plane::from_frustum_matrix(projview * Vector4f(0, 1, 0, 1));
     m_frustum[3] = Plane::from_frustum_matrix(projview * Vector4f(0, -1, 0, 1));
+    m_frustum[4] = Plane::from_frustum_matrix(projview * Vector4f(0, 0, 1, 1));
+    m_frustum[5] = Plane::from_frustum_matrix(projview * Vector4f(0, 0, -1, 1));
 
     m_scenegraph.sync(*this);
 }

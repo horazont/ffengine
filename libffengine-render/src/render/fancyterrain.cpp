@@ -202,7 +202,7 @@ FancyTerrainNode::~FancyTerrainNode()
 
 void FancyTerrainNode::collect_slices(
         std::vector<HeightmapSliceMeta> &requested_slices,
-        const std::array<Plane, 4> &frustum,
+        const std::array<Plane, 6> &frustum,
         const Vector3f &viewpoint)
 {
     collect_slices_recurse(requested_slices,
@@ -219,7 +219,7 @@ void FancyTerrainNode::collect_slices_recurse(
         const unsigned int relative_x,
         const unsigned int relative_y,
         const Vector3f &viewpoint,
-        const std::array<Plane, 4> &frustum)
+        const std::array<Plane, 6> &frustum)
 {
     const float min = 0.;
     const float max = 0.;

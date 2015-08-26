@@ -95,7 +95,7 @@ bool isect_aabb_ray(
  */
 PlaneSide isect_aabb_frustum(
         const AABB &aabb,
-        const std::array<Plane, 4> &frustum);
+        const std::array<Plane, 6> &frustum);
 
 bool isect_ray_sphere(
         const Ray &r,

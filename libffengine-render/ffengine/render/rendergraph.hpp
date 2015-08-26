@@ -82,7 +82,7 @@ private:
     std::vector<Matrix4f> m_model_stack;
     Matrix4f m_current_transformation;
 
-    std::array<Plane, 4> m_frustum;
+    std::array<Plane, 6> m_frustum;
 
     Vector3f m_viewpoint;
 
@@ -151,7 +151,7 @@ public:
         return m_zfar;
     }
 
-    inline const std::array<Plane, 4> &frustum() const
+    inline const std::array<Plane, 6> &frustum() const
     {
         return m_frustum;
     }

@@ -78,7 +78,7 @@ void FrustumNode::sync(RenderContext &context)
 {
     const float plane_size = 100.f;
     {
-        const std::array<Plane, 4> &frustum = context.frustum();
+        const std::array<Plane, 6> &frustum = context.frustum();
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
         for (unsigned int plane = 0; plane < 4; plane++)
         {
