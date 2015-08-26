@@ -27,7 +27,7 @@ the AUTHORS file.
 
 #include <ffengine/math/matrix.hpp>
 
-#define EPSILON 10e-16
+#define EPSILON 10e-6f
 
 #define CHECK_APPROX_ZERO(expr) CHECK((expr).abssum() <= EPSILON)
 
