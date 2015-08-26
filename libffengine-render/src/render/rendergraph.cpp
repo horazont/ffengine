@@ -64,6 +64,20 @@ void RenderContext::draw_elements(GLenum primitive,
     raise_last_gl_error();
 }
 
+void RenderContext::draw_elements_less(GLenum primitive,
+                                       VAO &with_arrays,
+                                       Material &using_material,
+                                       IBOAllocation &indicies,
+                                       unsigned int nmax)
+{
+    raise_last_gl_error();
+    prepare_draw();
+    with_arrays.bind();
+    using_material.bind();
+    ::engine::draw_elements(indicies, primitive, nmax);
+    raise_last_gl_error();
+}
+
 void RenderContext::draw_elements_base_vertex(
         GLenum primitive,
         VAO &with_arrays, Material &using_material,

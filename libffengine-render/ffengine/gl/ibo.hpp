@@ -43,9 +43,14 @@ public:
 
 typedef IBO::allocation_t IBOAllocation;
 
-static inline void draw_elements(const IBOAllocation &alloc, GLenum mode)
+static inline void draw_elements(
+        const IBOAllocation &alloc, GLenum mode,
+        unsigned int nmax = std::numeric_limits<unsigned int>::max())
 {
-    glDrawElements(mode, alloc.length(), IBOAllocation::buffer_t::gl_type, (const GLvoid*)alloc.offset());
+    glDrawElements(mode,
+                   std::min(alloc.length(), nmax),
+                   IBOAllocation::buffer_t::gl_type,
+                   (const GLvoid*)alloc.offset());
 }
 
 static inline void draw_elements_base_vertex(

@@ -93,6 +93,10 @@ public:
     void draw_elements(GLenum primitive,
                        VAO &with_arrays, Material &using_material,
                        IBOAllocation &indicies);
+    void draw_elements_less(GLenum primitive,
+                            VAO &with_arrays, Material &using_material,
+                            IBOAllocation &indicies,
+                            unsigned int nmax);
     void draw_elements_base_vertex(GLenum primitive,
                                    VAO &with_arrays, Material &using_material,
                                    IBOAllocation &indicies,
