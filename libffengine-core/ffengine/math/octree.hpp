@@ -306,9 +306,35 @@ protected:
      *
      * @see OctreeRayHitInfo
      * @see Octree.select_nodes_by_ray()
+     * @see select_nodes_by_frustum()
      */
     void select_nodes_by_ray(const Ray &r,
                              std::vector<OctreeRayHitInfo> &hitset);
+
+    /**
+     * Select all nodes in the subtree (including this one) which contain
+     * objects.
+     *
+     * @param hitset Vector to store the matching nodes into.
+     */
+    void select_nodes_with_objects(std::vector<OctreeNode*> &hitset);
+
+    /**
+     * Select nodes by testing whether they are entirely or partially inside
+     * a given frustum.
+     *
+     * Empty nodes are never returned, but their child nodes may be returned
+     * if they are partially or entirely inside the frustum.
+     *
+     * @param frustum The frustum to test against.
+     * @param hitset A vector to store the hit results.
+     *
+     * @see Octree.select_nodes_by_frustum()
+     * @see select_nodes_by_ray()
+     */
+    void select_nodes_by_frustum(
+                const std::array<Plane, 6> &frustum,
+                std::vector<OctreeNode*> &hitset);
 
     /**
      * Split the node.
@@ -474,11 +500,36 @@ public:
      * objects of non-empty leaves are not contained in the hit set.
      *
      * @param r The ray to use for the ray intersection test
-     * @param hitset A vector to store the
+     * @param hitset A vector to store the nodes which matched the query.
+     *
+     * @see select_nodes_by_frustum()
      */
-    void select_nodes_by_ray(
+    inline void select_nodes_by_ray(
             const Ray &r,
-            std::vector<OctreeRayHitInfo> &hitset);
+            std::vector<OctreeRayHitInfo> &hitset)
+    {
+        m_root.select_nodes_by_ray(r, hitset);
+    }
+
+    /**
+     * Select octree nodes using a frustum test.
+     *
+     * All nodes which are partially or entirely within the frustum *and*
+     * contain objects will be selected. Thus, parent nodes without objects
+     * are not contained in the hit set.
+     *
+     * @param frustum Frustum specification to test against
+     * @param hitset A vector to store the nodes which matched the query.
+     *
+     * @see select_nodes_by_ray()
+     */
+    inline void select_nodes_by_frustum(
+            const std::array<Plane, 6> &frustum,
+            std::vector<OctreeNode*> &hitset)
+    {
+        m_root.select_nodes_by_frustum(frustum, hitset);
+    }
+
 };
 
 

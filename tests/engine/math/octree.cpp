@@ -336,3 +336,63 @@ TEST_CASE("math/octree/Octree/select_nodes_by_ray")
 
     CHECK(selected_nodes == expected_nodes);
 }
+
+TEST_CASE("math/octree/Octree/select_nodes_by_frustum")
+{
+    std::vector<Vector3f> coords;
+    coords.emplace_back(-1, -1, -1);
+    coords.emplace_back(-1, -1, 1);
+    coords.emplace_back(-1, 1, -1);
+    coords.emplace_back(-1, 1, 1);
+    coords.emplace_back(1, -1, -1);
+    coords.emplace_back(1, -1, 1);
+    coords.emplace_back(1, 1, -1);
+    coords.emplace_back(1, 1, 1);
+
+    ffe::Octree tree;
+
+    CHECK(!tree.root().is_split());
+
+    std::vector<std::unique_ptr<TestObject> > objects;
+    for (float radius = 0.1f; radius < 0.35f; radius += 0.2f)
+    {
+        for (auto &coord: coords)
+        {
+            auto obj = std::make_unique<TestObject>();
+            obj->set_bounding_sphere(Sphere{coord, radius});
+            tree.insert_object(obj.get());
+            objects.emplace_back(std::move(obj));
+        }
+    }
+
+    // insert an object into the root to test that nodes with children and
+    // objects are selected
+    auto obj = std::make_unique<TestObject>();
+    obj->set_bounding_sphere(Sphere{Vector3f(0, 0, 0), 0.1f});
+    tree.insert_object(obj.get());
+    objects.emplace_back(std::move(obj));
+
+    // construct the planes so that we select the positive X nodes
+    std::array<Plane, 6> frustum({{
+                                      Plane(Vector4f(1, 0, 0, 0.9)),
+                                      Plane(Vector4f(-1, 0, 0, -1)),
+                                      Plane(Vector4f(0, 1, 0, -1)),
+                                      Plane(Vector4f(0, -1, 0, -1)),
+                                      Plane(Vector4f(0, 0, 1, -1)),
+                                      Plane(Vector4f(0, 0, -1, -1)),
+                                  }});
+
+
+    std::vector<ffe::OctreeNode*> expected_nodes;
+    expected_nodes.push_back(&tree.root());
+    expected_nodes.push_back(tree.root().child(0b100));
+    expected_nodes.push_back(tree.root().child(0b101));
+    expected_nodes.push_back(tree.root().child(0b110));
+    expected_nodes.push_back(tree.root().child(0b111));
+
+    std::vector<ffe::OctreeNode*> hitset;
+
+    tree.select_nodes_by_frustum(frustum, hitset);
+
+    CHECK(hitset == expected_nodes);
+}

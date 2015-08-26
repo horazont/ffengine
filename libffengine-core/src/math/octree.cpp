@@ -289,6 +289,47 @@ void OctreeNode::select_nodes_by_ray(const Ray &r,
     }
 }
 
+void OctreeNode::select_nodes_with_objects(std::vector<OctreeNode *> &hitset)
+{
+    if (!m_objects.empty()) {
+        hitset.push_back(this);
+    }
+
+    for (auto &child: m_children) {
+        if (child) {
+            child->select_nodes_with_objects(hitset);
+        }
+    }
+}
+
+void OctreeNode::select_nodes_by_frustum(
+        const std::array<Plane, 6> &frustum,
+        std::vector<OctreeNode*> &hitset)
+{
+    PlaneSide result = isect_aabb_frustum(bounds(), frustum);
+    if (result == PlaneSide::NEGATIVE_NORMAL) {
+        // entirely outside frustum
+        return;
+    } else if (result == PlaneSide::POSITIVE_NORMAL) {
+        // entirely inside frustum
+        select_nodes_with_objects(hitset);
+        return;
+    }
+
+    // intersects with frustum, add ourselves if we have objects and
+    // recurse into children
+    if (!m_objects.empty()) {
+        hitset.push_back(this);
+    }
+
+    for (auto &child: m_children)
+    {
+        if (child) {
+            child->select_nodes_by_frustum(frustum, hitset);
+        }
+    }
+}
+
 bool OctreeNode::split()
 {
     if (m_is_split) {
@@ -428,13 +469,6 @@ void Octree::remove_object(OctreeObject *obj)
         return;
     }
     obj->m_parent->remove_object(obj);
-}
-
-void Octree::select_nodes_by_ray(
-        const Ray &r,
-        std::vector<OctreeRayHitInfo> &objs)
-{
-    m_root.select_nodes_by_ray(r, objs);
 }
 
 }
