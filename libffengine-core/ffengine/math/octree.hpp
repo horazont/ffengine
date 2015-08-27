@@ -53,7 +53,7 @@ public:
      * zero-sized sphere centered at (0, 0, 0).
      */
     OctreeObject();
-    ~OctreeObject();
+    virtual ~OctreeObject();
 
 private:
     OctreeNode *m_parent;
@@ -263,6 +263,8 @@ protected:
      */
     OctreeNode *insert_object(OctreeObject *obj);
 
+    void invalidate_bounds();
+
     /**
      * Merge the node.
      *
@@ -402,23 +404,25 @@ public:
     }
 
 public:
-    container_type::iterator begin();
-    container_type::const_iterator cbegin() const
+    inline container_type::const_iterator cbegin() const
     {
         return m_objects.cbegin();
     }
 
-    container_type::reverse_iterator rbegin();
-    container_type::const_reverse_iterator crbegin() const;
-    container_type::iterator end();
+    inline container_type::const_reverse_iterator crbegin() const
+    {
+        return m_objects.crbegin();
+    }
 
-    container_type::const_iterator cend() const
+    inline container_type::const_iterator cend() const
     {
         return m_objects.cend();
     }
 
-    container_type::reverse_iterator rend();
-    container_type::const_reverse_iterator crend() const;
+    inline container_type::const_reverse_iterator crend() const
+    {
+        return m_objects.crend();
+    }
 
     /**
      * Return the number of objects in this node (excluding child nodes).

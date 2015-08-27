@@ -28,8 +28,11 @@ the AUTHORS file.
 #include <vector>
 
 #include "ffengine/common/types.hpp"
+#include "ffengine/common/utils.hpp"
 
 #include "ffengine/math/matrix.hpp"
+#include "ffengine/math/quaternion.hpp"
+#include "ffengine/math/octree.hpp"
 
 #include "ffengine/gl/ibo.hpp"
 #include "ffengine/gl/material.hpp"
@@ -38,6 +41,15 @@ the AUTHORS file.
 #include "ffengine/render/camera.hpp"
 
 namespace engine {
+
+
+class RenderableOctreeObject: public ffe::OctreeObject
+{
+public:
+    virtual void render(RenderContext &context);
+
+};
+
 
 namespace scenegraph {
 
@@ -144,73 +156,7 @@ protected:
     typedef std::vector<std::unique_ptr<Node> > internal_container;
 
 public:
-    template <typename internal_iterator>
-    class iterator_tpl
-    {
-    public:
-        typedef std::bidirectional_iterator_tag iterator_category;
-        typedef typename internal_iterator::difference_type difference_type;
-        typedef Node& reference;
-        typedef Node*& pointer;
-        typedef Node& value_type;
-
-    public:
-        iterator_tpl(internal_iterator curr):
-            m_curr(curr)
-        {
-
-        }
-
-    private:
-        internal_iterator m_curr;
-
-    public:
-        inline bool operator==(const iterator_tpl &other) const
-        {
-            return (m_curr == other.m_curr);
-        }
-
-        inline bool operator!=(const iterator_tpl &other) const
-        {
-            return (m_curr != other.m_curr);
-        }
-
-        inline iterator_tpl operator++(int) const
-        {
-            return iterator(std::next(m_curr));
-        }
-
-        inline iterator_tpl &operator++()
-        {
-            ++m_curr;
-            return *this;
-        }
-
-        inline iterator_tpl operator--(int) const
-        {
-            return iterator(std::prev(m_curr));
-        }
-
-        inline iterator_tpl &operator--()
-        {
-            --m_curr;
-            return *this;
-        }
-
-        inline Node &operator*() const
-        {
-            return **m_curr;
-        }
-
-        inline Node &operator->() const
-        {
-            return **m_curr;
-        }
-
-        friend class Group;
-    };
-
-    typedef iterator_tpl<internal_container::iterator> iterator;
+    typedef DereferencingIterator<internal_container::iterator, Group> iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
 
 public:
@@ -571,6 +517,351 @@ public:
     void sync(RenderContext &context) override;
 
 };
+
+
+class OctContext
+{
+public:
+    typedef std::tuple<Quaternionf, Vector3f> Transformation;
+
+public:
+    OctContext();
+
+private:
+    std::vector<Transformation> m_transformation_stack;
+
+public:
+    void push_translation(const Vector3f &d);
+    void push_rotation(const Quaternionf &q);
+
+    inline const Vector3f &get_origin() const
+    {
+        return std::get<1>(m_transformation_stack.back());
+    }
+
+    inline const Quaternionf &get_orientation() const
+    {
+        return std::get<0>(m_transformation_stack.back());
+    }
+
+    void pop_transform();
+
+    void reset();
+
+};
+
+
+class OctNode
+{
+public:
+    virtual ~OctNode();
+
+public:
+    virtual void advance(TimeInterval seconds);
+
+    virtual void sync(RenderContext &context,
+                      ffe::Octree &octree,
+                      OctContext &positioning);
+
+};
+
+
+class OctGroup: public OctNode
+{
+protected:
+    typedef std::vector<std::unique_ptr<OctNode> > internal_container;
+
+public:
+    typedef DereferencingIterator<internal_container::iterator, OctGroup> iterator;
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+
+public:
+    OctGroup();
+
+private:
+    internal_container m_locked_children;
+    internal_container m_children;
+
+public:
+    inline iterator begin()
+    {
+        return iterator(m_children.begin());
+    }
+
+    inline iterator end()
+    {
+        return iterator(m_children.end());
+    }
+
+    /**
+     * Add a node to the group.
+     *
+     * It will be rendered after the next call to sync().
+     *
+     * @param node The scene graph node to be added. The OctGroup takes
+     * ownership.
+     */
+    void add(std::unique_ptr<OctNode> &&node);
+
+    /**
+     * Return the node at the given `index`, range-checked.
+     *
+     * @throws std::out_of_range if the index is out of bounds
+     * @param index Index of the node.
+     * @return Reference to the node.
+     */
+    OctNode &at(const unsigned int index);
+
+    /**
+     * Create and add a node to the group. Takes the same arguments as `T` and
+     * returns a reference to the new node. The new node will be rendered after
+     * the next call to sync().
+     *
+     * @return Reference to the new node.
+     */
+    template <typename T, typename... arg_ts>
+    T &emplace(arg_ts&&... args)
+    {
+        T *result = new T(std::forward<arg_ts>(args)...);
+        m_children.emplace_back(result);
+        return *result;
+    }
+
+    /**
+     * Erase a single node from the group.
+     *
+     * The node may not be deleted immediately, depending on whether it is
+     * currently being rendered. After the next call to sync(), it will have
+     * been deleted.
+     *
+     * @param iter Iterator pointing at the node to remove
+     * @return Iterator pointing to the node behind the node which was
+     * removed.
+     */
+    iterator erase(iterator iter);
+
+    /**
+     * Erase multiple nodes from the group, in the half-open interval
+     * ``[first, last)``.
+     *
+     * See erase() for details on the actual time of deletion.
+     *
+     * @param first First node to erase.
+     * @param last OctNode after the last node to erase.
+     * @return New iterator pointing to the node at which last pointed.
+     * @see erase
+     */
+    iterator erase(iterator first, iterator last);
+
+    /**
+     * Number of nodes currently in the group.
+     *
+     * @return Number of nodes currently in the group.
+     */
+    inline std::size_t size() const
+    {
+        return m_children.size();
+    }
+
+    /**
+     * Access a specific node.
+     *
+     * @param at Index of the node
+     * @return A pointer to the node or std::nullptr if the index is out of
+     * range.
+     */
+    OctNode *operator[](const unsigned int at);
+
+    /**
+     * Remove and return the node at the given iterator position.
+     *
+     * In contrast to erase(), this does not take care of keeping the node
+     * alive if neccessary for rendering.
+     *
+     * You **must** keep the node alive until rendering finishes. If you want
+     * to simply delete a node, use erase() instead, which will take care of
+     * keeping the node alive until the current render finishes but logically
+     * removing it from the scenegraph.
+     *
+     * @param iter The iterator pointing at the node to remove.
+     * @return A tuple consisting of the removed node and the iterator pointing
+     * to the node which was behind the removed node.
+     */
+    std::tuple<std::unique_ptr<OctNode>, iterator> pop(iterator iter);
+
+public:
+    void advance(TimeInterval seconds) override;
+
+    void sync(RenderContext &context,
+              ffe::Octree &octree,
+              OctContext &positioning) override;
+
+};
+
+
+class OctParentNode: public OctNode
+{
+private:
+    std::unique_ptr<OctNode> m_child;
+    std::unique_ptr<OctNode> m_locked_child;
+
+public:
+    /**
+     * Return a pointer to the current child node.
+     *
+     * @return Pointer to the current child node
+     */
+    inline OctNode *child() const
+    {
+        return m_child.get();
+    }
+
+    /**
+     * Swap the current child for a different one.
+     *
+     * You **must** keep the returned node alive until the next call to sync().
+     * If you simply want to set a new child, use set_child().
+     *
+     * @param node The new child to adopt
+     * @return The old child.
+     */
+    std::unique_ptr<OctNode> swap_child(std::unique_ptr<OctNode> &&node);
+
+    /**
+     * Replace the current child, deleting it.
+     *
+     * The old child might be kept alive until the next call to sync().
+     *
+     * @param node New child to adopt
+     */
+    void set_child(std::unique_ptr<OctNode> &&node);
+
+    /**
+     * Create a node and replace the current child with it.
+     *
+     * The deletion of the old child has the same semantics as with
+     * set_child().
+     *
+     * @return A reference to the newly created child.
+     */
+    template <typename child_t, typename... arg_ts>
+    child_t &emplace_child(arg_ts&&... args)
+    {
+        child_t *result = new child_t(std::forward<arg_ts>(args)...);
+        set_child(std::unique_ptr<OctNode>(result));
+        return *result;
+    }
+
+public:
+    void advance(TimeInterval seconds) override;
+    void sync(RenderContext &context, ffe::Octree &octree,
+              OctContext &positioning) override;
+
+};
+
+
+class OctRotation: public OctParentNode
+{
+public:
+    OctRotation() = default;
+    explicit OctRotation(const Quaternionf &q);
+
+private:
+    Quaternionf m_rotation;
+
+public:
+    inline void set_rotation(Quaternionf &&src)
+    {
+        m_rotation = src;
+    }
+
+    inline const Quaternionf &rotation() const
+    {
+        return m_rotation;
+    }
+
+public:
+    void sync(RenderContext &context, ffe::Octree &octree,
+              OctContext &positioning) override;
+
+};
+
+
+class OctTranslation: public OctParentNode
+{
+public:
+    OctTranslation() = default;
+    explicit OctTranslation(const Vector3f &d);
+
+private:
+    Vector3f m_translation;
+
+public:
+    inline void set_translation(Vector3f &&src)
+    {
+        m_translation = src;
+    }
+
+    inline const Vector3f &translation() const
+    {
+        return m_translation;
+    }
+
+public:
+    void sync(RenderContext &context, ffe::Octree &octree,
+              OctContext &positioning) override;
+
+};
+
+
+class OctreeGroup: public Node
+{
+private:
+    OctGroup m_root;
+    ffe::Octree m_octree;
+
+    // used during sync
+    OctContext m_positioning;
+    std::vector<ffe::OctreeNode*> m_hitset;
+
+    std::vector<RenderableOctreeObject*> m_to_render;
+
+    std::atomic_uint_least32_t m_selected_objects;
+
+public:
+    inline OctGroup &root()
+    {
+        return m_root;
+    }
+
+    inline const OctGroup &root() const
+    {
+        return m_root;
+    }
+
+    inline ffe::Octree &octree()
+    {
+        return m_octree;
+    }
+
+    inline const ffe::Octree &octree() const
+    {
+        return m_octree;
+    }
+
+
+    inline uint_least32_t selected_objects() const
+    {
+        return m_selected_objects;
+    }
+
+public:
+    void advance(TimeInterval seconds) override;
+    void sync(RenderContext &context) override;
+    void render(RenderContext &context) override;
+
+};
+
 
 } /* namespace scenegraph */
 

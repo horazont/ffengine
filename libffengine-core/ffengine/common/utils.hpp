@@ -143,6 +143,72 @@ public:
 
 };
 
+template <typename internal_iterator, typename for_class>
+class DereferencingIterator
+{
+public:
+    typedef std::bidirectional_iterator_tag iterator_category;
+    typedef typename internal_iterator::difference_type difference_type;
+    typedef std::remove_pointer<typename internal_iterator::value_type> &value_type;
+    typedef value_type reference;
+    typedef std::remove_pointer<typename internal_iterator::value_type> *&pointer;
+
+public:
+    DereferencingIterator(internal_iterator curr):
+        m_curr(curr)
+    {
+
+    }
+
+private:
+    internal_iterator m_curr;
+
+public:
+    inline bool operator==(const DereferencingIterator &other) const
+    {
+        return (m_curr == other.m_curr);
+    }
+
+    inline bool operator!=(const DereferencingIterator &other) const
+    {
+        return (m_curr != other.m_curr);
+    }
+
+    inline DereferencingIterator operator++(int) const
+    {
+        return DereferencingIterator(std::next(m_curr));
+    }
+
+    inline DereferencingIterator &operator++()
+    {
+        ++m_curr;
+        return *this;
+    }
+
+    inline DereferencingIterator operator--(int) const
+    {
+        return DereferencingIterator(std::prev(m_curr));
+    }
+
+    inline DereferencingIterator &operator--()
+    {
+        --m_curr;
+        return *this;
+    }
+
+    inline value_type operator*() const
+    {
+        return **m_curr;
+    }
+
+    inline value_type operator->() const
+    {
+        return **m_curr;
+    }
+
+    friend for_class;
+};
+
 
 /**
  * Raise the last OS error (as detected by querying errno) as

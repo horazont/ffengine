@@ -264,7 +264,7 @@ void OctreeNode::remove_object(OctreeObject *obj)
 
     obj->m_parent = nullptr;
     // TODO: only invalidate bounds if the object was flush against the edges
-    m_bounds_valid = false;
+    invalidate_bounds();
 
     delete_if_empty();
 }
@@ -351,6 +351,10 @@ bool OctreeNode::split()
         }
     }
 
+    if (mean_sum == 0) {
+        return false;
+    }
+
     mean /= mean_sum;
 
     m_split_planes[0].plane = Plane(mean, Vector3f(1, 0, 0));
@@ -360,17 +364,13 @@ bool OctreeNode::split()
     m_split_planes[2].plane = Plane(mean, Vector3f(0, 0, 1));
     m_split_planes[2].enabled = true;
 
-    std::vector<unsigned int> object_child_indices;
     std::array<unsigned int, 3> straddle_counters({0, 0, 0});
-    object_child_indices.reserve(m_objects.size());
-    for (unsigned int i = 0;
-         i < m_objects.size();
-         ++i)
+    for (OctreeObject *object: m_objects)
     {
         for (unsigned int plane_idx = 0; plane_idx < 3; ++plane_idx)
         {
             PlaneSide side = m_split_planes[plane_idx].plane.side_of(
-                        m_objects[i]->m_bounding_sphere);;
+                        object->m_bounding_sphere);;
             if (side == PlaneSide::BOTH) {
                 straddle_counters[plane_idx] += 1;
             }
@@ -395,7 +395,7 @@ bool OctreeNode::split()
         }
     }
 
-    if (disabled_count >= 2) {
+    if (disabled_count == 3) {
         // re-enable all planes but the one with most straddling
         for (unsigned int i = 0; i < 3; ++i) {
             m_split_planes[i].enabled = (i != max_straddling_plane);
@@ -439,14 +439,24 @@ OctreeNode *OctreeNode::insert_object(OctreeObject *obj)
 
     if (destination == CHILD_SELF) {
         m_objects.push_back(obj);
+        invalidate_bounds();
         obj->m_parent = this;
         if (!m_is_split && m_objects.size() >= SPLIT_THRESHOLD) {
             split();
+            return obj->m_parent;
         }
     } else {
         return autocreate_child(destination).insert_object(obj);
     }
     return this;
+}
+
+void OctreeNode::invalidate_bounds()
+{
+    m_bounds_valid = false;
+    if (m_parent) {
+        m_parent->invalidate_bounds();
+    }
 }
 
 /* ffe::Octree */
