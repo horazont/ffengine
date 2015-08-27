@@ -124,6 +124,15 @@ void ArrayDeclaration::declare_attribute(const std::string &name,
                 );
 }
 
+const AttributeMapping &ArrayDeclaration::get_attribute(const std::string &name) const
+{
+    auto iter = m_attribs.find(name);
+    if (iter == m_attribs.end()) {
+        throw std::runtime_error("no such attribute: "+name);
+    }
+    return iter->second;
+}
+
 std::unique_ptr<VAO> ArrayDeclaration::make_vao(
         const ShaderProgram &for_shader,
         bool add_vbo_hints)

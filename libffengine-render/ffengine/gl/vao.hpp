@@ -78,6 +78,8 @@ public:
                            unsigned int vbo_attr,
                            bool normalized=false);
 
+    const AttributeMapping &get_attribute(const std::string &name) const;
+
     inline IBO *ibo() const
     {
         return m_ibo;
