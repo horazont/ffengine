@@ -56,9 +56,10 @@ static inline void draw_elements(
 static inline void draw_elements_base_vertex(
         const IBOAllocation &alloc,
         GLenum mode,
-        GLint base_vertex)
+        GLint base_vertex,
+        unsigned int nmax = std::numeric_limits<unsigned int>::max())
 {
-    glDrawElementsBaseVertex(mode, alloc.length(), IBOAllocation::buffer_t::gl_type, (const GLvoid*)alloc.offset(), base_vertex);
+    glDrawElementsBaseVertex(mode, std::min(alloc.length(), nmax), IBOAllocation::buffer_t::gl_type, (const GLvoid*)alloc.offset(), base_vertex);
 }
 
 }

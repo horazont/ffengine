@@ -101,6 +101,11 @@ public:
                                    VAO &with_arrays, Material &using_material,
                                    IBOAllocation &indicies,
                                    GLint base_vertex);
+    void draw_elements_base_vertex_less(GLenum primitive,
+                                        VAO &with_arrays, Material &using_material,
+                                        IBOAllocation &indicies,
+                                        GLint base_vertex,
+                                        unsigned int nmax);
 
     void pop_transformation();
 

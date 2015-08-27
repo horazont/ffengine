@@ -92,6 +92,21 @@ void RenderContext::draw_elements_base_vertex(
     raise_last_gl_error();
 }
 
+void RenderContext::draw_elements_base_vertex_less(
+        GLenum primitive,
+        VAO &with_arrays, Material &using_material,
+        IBOAllocation &indicies,
+        GLint base_vertex,
+        unsigned int nmax)
+{
+    raise_last_gl_error();
+    prepare_draw();
+    with_arrays.bind();
+    using_material.bind();
+    ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex, nmax);
+    raise_last_gl_error();
+}
+
 void RenderContext::push_transformation(const Matrix4f &mat)
 {
     m_model_stack.push_back(m_current_transformation);
