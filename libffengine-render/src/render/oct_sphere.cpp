@@ -68,7 +68,7 @@ void OctSphere::render(RenderContext &context)
     context.pop_transformation();
 }
 
-void OctSphere::sync(RenderContext &context, ffe::Octree &octree,
+void OctSphere::sync(RenderContext &, ffe::Octree &octree,
                      scenegraph::OctContext &positioning)
 {
     if (this->octree() != &octree) {

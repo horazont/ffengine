@@ -34,7 +34,7 @@ static io::Logger &logger = io::logging().get_logger("render.scenegraph");
 
 /* engine::RenderableOctreeObject */
 
-void RenderableOctreeObject::render(RenderContext &context)
+void RenderableOctreeObject::render(RenderContext &)
 {
 
 }
@@ -305,12 +305,12 @@ OctNode::~OctNode()
 
 }
 
-void OctNode::advance(TimeInterval seconds)
+void OctNode::advance(TimeInterval)
 {
 
 }
 
-void OctNode::sync(RenderContext &context, ffe::Octree &octree, OctContext &positioning)
+void OctNode::sync(RenderContext &, ffe::Octree &, OctContext &)
 {
 
 }
