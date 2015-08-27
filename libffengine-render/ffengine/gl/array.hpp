@@ -595,14 +595,16 @@ public:
         std::cout << "BEGIN OF BUFFER DUMP (glid = " << this->m_glid << ")" << std::endl;
 
         std::basic_string<element_t> buf;
-        buf.resize(m_remote_size);
+        buf.resize(m_remote_size, (element_t)(0xdeadbeefdeadbeefULL));
         glGetBufferSubData(gl_target, 0, m_remote_size*sizeof(element_t), &buf.front());
 
+        unsigned int p = 0;
         for (auto &item: buf) {
-            std::cout << item << std::endl;
+            std::cout << p << "  " << item << std::endl;
+            ++p;
         }
 
-        std::cout << "END OF BUFFER DUMP (glid = " << this->m_glid << ")" << std::endl;
+        std::cout << "END OF BUFFER DUMP (glid = " << this->m_glid << "; count = " << buf.size() << ")" << std::endl;
     }
 
     element_t *region_get_ptr(const GLArrayRegionID region_id)
