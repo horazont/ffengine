@@ -30,8 +30,9 @@ DynamicAABBs::DynamicAABBs(DiscoverCallback &&cb):
 
 void DynamicAABBs::render(RenderContext &context)
 {
-    context.draw_elements_less(GL_LINES, *m_vao, m_material, m_ibo_alloc,
-                               m_aabbs.size()*24);
+    context.draw_elements_base_vertex_less(GL_LINES, *m_vao, m_material, m_ibo_alloc,
+                                           m_vbo_alloc.base(),
+                                           m_aabbs.size()*24);
 }
 
 void DynamicAABBs::sync(RenderContext &)
