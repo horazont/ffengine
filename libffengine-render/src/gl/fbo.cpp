@@ -173,7 +173,8 @@ void RenderTarget::unbound(Usage usage)
 
 
 WindowRenderTarget::WindowRenderTarget():
-    RenderTarget(0, 0)
+    RenderTarget(0, 0),
+    m_fbo_id(0)
 {
 
 }

@@ -37,7 +37,8 @@ CameraController::CameraController():
     m_rot_accel(0, 0),
     m_distance(1),
     m_distance_vel(0),
-    m_distance_accel(0)
+    m_distance_accel(0),
+    m_2d_restricted(false)
 {
 
 }
