@@ -276,6 +276,33 @@ protected:
         return m_regions.erase(iter+1, iter+nregions);
     }
 
+    inline bool merge_aggregated(region_container::iterator &iterator,
+                                 region_container::iterator &best,
+                                 unsigned int &aggregation_backlog,
+                                 const unsigned int nblocks)
+    {
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "compacting %d regions",
+                             aggregation_backlog);
+        iterator = compact_regions(
+                    iterator,
+                    aggregation_backlog);
+        GLArrayRegion &merged = **(iterator-1);
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "resulting region (%d) has %d elements",
+                             merged.m_id,
+                             merged.m_count);
+        if (merged.m_count >= nblocks) {
+            gl_array_logger.logf(io::LOG_DEBUG,
+                                 "suggesting region %d",
+                                 merged.m_id);
+            best = iterator-1;
+            return true;
+        }
+
+        return false;
+    }
+
     region_container::iterator compact_or_expand(
             const unsigned int nblocks)
     {
@@ -290,22 +317,8 @@ protected:
             if (region.m_in_use)
             {
                 if (aggregation_backlog > 1) {
-                    gl_array_logger.logf(io::LOG_DEBUG,
-                                         "compacting %d regions",
-                                         aggregation_backlog);
-                    iterator = compact_regions(
-                                iterator,
-                                aggregation_backlog);
-                    GLArrayRegion &merged = **(iterator-1);
-                    gl_array_logger.logf(io::LOG_DEBUG,
-                                         "resulting region (%d) has %d elements",
-                                         merged.m_id,
-                                         merged.m_count);
-                    if (merged.m_count >= nblocks) {
-                        gl_array_logger.logf(io::LOG_DEBUG,
-                                             "suggesting region %d",
-                                             merged.m_id);
-                        best = iterator-1;
+                    if (merge_aggregated(iterator, best,
+                                         aggregation_backlog, nblocks)) {
                         found = true;
                         break;
                     }
@@ -319,6 +332,11 @@ protected:
             }
 
             aggregation_backlog += 1;
+        }
+
+        if (!found && aggregation_backlog > 1) {
+            found = merge_aggregated(iterator, best,
+                                     aggregation_backlog, nblocks);
         }
 
         if (found) {
