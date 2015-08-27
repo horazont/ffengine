@@ -417,6 +417,9 @@ protected:
             return false;
         }
 
+        gl_array_logger.logf(io::LOG_INFO, "(glid=%d) GPU reallocation",
+                             this->m_glid);
+
         glBufferData(gl_target,
                      m_local_buffer.size() * sizeof(element_t),
                      m_local_buffer.data(),
