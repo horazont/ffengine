@@ -86,6 +86,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
                         VBOAttribute(2)
                     })),
     m_ibo(),
+    m_material(m_vbo, m_ibo),
+    m_normal_debug_material(m_vbo, m_ibo),
     m_vbo_allocation(m_vbo.allocate(m_grid_size*m_grid_size)),
     m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*4)),
     m_cache_invalidation(0, 0, m_terrain.size(), m_terrain.size())
@@ -114,7 +116,10 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     success = success && m_material.shader().attach_resource(
                 GL_FRAGMENT_SHADER,
                 ":/shaders/terrain/main.frag");
-    success = success && m_material.shader().link();
+
+    m_material.declare_attribute("position", 0);
+
+    success = success && m_material.link();
 
     success = success && m_normal_debug_material.shader().attach_resource(
                 GL_VERTEX_SHADER,
@@ -125,7 +130,10 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     success = success && m_normal_debug_material.shader().attach_resource(
                 GL_FRAGMENT_SHADER,
                 ":/shaders/generic/normal_debug.frag");
-    success = success && m_normal_debug_material.shader().link();
+
+    m_normal_debug_material.declare_attribute("position", 0);
+
+    success = success && m_normal_debug_material.link();
 
     if (!success) {
         throw std::runtime_error("failed to compile or link shader");
@@ -142,7 +150,6 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
                 0.);
     glUniform1f(m_material.shader().uniform_location("heightmap_factor"),
                 heightmap_factor);
-    RenderContext::configure_shader(m_material.shader());
 
     m_normal_debug_material.shader().bind();
     glUniform2f(m_normal_debug_material.shader().uniform_location("chunk_translation"),
@@ -155,7 +162,6 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
                 0.);
     glUniform1f(m_normal_debug_material.shader().uniform_location("heightmap_factor"),
                 heightmap_factor);
-    RenderContext::configure_shader(m_normal_debug_material.shader());
 
     m_heightmap.bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -169,12 +175,6 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);*/
 
-    ArrayDeclaration decl;
-    decl.declare_attribute("position", m_vbo, 0);
-    decl.set_ibo(&m_ibo);
-
-    m_vao = decl.make_vao(m_material.shader(), true);
-    m_nd_vao = decl.make_vao(m_normal_debug_material.shader(), true);
 
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
@@ -187,8 +187,8 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     }
     m_vbo_allocation.mark_dirty();
 
-    m_vao->sync();
-    m_nd_vao->sync();
+    m_vbo.sync();
+    m_ibo.sync();
 
     // we assume that at any given time only one fourth of the texture cache
     // will be used for rendering. otherwise, realloc :)
@@ -265,7 +265,6 @@ void FancyTerrainNode::collect_slices_recurse(
 }
 
 inline void render_slice(RenderContext &context,
-                         VAO &vao,
                          Material &material,
                          IBOAllocation &ibo_allocation,
                          const float x, const float y,
@@ -282,17 +281,17 @@ inline void render_slice(RenderContext &context,
     std::cout << "  translationx  = " << x << std::endl;
     std::cout << "  translationy  = " << y << std::endl;
     std::cout << "  scale         = " << scale << std::endl;*/
-    context.draw_elements(GL_LINES_ADJACENCY, vao, material, ibo_allocation);
+    context.draw_elements(GL_LINES_ADJACENCY, material, ibo_allocation);
 }
 
-void FancyTerrainNode::render_all(RenderContext &context, VAO &vao, Material &material)
+void FancyTerrainNode::render_all(RenderContext &context, Material &material)
 {
     for (auto &slice: m_render_slices) {
         const float x = slice.basex;
         const float y = slice.basey;
         const float scale = slice.lod;
 
-        render_slice(context, vao, material, m_ibo_allocation,
+        render_slice(context, material, m_ibo_allocation,
                      x, y, scale);
     }
 }
@@ -322,11 +321,16 @@ void FancyTerrainNode::configure_overlay(
 
 bool FancyTerrainNode::configure_overlay_material(Material &mat)
 {
-    bool success = mat.shader().attach_resource(GL_VERTEX_SHADER,
-                                                ":/shaders/terrain/main.vert");
-    success = success && mat.shader().attach_resource(GL_GEOMETRY_SHADER,
-                                                ":/shaders/terrain/main.geom");
-    success = success && mat.shader().link();
+    bool success = mat.shader().attach_resource(
+                GL_VERTEX_SHADER,
+                ":/shaders/terrain/main.vert");
+    success = success && mat.shader().attach_resource(
+                GL_GEOMETRY_SHADER,
+                ":/shaders/terrain/main.geom");
+
+    mat.declare_attribute("position", 0);
+
+    success = success && mat.link();
     if (!success) {
         return false;
     }
@@ -336,7 +340,8 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
     mat.shader().bind();
     glUniform1f(mat.shader().uniform_location("zoffset"), 1.0f);
     glUniform1f(mat.shader().uniform_location("heightmap_factor"),
-                1.f/(m_terrain.size()));
+                1.f/(m_terrain_interface.size()));
+    mat.shader().unbind();
 
     return true;
 }
@@ -365,10 +370,10 @@ void FancyTerrainNode::render(RenderContext &context)
     timelog_clock::time_point t_solid, t_overlay;
 #endif
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
-    m_material.shader().bind();
+    m_material.bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, context.viewpoint()/*fake_viewpoint*/.as_array);
-    render_all(context, *m_vao, m_material);
+    render_all(context, m_material);
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 #ifdef TIMELOG_RENDER
     t_solid = timelog_clock::now();
@@ -382,8 +387,9 @@ void FancyTerrainNode::render(RenderContext &context)
     glDepthMask(GL_FALSE);
     for (auto &overlay: m_render_overlays)
     {
-        overlay.material->shader().bind();
-        glUniform3fv(overlay.material->shader().uniform_location("lod_viewpoint"),
+        Material &material = *overlay.material;
+        material.bind();
+        glUniform3fv(material.shader().uniform_location("lod_viewpoint"),
                      1, context.viewpoint()/*fake_viewpoint*/.as_array);
         for (auto &slice: m_render_slices)
         {
@@ -394,7 +400,7 @@ void FancyTerrainNode::render(RenderContext &context)
             sim::TerrainRect slice_rect(x, y, x+scale, y+scale);
             if (slice_rect.overlaps(overlay.clip_rect)) {
                 render_slice(context,
-                             *m_vao, *overlay.material, m_ibo_allocation,
+                             material, m_ibo_allocation,
                              x, y, scale);
             }
         }
@@ -421,7 +427,7 @@ void FancyTerrainNode::sync(RenderContext &context)
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
-        item.first->bind();
+        item.first->shader().bind();
         glUniform1f(item.first->shader().uniform_location("scale_to_radius"),
                     lod_range_base / (m_grid_size-1));
         m_render_overlays.emplace_back(

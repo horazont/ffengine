@@ -47,13 +47,11 @@ FluidNode::FluidNode(sim::Fluid &fluidsim):
                 fluidsim.blocks().cells_per_axis(),
                 GL_RGBA,
                 GL_FLOAT),
-    m_vbo(VBOFormat({
-                        VBOAttribute(3)
-                    })),
-    m_ibo(),
-    m_material(),
-    m_vbo_alloc(m_vbo.allocate((cells+1)*(cells+1))),
-    m_ibo_alloc(m_ibo.allocate(cells*cells*4))
+    m_material(VBOFormat({
+                             VBOAttribute(3)
+                         })),
+    m_vbo_alloc(m_material.vbo().allocate((cells+1)*(cells+1))),
+    m_ibo_alloc(m_material.ibo().allocate(cells*cells*4))
 {
     {
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
@@ -95,7 +93,11 @@ FluidNode::FluidNode(sim::Fluid &fluidsim):
     success = success && m_material.shader().attach_resource(
                 GL_FRAGMENT_SHADER,
                 ":/shaders/fluid/main.frag");
-    success = success && m_material.shader().link();
+
+
+    m_material.declare_attribute("position", 0);
+
+    success = success && m_material.link();
     if (!success) {
         throw std::runtime_error("shader failed to compile or link");
     }
@@ -106,11 +108,6 @@ FluidNode::FluidNode(sim::Fluid &fluidsim):
     glUniform1f(m_material.shader().uniform_location("height"),
                 m_fluidsim.blocks().cells_per_axis());
 
-    ArrayDeclaration decl;
-    decl.declare_attribute("position", m_vbo, 0);
-    decl.set_ibo(&m_ibo);
-
-    m_vao = decl.make_vao(m_material.shader(), true);
 
     RenderContext::configure_shader(m_material.shader());
 
@@ -207,14 +204,14 @@ void FluidNode::render(RenderContext &context)
                  context.viewpoint().as_array);
     glUniform2f(m_material.shader().uniform_location("viewport"),
                 context.viewport_width(), context.viewport_height());
-    context.draw_elements(GL_LINES_ADJACENCY, *m_vao, m_material, m_ibo_alloc);
+    context.draw_elements(GL_LINES_ADJACENCY, m_material, m_ibo_alloc);
     /*glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
 }
 
 void FluidNode::sync(RenderContext &)
 {
-    m_vao->sync();
-    m_material.shader().bind();
+    m_material.bind();
+    m_material.sync();
     glUniform1f(m_material.shader().uniform_location("t"),
                 m_t);
     m_fluiddata.bind();

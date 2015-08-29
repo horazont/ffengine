@@ -25,14 +25,13 @@ the AUTHORS file.
 
 namespace engine {
 
-OctSphere::OctSphere(ArrayDeclaration &arrays, VAO &vao, Material &mat, float radius):
+OctSphere::OctSphere(Material &mat, float radius):
     OctNode(),
     RenderableOctreeObject(),
     m_radius(radius),
     m_material(mat),
-    m_vao(vao),
-    m_vbo_alloc(arrays.get_attribute("position").vbo.allocate(6)),
-    m_ibo_alloc(arrays.ibo()->allocate(8*3))
+    m_vbo_alloc(mat.vbo().allocate(6)),
+    m_ibo_alloc(mat.ibo().allocate(8*3))
 {
     {
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
@@ -86,8 +85,9 @@ OctSphere::OctSphere(ArrayDeclaration &arrays, VAO &vao, Material &mat, float ra
 void OctSphere::render(RenderContext &context)
 {
     context.push_transformation(translation4(m_origin));
+    m_material.bind();
     /*std::cout << "rendering at " << m_origin << std::endl; */
-    context.draw_elements(GL_TRIANGLES, m_vao, m_material, m_ibo_alloc);
+    context.draw_elements(GL_TRIANGLES, m_material, m_ibo_alloc);
     context.pop_transformation();
 }
 

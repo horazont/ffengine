@@ -34,13 +34,10 @@ public:
     FrustumNode();
 
 private:
-    engine::VBO m_vbo;
-    engine::IBO m_ibo;
-    engine::Material m_material;
-    std::unique_ptr<engine::VAO> m_vao;
+    Material m_material;
 
-    engine::VBOAllocation m_vbo_alloc;
-    engine::IBOAllocation m_ibo_alloc;
+    VBOAllocation m_vbo_alloc;
+    IBOAllocation m_ibo_alloc;
 
 public:
     void render(RenderContext &context) override;

@@ -31,14 +31,13 @@ namespace engine {
 class OctSphere: public scenegraph::OctNode, public RenderableOctreeObject
 {
 public:
-    OctSphere(ArrayDeclaration &arrays, VAO &vao, Material &mat, float radius);
+    OctSphere(Material &mat, float radius);
 
 private:
     Vector3f m_origin;
     float m_radius;
 
     Material &m_material;
-    VAO &m_vao;
 
     VBOAllocation m_vbo_alloc;
     IBOAllocation m_ibo_alloc;

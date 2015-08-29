@@ -28,11 +28,11 @@ namespace engine {
 
 FrustumNode::FrustumNode():
     scenegraph::Node(),
-    m_vbo(VBOFormat({
+    m_material(VBOFormat({
                         VBOAttribute(3)
                     })),
-    m_vbo_alloc(m_vbo.allocate(16)),
-    m_ibo_alloc(m_ibo.allocate(4*2*3))
+    m_vbo_alloc(m_material.vbo().allocate(16)),
+    m_ibo_alloc(m_material.ibo().allocate(4*2*3))
 {
     uint16_t *dest = m_ibo_alloc.get();
     for (unsigned int face = 0; face < 4; face++)
@@ -47,30 +47,29 @@ FrustumNode::FrustumNode():
         *dest++ = base+3;
     }
     m_ibo_alloc.mark_dirty();
-    m_ibo.sync();
+
     bool success = m_material.shader().attach_resource(
                 GL_VERTEX_SHADER,
                 ":/shaders/frustum/main.vert");
     success = success && m_material.shader().attach_resource(
                 GL_FRAGMENT_SHADER,
                 ":/shaders/frustum/main.frag");
-    success = success && m_material.shader().link();
+
+    m_material.declare_attribute("position", 0);
+
+    success = success && m_material.link();
 
     if (!success) {
         throw std::runtime_error("failed to compile or link shader");
     }
 
-    ArrayDeclaration decl;
-    decl.declare_attribute("position", m_vbo, 0);
-    decl.set_ibo(&m_ibo);
-
-    m_vao = decl.make_vao(m_material.shader(), true);
+    m_material.sync();
 }
 
 void FrustumNode::render(RenderContext &context)
 {
     glDisable(GL_CULL_FACE);
-    context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_alloc);
+    context.draw_elements(GL_TRIANGLES, m_material, m_ibo_alloc);
     glEnable(GL_CULL_FACE);
 }
 
@@ -116,7 +115,7 @@ void FrustumNode::sync(RenderContext &context)
 
     /* _Exit(1); */
 
-    m_vao->sync();
+    m_material.sync();
 }
 
 }

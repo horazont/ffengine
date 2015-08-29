@@ -52,27 +52,23 @@ void RenderContext::prepare_draw()
 }
 
 void RenderContext::draw_elements(GLenum primitive,
-                                  VAO &with_arrays,
                                   Material &using_material,
                                   IBOAllocation &indicies)
 {
     raise_last_gl_error();
     prepare_draw();
-    with_arrays.bind();
     using_material.bind();
     ::engine::draw_elements(indicies, primitive);
     raise_last_gl_error();
 }
 
 void RenderContext::draw_elements_less(GLenum primitive,
-                                       VAO &with_arrays,
                                        Material &using_material,
                                        IBOAllocation &indicies,
                                        unsigned int nmax)
 {
     raise_last_gl_error();
     prepare_draw();
-    with_arrays.bind();
     using_material.bind();
     ::engine::draw_elements(indicies, primitive, nmax);
     raise_last_gl_error();
@@ -80,13 +76,12 @@ void RenderContext::draw_elements_less(GLenum primitive,
 
 void RenderContext::draw_elements_base_vertex(
         GLenum primitive,
-        VAO &with_arrays, Material &using_material,
+        Material &using_material,
         IBOAllocation &indicies,
         GLint base_vertex)
 {
     raise_last_gl_error();
     prepare_draw();
-    with_arrays.bind();
     using_material.bind();
     ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex);
     raise_last_gl_error();
@@ -94,14 +89,13 @@ void RenderContext::draw_elements_base_vertex(
 
 void RenderContext::draw_elements_base_vertex_less(
         GLenum primitive,
-        VAO &with_arrays, Material &using_material,
+        Material &using_material,
         IBOAllocation &indicies,
         GLint base_vertex,
         unsigned int nmax)
 {
     raise_last_gl_error();
     prepare_draw();
-    with_arrays.bind();
     using_material.bind();
     ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex, nmax);
     raise_last_gl_error();

@@ -25,16 +25,43 @@ the AUTHORS file.
 
 #include "ffengine/gl/util.hpp"
 
+#include "ffengine/render/rendergraph.hpp"
+
 
 namespace engine {
 
 io::Logger &logger = io::logging().get_logger("gl.material");
 
-Material::Material():
+Material::Material(const VBOFormat &format):
     m_max_texture_units(gl_get_integer(GL_MAX_TEXTURE_IMAGE_UNITS)),
+    m_vbo(new VBO(format)),
+    m_ibo(new IBO()),
+    m_buffers_shared(false),
     m_base_free_unit(0)
 {
 
+}
+
+Material::Material(VBO &vbo, IBO &ibo):
+    m_max_texture_units(gl_get_integer(GL_MAX_TEXTURE_IMAGE_UNITS)),
+    m_vbo(&vbo),
+    m_ibo(&ibo),
+    m_buffers_shared(true),
+    m_base_free_unit(0)
+{
+
+}
+
+Material::~Material()
+{
+    if (!m_buffers_shared) {
+        if (m_vbo) {
+            delete m_vbo;
+        }
+        if (m_ibo) {
+            delete m_ibo;
+        }
+    }
 }
 
 GLint Material::get_next_texture_unit()
@@ -89,6 +116,11 @@ GLint Material::attach_texture(const std::string &name, Texture2D *tex)
     return unit;
 }
 
+void Material::declare_attribute(const std::string &name, unsigned int vbo_attr, bool normalized)
+{
+    m_declaration.declare_attribute(name, *m_vbo, vbo_attr, normalized);
+}
+
 void Material::detach_texture(const std::string &name)
 {
     auto iter = m_texture_bindings.find(name);
@@ -99,13 +131,34 @@ void Material::detach_texture(const std::string &name)
     m_texture_bindings.erase(iter);
 }
 
+bool Material::link()
+{
+    if (!m_shader.link()) {
+        return false;
+    }
+
+    m_declaration.set_ibo(m_ibo);
+    m_vao = std::move(m_declaration.make_vao(m_shader, true));
+    RenderContext::configure_shader(m_shader);
+    return true;
+}
+
 void Material::bind()
 {
+    m_vao->bind();
     m_shader.bind();
     for (auto &binding: m_texture_bindings)
     {
         glActiveTexture(GL_TEXTURE0+binding.second.texture_unit);
         binding.second.texture_obj->bind();
+    }
+}
+
+void Material::sync()
+{
+    if (!m_buffers_shared) {
+        m_ibo->sync();
+        m_vbo->sync();
     }
 }
 

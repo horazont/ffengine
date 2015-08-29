@@ -45,10 +45,7 @@ private:
 
     Texture2D m_fluiddata;
 
-    VBO m_vbo;
-    IBO m_ibo;
     Material m_material;
-    std::unique_ptr<VAO> m_vao;
 
     VBOAllocation m_vbo_alloc;
     IBOAllocation m_ibo_alloc;

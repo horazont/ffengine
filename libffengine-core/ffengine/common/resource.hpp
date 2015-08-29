@@ -80,7 +80,7 @@ public:
     {
         require_unused_name(name);
 
-        T *obj = new T(args...);
+        T *obj = new T(std::forward<args_ts>(args)...);
         insert_resource_unchecked(name, std::unique_ptr<Resource>(obj));
         return *obj;
     }

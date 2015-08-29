@@ -510,7 +510,7 @@ protected:
                     << "uploading "
                     << size << " bytes at offset "
                     << offset
-                    << " (glid=" << this->m_glid << ")" << io::submit;
+                    << " (glid=" << this->m_glid << "; bound=" << gl_get_integer(gl_binding_type) << ")" << io::submit;
             glBufferSubData(gl_target, offset, size, m_local_buffer.data() + offset/sizeof(element_t));
         } else {
             // std::cout << "nothing to upload (right_block=0)" << std::endl;

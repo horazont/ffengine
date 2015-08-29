@@ -28,11 +28,11 @@ namespace engine {
 
 PointerNode::PointerNode(const float radius):
     scenegraph::Node(),
-    m_vbo(VBOFormat({
-                        VBOAttribute(3)
-                    })),
-    m_vbo_alloc(m_vbo.allocate(8)),
-    m_ibo_alloc(m_ibo.allocate(36))
+    m_material(VBOFormat({
+                             VBOAttribute(3)
+                         })),
+    m_vbo_alloc(m_material.vbo().allocate(8)),
+    m_ibo_alloc(m_material.ibo().allocate(36))
 {
     {
         auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
@@ -129,29 +129,25 @@ PointerNode::PointerNode(const float radius):
                 "  color = vec4(0.8, 0.9, 1.0, 0.8);"
                 "}");
 
-    success = success && m_material.shader().link();
+    m_material.declare_attribute("position", 0);
+
+    success = success && m_material.link();
 
     if (!success) {
         throw std::runtime_error("failed to link shader");
     }
 
-    ArrayDeclaration decl;
-    decl.declare_attribute("position", m_vbo, 0);
-    decl.set_ibo(&m_ibo);
-
-    m_vao = decl.make_vao(m_material.shader(), true);
-
-    RenderContext::configure_shader(m_material.shader());
+    m_material.sync();
 }
 
 void PointerNode::render(RenderContext &context)
 {
-    context.draw_elements(GL_TRIANGLES, *m_vao, m_material, m_ibo_alloc);
+    context.draw_elements(GL_TRIANGLES, m_material, m_ibo_alloc);
 }
 
 void PointerNode::sync(RenderContext &)
 {
-    m_vao->sync();
+
 }
 
 }

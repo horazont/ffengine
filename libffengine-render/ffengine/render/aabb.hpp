@@ -45,10 +45,7 @@ private:
     std::vector<AABB> m_aabbs;
     DiscoverCallback m_discover_cb;
 
-    engine::VBO m_vbo;
-    engine::IBO m_ibo;
     engine::Material m_material;
-    std::unique_ptr<engine::VAO> m_vao;
 
     engine::VBOAllocation m_vbo_alloc;
     engine::IBOAllocation m_ibo_alloc;

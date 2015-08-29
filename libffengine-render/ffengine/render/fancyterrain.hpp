@@ -187,9 +187,6 @@ private:
     VBOAllocation m_vbo_allocation;
     IBOAllocation m_ibo_allocation;
 
-    std::unique_ptr<VAO> m_vao;
-    std::unique_ptr<VAO> m_nd_vao;
-
     std::mutex m_cache_invalidation_mutex;
     sim::TerrainRect m_cache_invalidation;
 
@@ -213,7 +210,7 @@ protected:
     void compute_heightmap_lod(unsigned int basex,
                                unsigned int basey,
                                unsigned int lod);
-    void render_all(RenderContext &context, VAO &vao, Material &material);
+    void render_all(RenderContext &context, Material &material);
 
 public:
     void attach_blend_texture(Texture2D *tex);
@@ -287,6 +284,10 @@ public:
      */
     bool configure_overlay_material(Material &mat);
 
+    inline Material &material()
+    {
+        return m_material;
+    }
 
     /**
      * Remove a previously registered overlay.

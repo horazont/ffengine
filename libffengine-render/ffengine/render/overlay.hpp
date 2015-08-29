@@ -37,13 +37,9 @@ public:
     OverlayNode(Texture2D &depthbuffer);
 
 private:
-    engine::VBO m_vbo;
-    engine::IBO m_ibo;
     engine::Material m_material;
 
     Texture2D &m_depthbuffer;
-
-    std::unique_ptr<engine::VAO> m_vao;
 
     engine::VBOAllocation m_vbo_alloc;
     engine::IBOAllocation m_ibo_alloc;
