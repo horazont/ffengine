@@ -105,7 +105,6 @@ void OctSphere::sync(RenderContext &, ffe::Octree &octree,
     update_bounds(Sphere{m_origin, m_radius});
 
     if (this->octree() != &octree) {
-        std::cout << "inserting at " << m_origin << std::endl;
         octree.insert_object(this);
     }
 }
