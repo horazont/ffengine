@@ -26,6 +26,15 @@ the AUTHORS file.
 #include "ffengine/math/curve.hpp"
 
 
+TEST_CASE("math/curve/QuadBezier/QuadBezier()")
+{
+    QuadBezier3f curve;
+
+    CHECK(curve.p1 == Vector3f(0, 0, 0));
+    CHECK(curve.p2 == Vector3f(0, 0, 0));
+    CHECK(curve.p3 == Vector3f(0, 0, 0));
+}
+
 TEST_CASE("math/curve/QuadBezier/QuadBezier(p1, p2, p3)")
 {
     QuadBezier3f curve(Vector3f(0, 0, 0),

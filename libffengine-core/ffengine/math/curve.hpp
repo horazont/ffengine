@@ -32,6 +32,8 @@ the AUTHORS file.
 template <typename vector_t>
 struct QuadBezier
 {
+    QuadBezier() = default;
+
     template <typename p1_t, typename p2_t, typename p3_t>
     QuadBezier(p1_t &&p1, p2_t &&p2, p3_t &&p3):
         p1(p1),
@@ -62,7 +64,7 @@ struct QuadBezier
     template <typename float_t>
     inline Vector<float_t, vector_t::dimension> operator[](float_t t)
     {
-        return sqr(1-t)*p1 + 2*(1-t)*t*p2, + sqr(t)*p3;
+        return sqr(1-t)*p1 + 2*(1-t)*t*p2 + sqr(t)*p3;
     }
 
 };
