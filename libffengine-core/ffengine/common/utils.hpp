@@ -149,9 +149,9 @@ class DereferencingIterator
 public:
     typedef std::bidirectional_iterator_tag iterator_category;
     typedef typename internal_iterator::difference_type difference_type;
-    typedef std::remove_pointer<typename internal_iterator::value_type> &value_type;
+    typedef typename internal_iterator::value_type::element_type &value_type;
     typedef value_type reference;
-    typedef std::remove_pointer<typename internal_iterator::value_type> *&pointer;
+    typedef typename internal_iterator::value_type::element_type *&pointer;
 
 public:
     DereferencingIterator(internal_iterator curr):
