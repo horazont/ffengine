@@ -5,6 +5,7 @@ find_package(SIGC++ REQUIRED)
 set(TEST_SRC
   engine/io/utils.cpp
   engine/math/algo.cpp
+  engine/math/curve.cpp
   engine/math/intersect.cpp
   engine/math/matrix.cpp
   engine/math/octree.cpp

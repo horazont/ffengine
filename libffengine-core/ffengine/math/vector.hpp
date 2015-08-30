@@ -49,9 +49,10 @@ typedef double VectorFloat;
 
 #include "variadic_initializer.inc.hpp"
 
-template <typename vector_float_t, unsigned int _dimension>
+template <typename _vector_float_t, unsigned int _dimension>
 struct Vector {
     static constexpr unsigned int dimension = _dimension;
+    using vector_float_t = _vector_float_t;
 
     static_assert(dimension > 0, "Vector dimension must be "
                                  "greater than 0");

@@ -15,6 +15,7 @@ set(ENGINE_HEADERS
   ffengine/io/stream_operators.inc.hpp
   ffengine/io/utils.hpp
   ffengine/math/algo.hpp
+  ffengine/math/curve.hpp
   ffengine/math/intersect.hpp
   ffengine/math/matrix.hpp
   ffengine/math/octree.hpp
@@ -40,6 +41,7 @@ set(ENGINE_SRC
   src/io/stream_operators.inc.cpp
   src/io/utils.cpp
   src/math/algo.cpp
+  src/math/curve.cpp
   src/math/intersect.cpp
   src/math/matrix.cpp
   src/math/octree.cpp
