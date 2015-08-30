@@ -18,6 +18,7 @@ set(ENGINE_HEADERS
   ffengine/gl/vbo.hpp
   ffengine/render/aabb.hpp
   ffengine/render/camera.hpp
+  ffengine/render/curve.hpp
   ffengine/render/fancyterrain.hpp
   ffengine/render/fancyterraindata.hpp
   ffengine/render/fluid.hpp
@@ -45,6 +46,7 @@ set(ENGINE_SRC
   src/gl/vbo.cpp
   src/render/aabb.cpp
   src/render/camera.cpp
+  src/render/curve.cpp
   src/render/fancyterrain.cpp
   src/render/fancyterraindata.cpp
   src/render/fluid.cpp
