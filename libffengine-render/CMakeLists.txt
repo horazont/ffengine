@@ -24,6 +24,7 @@ set(ENGINE_HEADERS
   ffengine/render/fancyterraindata.hpp
   ffengine/render/fluid.hpp
   ffengine/render/frustum.hpp
+  ffengine/render/fullterrain.hpp
   ffengine/render/grid.hpp
   ffengine/render/oct_sphere.hpp
   ffengine/render/overlay.hpp
@@ -53,6 +54,7 @@ set(ENGINE_SRC
   src/render/fancyterraindata.cpp
   src/render/fluid.cpp
   src/render/frustum.cpp
+  src/render/fullterrain.cpp
   src/render/grid.cpp
   src/render/oct_sphere.cpp
   src/render/overlay.cpp

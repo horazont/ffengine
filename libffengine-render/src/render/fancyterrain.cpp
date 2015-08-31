@@ -43,33 +43,11 @@ static io::Logger &logger = io::logging().get_logger("render.fancyterrain");
 static const Vector3f fake_viewpoint(30, 30, 200);
 
 
-HeightmapSliceMeta::HeightmapSliceMeta():
-    valid(false)
-{
-
-}
-
-HeightmapSliceMeta::HeightmapSliceMeta(
-        unsigned int basex,
-        unsigned int basey,
-        unsigned int lod):
-    basex(basex),
-    basey(basey),
-    lod(lod),
-    valid(true)
-{
-
-}
-
-
 FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
                                    GLResourceManager &resources):
     m_resources(resources),
     m_eval_context(resources.shader_library()),
     m_terrain_interface(terrain_interface),
-    m_grid_size(terrain_interface.grid_size()),
-    m_tiles((terrain_interface.size()-1)/(terrain_interface.grid_size()-1)),
-    m_max_depth(log2_of_pot((terrain_interface.size()-1)/(m_grid_size-1))),
     m_terrain(terrain_interface.terrain()),
     m_terrain_nt(terrain_interface.ntmap()),
     m_invalidate_cache_conn(terrain_interface.field_updated().connect(
@@ -88,20 +66,21 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_vbo(VBOFormat({
                         VBOAttribute(2)
                     })),
-    m_ibo(),
     m_material(m_vbo, m_ibo),
     m_normal_debug_material(m_vbo, m_ibo),
-    m_vbo_allocation(m_vbo.allocate(m_grid_size*m_grid_size)),
-    m_ibo_allocation(m_ibo.allocate((m_grid_size-1)*(m_grid_size-1)*4)),
+    m_vbo_allocation(m_vbo.allocate(terrain_interface.grid_size()*terrain_interface.grid_size())),
+    m_ibo_allocation(m_ibo.allocate((terrain_interface.grid_size()-1)*(terrain_interface.grid_size()-1)*4)),
     m_cache_invalidation(0, 0, m_terrain.size(), m_terrain.size())
 {
+    const unsigned int grid_size = terrain_interface.grid_size();
+
     uint16_t *dest = m_ibo_allocation.get();
-    for (unsigned int y = 0; y < m_grid_size-1; y++) {
-        for (unsigned int x = 0; x < m_grid_size-1; x++) {
-            const unsigned int curr_base = y*m_grid_size + x;
+    for (unsigned int y = 0; y < grid_size-1; y++) {
+        for (unsigned int x = 0; x < grid_size-1; x++) {
+            const unsigned int curr_base = y*grid_size + x;
             *dest++ = curr_base;
-            *dest++ = curr_base + m_grid_size;
-            *dest++ = curr_base + m_grid_size + 1;
+            *dest++ = curr_base + grid_size;
+            *dest++ = curr_base + grid_size + 1;
             *dest++ = curr_base + 1;
         }
     }
@@ -186,9 +165,9 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
         unsigned int index = 0;
-        for (unsigned int y = 0; y < m_grid_size; y++) {
-            for (unsigned int x = 0; x < m_grid_size; x++) {
-                slice[index++] = Vector2f(x, y) / (m_grid_size-1);
+        for (unsigned int y = 0; y < grid_size; y++) {
+            for (unsigned int x = 0; x < grid_size; x++) {
+                slice[index++] = Vector2f(x, y) / (grid_size-1);
             }
         }
     }
@@ -196,79 +175,11 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
 
     m_vbo.sync();
     m_ibo.sync();
-
-    // we assume that at any given time only one fourth of the texture cache
-    // will be used for rendering. otherwise, realloc :)
-    m_render_slices.reserve(m_tiles / 2);
 }
 
 FancyTerrainNode::~FancyTerrainNode()
 {
     m_invalidate_cache_conn.disconnect();
-}
-
-void FancyTerrainNode::collect_slices(
-        std::vector<HeightmapSliceMeta> &requested_slices,
-        const std::array<Plane, 6> &frustum,
-        const Vector3f &viewpoint)
-{
-    collect_slices_recurse(requested_slices,
-                           m_max_depth,
-                           0,
-                           0,
-                           viewpoint,
-                           frustum);
-}
-
-void FancyTerrainNode::collect_slices_recurse(
-        std::vector<HeightmapSliceMeta> &requested_slices,
-        const unsigned int invdepth,
-        const unsigned int relative_x,
-        const unsigned int relative_y,
-        const Vector3f &viewpoint,
-        const std::array<Plane, 6> &frustum)
-{
-    const float min = 0.;
-    const float max = 0.;
-
-    const unsigned int size = (1u << invdepth)*(m_grid_size-1);
-
-    const unsigned int absolute_x = relative_x * size;
-    const unsigned int absolute_y = relative_y * size;
-
-    AABB box{Vector3f(absolute_x, absolute_y, min),
-             Vector3f(absolute_x+size, absolute_y+size, max)};
-
-    PlaneSide side = isect_aabb_frustum(box, frustum);
-    if (side == PlaneSide::NEGATIVE_NORMAL) {
-        // outside frustum
-        return;
-    }
-
-    const float next_range_radius = lod_range_base * (1u<<invdepth);
-    if (invdepth == 0 ||
-            !isect_aabb_sphere(box, Sphere{viewpoint, next_range_radius}))
-    {
-        // next LOD not required, insert node
-        requested_slices.push_back(
-                    HeightmapSliceMeta(absolute_x, absolute_y, size)
-                    );
-        return;
-    }
-
-    // some children will need higher LOD
-
-    for (unsigned int offsy = 0; offsy < 2; offsy++) {
-        for (unsigned int offsx = 0; offsx < 2; offsx++) {
-            collect_slices_recurse(
-                        requested_slices,
-                        invdepth-1,
-                        relative_x*2+offsx,
-                        relative_y*2+offsy,
-                        viewpoint,
-                        frustum);
-        }
-    }
 }
 
 inline void render_slice(RenderContext &context,
@@ -291,9 +202,10 @@ inline void render_slice(RenderContext &context,
     context.draw_elements(GL_LINES_ADJACENCY, material, ibo_allocation);
 }
 
-void FancyTerrainNode::render_all(RenderContext &context, Material &material)
+void FancyTerrainNode::render_all(RenderContext &context, Material &material,
+                                  const FullTerrainNode::Slices &slices_to_render)
 {
-    for (auto &slice: m_render_slices) {
+    for (auto &slice: slices_to_render) {
         const float x = slice.basex;
         const float y = slice.basey;
         const float scale = slice.lod;
@@ -371,7 +283,8 @@ void FancyTerrainNode::invalidate_cache(sim::TerrainRect part)
     m_cache_invalidation = bounds(part, m_cache_invalidation);
 }
 
-void FancyTerrainNode::render(RenderContext &context)
+void FancyTerrainNode::render(RenderContext &context,
+                              const FullTerrainNode &render_terrain)
 {
 #ifdef TIMELOG_RENDER
     const timelog_clock::time_point t0 = timelog_clock::now();
@@ -381,7 +294,7 @@ void FancyTerrainNode::render(RenderContext &context)
     m_material.bind();
     glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
                  1, context.viewpoint()/*fake_viewpoint*/.as_array);
-    render_all(context, m_material);
+    render_all(context, m_material, render_terrain.slices_to_render());
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 #ifdef TIMELOG_RENDER
     t_solid = timelog_clock::now();
@@ -399,7 +312,7 @@ void FancyTerrainNode::render(RenderContext &context)
         material.bind();
         glUniform3fv(material.shader().uniform_location("lod_viewpoint"),
                      1, context.viewpoint()/*fake_viewpoint*/.as_array);
-        for (auto &slice: m_render_slices)
+        for (auto &slice: render_terrain.slices_to_render())
         {
             const unsigned int x = slice.basex;
             const unsigned int y = slice.basey;
@@ -423,7 +336,8 @@ void FancyTerrainNode::render(RenderContext &context)
 #endif
 }
 
-void FancyTerrainNode::sync(RenderContext &context)
+void FancyTerrainNode::sync(RenderContext &context,
+                            const FullTerrainNode &render_terrain)
 {
     // FIXME: use SceneStorage here!
 
@@ -437,7 +351,7 @@ void FancyTerrainNode::sync(RenderContext &context)
     for (auto &item: m_overlays) {
         item.first->shader().bind();
         glUniform1f(item.first->shader().uniform_location("scale_to_radius"),
-                    lod_range_base / (m_grid_size-1));
+                    render_terrain.scale_to_radius());
         m_render_overlays.emplace_back(
                     RenderOverlay{item.first, item.second.clip_rect}
                     );
@@ -447,15 +361,12 @@ void FancyTerrainNode::sync(RenderContext &context)
     t_overlays = timelog_clock::now();
 #endif
 
-    m_render_slices.clear();
-    collect_slices(m_render_slices, context.frustum(), context.viewpoint()/*fake_viewpoint*/);
-
     m_material.shader().bind();
     glUniform1f(m_material.shader().uniform_location("scale_to_radius"),
-                lod_range_base / (m_grid_size-1));
+                render_terrain.scale_to_radius());
     m_normal_debug_material.shader().bind();
     glUniform1f(m_normal_debug_material.shader().uniform_location("scale_to_radius"),
-                lod_range_base / (m_grid_size-1));
+                render_terrain.scale_to_radius());
 
 #ifdef TIMELOG_SYNC
     t_setup = timelog_clock::now();
@@ -513,10 +424,5 @@ void FancyTerrainNode::sync(RenderContext &context)
     logger.logf(io::LOG_DEBUG, "sync: t_upload   = %.2f ms", ms_cast(t_upload - t_allocate).count());
 #endif
 }
-
-
-const FancyTerrainNode::SlotUsage FancyTerrainNode::SLOT_EVICTABLE = 0;
-const FancyTerrainNode::SlotUsage FancyTerrainNode::SLOT_SUGGESTED = 1;
-const FancyTerrainNode::SlotUsage FancyTerrainNode::SLOT_REQUIRED = 2;
 
 }

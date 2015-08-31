@@ -32,110 +32,17 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 #include "ffengine/render/fancyterraindata.hpp"
-
-namespace engine {
-
-struct HeightmapSliceMeta
-{
-    /**
-     * World coordinate of the x origin of this slice.
-     */
-    unsigned int basex;
-
-    /**
-     * World coordinate of the y origin of this slice.
-     */
-    unsigned int basey;
-
-    /**
-     * Size of this slice in world coordinates.
-     */
-    unsigned int lod;
-
-    /**
-     * Is the slice actually valid?
-     */
-    bool valid;
-
-    HeightmapSliceMeta();
-    HeightmapSliceMeta(unsigned int basex, unsigned int basey, unsigned int lod);
-    HeightmapSliceMeta(const HeightmapSliceMeta &ref) = default;
-    HeightmapSliceMeta &operator=(const HeightmapSliceMeta &ref) = default;
-
-    inline bool operator==(const HeightmapSliceMeta &other) const
-    {
-        if (!valid || !other.valid) {
-            return (valid == other.valid);
-        }
-        return (basex == other.basex) && (basey == other.basey) && (lod == other.lod);
-    }
-};
-
-}
-
-namespace std {
-
-template<>
-struct hash<engine::HeightmapSliceMeta>
-{
-    typedef engine::HeightmapSliceMeta argument_type;
-    typedef typename std::hash<unsigned int>::result_type result_type;
-
-    hash():
-        m_uint_hash()
-    {
-
-    }
-
-private:
-    hash<unsigned int> m_uint_hash;
-
-public:
-    result_type operator()(const argument_type &value) const
-    {
-        if (!value.valid) {
-            return 0;
-        }
-        return m_uint_hash(value.basex)
-                ^ m_uint_hash(value.basey)
-                ^ m_uint_hash(value.lod);
-    }
-
-};
-
-}
+#include "ffengine/render/fullterrain.hpp"
 
 namespace engine {
 
 /**
  * Scenegraph node which renders a terrain using the CDLOD algorithm by
  * Strugar.
- *
- * It is mainly controlled by the ``grid_size`` and ``texture_cache_size``
- * parameters, as passed to the constructor.
- *
- * The *grid_size* controlls the number of vertices in a single grid tile used
- * for terrain rendering. For the smallest tile, this is equivalent to the
- * number of heightmap points covered. This is thus the world size of the
- * smallest (i.e. most precise, like with mipmaps) level-of-detail.
- *
- * For rendering, parts of the heightmap (and belonging normal maps etc.) are
- * cached on the GPU, depending on which are needed. The size of the cache is
- * controlled by *texture_cache_size*, which is the number of **tiles** along
- * one axis of the cache texture. For a grid size of 64 and a texture cache
- * size of 32, a square texture of size 2048 (along each edge) will be
- * created.
  */
-class FancyTerrainNode: public scenegraph::Node
+class FancyTerrainNode: public FullTerrainRenderer
 {
 public:
-    typedef unsigned int SlotIndex;
-    typedef uint_fast8_t SlotUsage;
-    typedef std::vector<SlotUsage> SlotUsages;
-    static const SlotUsage SLOT_EVICTABLE;
-    static const SlotUsage SLOT_SUGGESTED;
-    static const SlotUsage SLOT_REQUIRED;
-
     struct OverlayConfig
     {
         sim::TerrainRect clip_rect;
@@ -163,17 +70,10 @@ public:
     ~FancyTerrainNode() override;
 
 private:
-    /*static constexpr float lod_range_base = 269;*/
-    static constexpr float lod_range_base = 119;
-
     GLResourceManager &m_resources;
     spp::EvaluationContext m_eval_context;
 
     FancyTerrainInterface &m_terrain_interface;
-
-    const unsigned int m_grid_size;
-    const unsigned int m_tiles;
-    const unsigned int m_max_depth;
 
     const sim::Terrain &m_terrain;
     NTMapGenerator &m_terrain_nt;
@@ -195,27 +95,12 @@ private:
     std::mutex m_cache_invalidation_mutex;
     sim::TerrainRect m_cache_invalidation;
 
-    std::vector<HeightmapSliceMeta> m_render_slices;
-
     std::unordered_map<Material*, OverlayConfig> m_overlays;
     std::vector<RenderOverlay> m_render_overlays;
 
 protected:
-    void collect_slices_recurse(
-            std::vector<HeightmapSliceMeta> &requested_slices,
-            const unsigned int invdepth,
-            const unsigned int relative_x,
-            const unsigned int relative_y,
-            const Vector3f &viewpoint,
-            const std::array<Plane, 6> &frustum);
-    void collect_slices(
-            std::vector<HeightmapSliceMeta> &requested_slices,
-            const std::array<Plane, 6> &frustum,
-            const Vector3f &viewpoint);
-    void compute_heightmap_lod(unsigned int basex,
-                               unsigned int basey,
-                               unsigned int lod);
-    void render_all(RenderContext &context, Material &material);
+    void render_all(RenderContext &context, Material &material,
+                    const FullTerrainNode::Slices &slices_to_render);
 
 public:
     void attach_blend_texture(Texture2D *tex);
@@ -304,8 +189,10 @@ public:
     void remove_overlay(Material &mat);
 
 public:
-    void render(RenderContext &context) override;
-    void sync(RenderContext &context) override;
+    void render(RenderContext &context,
+                const FullTerrainNode &render_terrain) override;
+    void sync(RenderContext &context,
+              const FullTerrainNode &render_terrain) override;
 
 };
 
