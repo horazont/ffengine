@@ -80,6 +80,8 @@ private:
 
     sigc::connection m_invalidate_cache_conn;
 
+    bool m_linear_filter;
+
     Texture2D m_heightmap;
     Texture2D m_normalt;
 
@@ -174,6 +176,11 @@ public:
      */
     bool configure_overlay_material(Material &mat);
 
+    bool enable_linear_filter() const
+    {
+        return m_linear_filter;
+    }
+
     inline Material &material()
     {
         return m_material;
@@ -187,6 +194,20 @@ public:
      * @see configure_overlay
      */
     void remove_overlay(Material &mat);
+
+    /**
+     * Enable or disable linear filtering of the vertex data of the terrain.
+     * Disabling the linear filter might considerably improve terrain rendering
+     * performance on old systems, but will cause rendering bugs.
+     *
+     * The filter is enabled by default.
+     *
+     * @param filter Whether to enable linear filtering.
+     */
+    inline void set_enable_linear_filter(bool filter)
+    {
+        m_linear_filter = filter;
+    }
 
 public:
     void render(RenderContext &context,

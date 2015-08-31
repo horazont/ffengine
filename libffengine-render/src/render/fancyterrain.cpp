@@ -53,6 +53,7 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_invalidate_cache_conn(terrain_interface.field_updated().connect(
                            sigc::mem_fun(*this,
                                          &FancyTerrainNode::invalidate_cache))),
+    m_linear_filter(true),
     m_heightmap(GL_R32F,
                 m_terrain.size(),
                 m_terrain.size(),
@@ -148,19 +149,6 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_normal_debug_material.attach_texture("normalt", &m_normalt);
     glUniform1f(m_normal_debug_material.shader().uniform_location("normal_length"),
                 2.);
-
-    m_heightmap.bind();
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);*/
-
-    m_normalt.bind();
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);*/
-
 
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
@@ -367,6 +355,24 @@ void FancyTerrainNode::sync(RenderContext &context,
     m_normal_debug_material.shader().bind();
     glUniform1f(m_normal_debug_material.shader().uniform_location("scale_to_radius"),
                 render_terrain.scale_to_radius());
+
+    m_heightmap.bind();
+    if (m_linear_filter) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    m_normalt.bind();
+    if (m_linear_filter) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
 
 #ifdef TIMELOG_SYNC
     t_setup = timelog_clock::now();
