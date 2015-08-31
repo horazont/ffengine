@@ -8,6 +8,7 @@ set(ENGINE_HEADERS
   ffengine/gl/material.hpp
   ffengine/gl/mesh.hpp
   ffengine/gl/object.hpp
+  ffengine/gl/resource.hpp
   ffengine/gl/shader.hpp
   ffengine/gl/texture.hpp
   ffengine/gl/ubo.hpp
@@ -38,6 +39,7 @@ set(ENGINE_SRC
   src/gl/ibo.cpp
   src/gl/material.cpp
   src/gl/object.cpp
+  src/gl/resource.cpp
   src/gl/shader.cpp
   src/gl/texture.cpp
   src/gl/ubo.cpp
@@ -66,7 +68,8 @@ target_link_libraries(
   ffengine-core
   ffengine-sim
   Qt5::Core
-  sigc++)
+  sigc++
+  spp)
 target_include_directories(
   ffengine-render
   PUBLIC ${INCLUDE_DIRS})

@@ -28,8 +28,9 @@ the AUTHORS file.
 #include <unordered_map>
 #include <unordered_set>
 
-#include "ffengine/render/scenegraph.hpp"
+#include "ffengine/gl/resource.hpp"
 
+#include "ffengine/render/scenegraph.hpp"
 #include "ffengine/render/fancyterraindata.hpp"
 
 namespace engine {
@@ -157,12 +158,16 @@ public:
      *
      * @opengl
      */
-    FancyTerrainNode(FancyTerrainInterface &terrain);
+    FancyTerrainNode(FancyTerrainInterface &terrain,
+                     GLResourceManager &resources);
     ~FancyTerrainNode() override;
 
 private:
     /*static constexpr float lod_range_base = 269;*/
     static constexpr float lod_range_base = 119;
+
+    GLResourceManager &m_resources;
+    spp::EvaluationContext m_eval_context;
 
     FancyTerrainInterface &m_terrain_interface;
 

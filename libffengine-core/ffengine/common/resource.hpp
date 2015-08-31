@@ -57,7 +57,7 @@ public:
 };
 
 /**
- * @brief The ResourceManager class is the PID 0 of resources.
+ * @brief The ResourceManager class is the PID 1 of resources.
  */
 class ResourceManager
 {

@@ -1,6 +1,7 @@
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 set(ENGINE_HEADERS
+  ffengine/common/qtutils.hpp
   ffengine/common/resource.hpp
   ffengine/common/types.hpp
   ffengine/common/utils.hpp
@@ -28,6 +29,7 @@ set(ENGINE_HEADERS
   )
 
 set(ENGINE_SRC
+  src/common/qtutils.cpp
   src/common/resource.cpp
   src/common/utils.cpp
   src/io/common.cpp
@@ -56,6 +58,7 @@ add_library(ffengine-core STATIC ${ENGINE_SRC} ${PROTO_SRCS})
 
 target_link_libraries(
   ffengine-core
+  Qt5::Core
   sigc++)
 target_link_libraries(ffengine-core "atomic")
 target_include_directories(

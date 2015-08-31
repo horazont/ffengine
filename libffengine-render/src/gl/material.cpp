@@ -134,8 +134,11 @@ void Material::detach_texture(const std::string &name)
 bool Material::link()
 {
     if (!m_shader.link()) {
+        logger.logf(io::LOG_DEBUG, "shader failed to link");
         return false;
     }
+
+    logger.logf(io::LOG_DEBUG, "shader linked: %d", m_shader.glid());
 
     m_declaration.set_ibo(m_ibo);
     m_vao = std::move(m_declaration.make_vao(m_shader, true));

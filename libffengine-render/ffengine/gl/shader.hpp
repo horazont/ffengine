@@ -33,6 +33,8 @@ the AUTHORS file.
 
 #include <QString>
 
+#include <spp/spp.hpp>
+
 #include "ffengine/gl/object.hpp"
 #include "ffengine/gl/ubo.hpp"
 
@@ -187,6 +189,9 @@ protected:
 
 public:
     bool attach(GLenum shader_type, const std::string &source);
+    bool attach(const spp::Program &program,
+                spp::EvaluationContext &context,
+                GLenum shader_type = 0);
     bool attach_resource(GLenum shader_type, const QString &filename);
     GLint attrib_location(const std::string &name) const;
 

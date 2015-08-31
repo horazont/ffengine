@@ -13,6 +13,7 @@ find_package(Qt5Core REQUIRED)
 find_package(SIGC++ REQUIRED)
 
 # add_subdirectory(surface_mesh)
+add_subdirectory(shader-preprocessor)
 add_subdirectory(libffengine-core)
 add_subdirectory(libffengine-sim)
 add_subdirectory(libffengine-render)

@@ -78,6 +78,9 @@ bool ShaderProgram::compile(GLint shader_object,
                             const GLint source_len,
                             const QString &filename)
 {
+    shader_logger.logf(io::LOG_DEBUG, "%d: compiling shader: %s",
+                       shader_object, source);
+
     glShaderSource(shader_object, 1, &source, &source_len);
     raise_last_gl_error();
     glCompileShader(shader_object);
@@ -126,6 +129,8 @@ bool ShaderProgram::create_and_compile_and_attach(
         const QString &filename)
 {
     const GLenum shader = glCreateShader(type);
+    shader_logger.logf(io::LOG_DEBUG, "%d: created as 0x%04x",
+                       shader, type);
     if (!compile(shader, source, source_len, filename))
     {
         glDeleteShader(shader);
@@ -337,6 +342,48 @@ bool ShaderProgram::attach(GLenum shader_type, const std::string &source)
                                          source.c_str(),
                                          source.size()+1,
                                          "<memory>");
+}
+
+bool ShaderProgram::attach(const spp::Program &program,
+                           spp::EvaluationContext &context,
+                           GLenum shader_type)
+{
+    if (shader_type == 0) {
+        switch (program.type()) {
+        case spp::ProgramType::FRAGMENT:
+        {
+            shader_type = GL_FRAGMENT_SHADER;
+            break;
+        }
+        case spp::ProgramType::VERTEX:
+        {
+            shader_type = GL_VERTEX_SHADER;
+            break;
+        }
+        case spp::ProgramType::GEOMETRY:
+        {
+            shader_type = GL_GEOMETRY_SHADER;
+            break;
+        }
+        default:
+        {
+            throw std::runtime_error("attempt to attach generic program without type specification");
+        }
+        }
+    }
+
+    std::string source;
+    {
+        std::ostringstream buf;
+        program.evaluate(buf, context);
+        source = buf.str();
+    }
+
+    return create_and_compile_and_attach(
+                shader_type,
+                source.c_str(),
+                source.size()+1,
+                "<derived from "+QString::fromStdString(program.source_path())+">");
 }
 
 bool ShaderProgram::attach_resource(GLenum shader_type, const QString &filename)

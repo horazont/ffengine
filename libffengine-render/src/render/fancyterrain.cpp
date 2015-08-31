@@ -62,7 +62,10 @@ HeightmapSliceMeta::HeightmapSliceMeta(
 }
 
 
-FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
+FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
+                                   GLResourceManager &resources):
+    m_resources(resources),
+    m_eval_context(resources.shader_library()),
     m_terrain_interface(terrain_interface),
     m_grid_size(terrain_interface.grid_size()),
     m_tiles((terrain_interface.size()-1)/(terrain_interface.grid_size()-1)),
@@ -105,31 +108,45 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
 
     m_ibo_allocation.mark_dirty();
 
+    const float heightmap_factor = 1.f / m_terrain_interface.size();
+
+    m_eval_context.define1f("HEIGHTMAP_FACTOR", heightmap_factor);
+
+    // sub-context for defining the z-offset
+    spp::EvaluationContext ctx(m_eval_context);
+    ctx.define1f("ZOFFSET", 0.);
+
     bool success = true;
 
-    success = success && m_material.shader().attach_resource(
-                GL_VERTEX_SHADER,
-                ":/shaders/terrain/main.vert");
-    success = success && m_material.shader().attach_resource(
-                GL_GEOMETRY_SHADER,
-                ":/shaders/terrain/main.geom");
-    success = success && m_material.shader().attach_resource(
-                GL_FRAGMENT_SHADER,
-                ":/shaders/terrain/main.frag");
+    success = success && m_material.shader().attach(
+                resources.load_shader_checked(":/shaders/terrain/main.vert"),
+                ctx,
+                GL_VERTEX_SHADER);
+    success = success && m_material.shader().attach(
+                resources.load_shader_checked(":/shaders/terrain/main.geom"),
+                ctx,
+                GL_GEOMETRY_SHADER);
+    success = success && m_material.shader().attach(
+                resources.load_shader_checked(":/shaders/terrain/main.frag"),
+                ctx,
+                GL_FRAGMENT_SHADER);
 
     m_material.declare_attribute("position", 0);
 
     success = success && m_material.link();
 
-    success = success && m_normal_debug_material.shader().attach_resource(
-                GL_VERTEX_SHADER,
-                ":/shaders/terrain/main.vert");
-    success = success && m_normal_debug_material.shader().attach_resource(
-                GL_GEOMETRY_SHADER,
-                ":/shaders/terrain/normal_debug.geom");
-    success = success && m_normal_debug_material.shader().attach_resource(
-                GL_FRAGMENT_SHADER,
-                ":/shaders/generic/normal_debug.frag");
+    success = success && m_normal_debug_material.shader().attach(
+                resources.load_shader_checked(":/shaders/terrain/main.vert"),
+                ctx,
+                GL_VERTEX_SHADER);
+    success = success && m_normal_debug_material.shader().attach(
+                resources.load_shader_checked(":/shaders/terrain/normal_debug.geom"),
+                ctx,
+                GL_GEOMETRY_SHADER);
+    success = success && m_normal_debug_material.shader().attach(
+                resources.load_shader_checked(":/shaders/generic/normal_debug.frag"),
+                ctx,
+                GL_FRAGMENT_SHADER);
 
     m_normal_debug_material.declare_attribute("position", 0);
 
@@ -139,17 +156,11 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
         throw std::runtime_error("failed to compile or link shader");
     }
 
-    const float heightmap_factor = 1.f / m_terrain_interface.size();
-
     m_material.shader().bind();
     glUniform2f(m_material.shader().uniform_location("chunk_translation"),
                 0.0, 0.0);
     m_material.attach_texture("heightmap", &m_heightmap);
     m_material.attach_texture("normalt", &m_normalt);
-    glUniform1f(m_material.shader().uniform_location("zoffset"),
-                0.);
-    glUniform1f(m_material.shader().uniform_location("heightmap_factor"),
-                heightmap_factor);
 
     m_normal_debug_material.shader().bind();
     glUniform2f(m_normal_debug_material.shader().uniform_location("chunk_translation"),
@@ -158,10 +169,6 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface):
     m_normal_debug_material.attach_texture("normalt", &m_normalt);
     glUniform1f(m_normal_debug_material.shader().uniform_location("normal_length"),
                 2.);
-    glUniform1f(m_normal_debug_material.shader().uniform_location("zoffset"),
-                0.);
-    glUniform1f(m_normal_debug_material.shader().uniform_location("heightmap_factor"),
-                heightmap_factor);
 
     m_heightmap.bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -321,12 +328,18 @@ void FancyTerrainNode::configure_overlay(
 
 bool FancyTerrainNode::configure_overlay_material(Material &mat)
 {
-    bool success = mat.shader().attach_resource(
-                GL_VERTEX_SHADER,
-                ":/shaders/terrain/main.vert");
-    success = success && mat.shader().attach_resource(
-                GL_GEOMETRY_SHADER,
-                ":/shaders/terrain/main.geom");
+    // sub-context for redefining the zoffset
+    spp::EvaluationContext ctx(m_eval_context);
+    ctx.define1f("ZOFFSET", 1.);
+
+    bool success = mat.shader().attach(
+                m_resources.load_shader_checked(":/shaders/terrain/main.vert"),
+                ctx,
+                GL_VERTEX_SHADER);
+    success = success && mat.shader().attach(
+                m_resources.load_shader_checked(":/shaders/terrain/main.geom"),
+                ctx,
+                GL_GEOMETRY_SHADER);
 
     mat.declare_attribute("position", 0);
 
@@ -337,11 +350,6 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
 
     mat.attach_texture("heightmap", &m_heightmap);
     mat.attach_texture("normalt", &m_normalt);
-    mat.shader().bind();
-    glUniform1f(mat.shader().uniform_location("zoffset"), 1.0f);
-    glUniform1f(mat.shader().uniform_location("heightmap_factor"),
-                1.f/(m_terrain_interface.size()));
-    mat.shader().unbind();
 
     return true;
 }
