@@ -6,5 +6,5 @@
 	url = ssh://git.sotecware.net/surface_mesh
 [submodule "shader-preprocessor"]
 	path = shader-preprocessor
-	url = ssh://git.sotecware.net/shader-preprocessor
+	url = https://github.com/horazont/shader-preprocessor
 	branch = devel
