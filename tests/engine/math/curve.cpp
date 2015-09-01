@@ -28,7 +28,7 @@ the AUTHORS file.
 
 TEST_CASE("math/curve/QuadBezier/QuadBezier()")
 {
-    QuadBezier3f curve;
+    const QuadBezier3f curve;
 
     CHECK(curve.p1 == Vector3f(0, 0, 0));
     CHECK(curve.p2 == Vector3f(0, 0, 0));
@@ -37,9 +37,9 @@ TEST_CASE("math/curve/QuadBezier/QuadBezier()")
 
 TEST_CASE("math/curve/QuadBezier/QuadBezier(p1, p2, p3)")
 {
-    QuadBezier3f curve(Vector3f(0, 0, 0),
-                       Vector3f(1, 0, 0),
-                       Vector3f(1, 1, 0));
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(1, 1, 0));
 
     CHECK(curve.p1 == Vector3f(0, 0, 0));
     CHECK(curve.p2 == Vector3f(1, 0, 0));
@@ -48,15 +48,15 @@ TEST_CASE("math/curve/QuadBezier/QuadBezier(p1, p2, p3)")
 
 TEST_CASE("math/curve/QuadBezier/QuadBezier(const QuadBezier&)")
 {
-    QuadBezier3f curve1(Vector3f(0, 0, 0),
-                        Vector3f(0, 1, 0),
-                        Vector3f(1, 1, 0));
+    const QuadBezier3f curve1(Vector3f(0, 0, 0),
+                              Vector3f(0, 1, 0),
+                              Vector3f(1, 1, 0));
 
     CHECK(curve1.p1 == Vector3f(0, 0, 0));
     CHECK(curve1.p2 == Vector3f(0, 1, 0));
     CHECK(curve1.p3 == Vector3f(1, 1, 0));
 
-    QuadBezier3f curve2(curve1);
+    const QuadBezier3f curve2(curve1);
 
     CHECK(curve2.p1 == Vector3f(0, 0, 0));
     CHECK(curve2.p2 == Vector3f(0, 1, 0));
@@ -65,17 +65,17 @@ TEST_CASE("math/curve/QuadBezier/QuadBezier(const QuadBezier&)")
 
 TEST_CASE("math/curve/QuadBezier/equality")
 {
-    QuadBezier3f curve1(Vector3f(0, 0, 0),
-                        Vector3f(0, 1, 0),
-                        Vector3f(0, 0, 1));
+    const QuadBezier3f curve1(Vector3f(0, 0, 0),
+                              Vector3f(0, 1, 0),
+                              Vector3f(0, 0, 1));
 
-    QuadBezier3f curve2(Vector3f(0, 0, 0),
-                        Vector3f(0, 1, 0),
-                        Vector3f(0, 0, 1));
+    const QuadBezier3f curve2(Vector3f(0, 0, 0),
+                              Vector3f(0, 1, 0),
+                              Vector3f(0, 0, 1));
 
-    QuadBezier3f curve3(Vector3f(0, 0, 0),
-                        Vector3f(0, 1, 1),
-                        Vector3f(0, 0, 1));
+    const QuadBezier3f curve3(Vector3f(0, 0, 0),
+                              Vector3f(0, 1, 1),
+                              Vector3f(0, 0, 1));
 
     CHECK(curve1 == curve2);
     CHECK_FALSE(curve1 != curve2);
@@ -87,9 +87,9 @@ TEST_CASE("math/curve/QuadBezier/equality")
 
 TEST_CASE("math/curve/QuadBezier/[]")
 {
-    QuadBezier3f curve(Vector3f(0, 0, 0),
-                       Vector3f(1, 0, 0),
-                       Vector3f(1, 1, 0));
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(1, 1, 0));
 
     CHECK(curve[0.f] == Vector3f(0, 0, 0));
     CHECK(curve[0.25f] == Vector3f(0.4375, 0.0625, 0));

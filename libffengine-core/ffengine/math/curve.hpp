@@ -62,7 +62,7 @@ struct QuadBezier
     // evaluating
 
     template <typename float_t>
-    inline Vector<float_t, vector_t::dimension> operator[](float_t t)
+    inline Vector<float_t, vector_t::dimension> operator[](float_t t) const
     {
         return sqr(1-t)*p1 + 2*(1-t)*t*p2 + sqr(t)*p3;
     }
