@@ -65,6 +65,41 @@ public:
 
 };
 
+class QuadBezier3fRoadTest: public scenegraph::OctNode,
+                         public RenderableOctreeObject
+{
+public:
+    QuadBezier3fRoadTest(Material &mat, unsigned int steps);
+
+private:
+    Material &m_mat;
+    unsigned int m_steps;
+    QuadBezier3f m_curve;
+    bool m_curve_changed;
+
+    VBOAllocation m_vbo_alloc;
+    IBOAllocation m_ibo_alloc;
+
+public:
+    inline const QuadBezier3f &curve() const
+    {
+        return m_curve;
+    }
+
+    inline void set_curve(const QuadBezier3f &curve)
+    {
+        m_curve = curve;
+        m_curve_changed = true;
+    }
+
+public:
+    void render(RenderContext &context) override;
+    void sync(RenderContext &context,
+              ffe::Octree &octree,
+              scenegraph::OctContext &positioning) override;
+
+};
+
 }
 
 #endif
