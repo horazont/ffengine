@@ -92,8 +92,8 @@ TEST_CASE("math/curve/QuadBezier/[]")
                        Vector3f(1, 1, 0));
 
     CHECK(curve[0.f] == Vector3f(0, 0, 0));
-    CHECK(curve[0.25f] == Vector3f(0.0625, 0.0625, 0));
-    CHECK(curve[0.5f] == Vector3f(0.25, 0.25, 0));
-    CHECK(curve[0.75f] == Vector3f(0.5625, 0.5625, 0));
+    CHECK(curve[0.25f] == Vector3f(0.4375, 0.0625, 0));
+    CHECK(curve[0.5f] == Vector3f(0.75, 0.25, 0));
+    CHECK(curve[0.75f] == Vector3f(0.9375, 0.5625, 0));
     CHECK(curve[1.f] == Vector3f(1, 1, 0));
 }
