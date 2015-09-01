@@ -108,3 +108,40 @@ TEST_CASE("math/curve/QuadBezier/diff")
     CHECK(curve.diff(0.25f) == Vector3f(3, 1, 0));
     CHECK(curve.diff(1.f) == Vector3f(0, 4, 0));
 }
+
+
+TEST_CASE("math/curve/autosample_quadbezier/straight_line")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(1, 0, 0));
+
+    std::vector<float> dest;
+    autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.1, 0.1);
+
+    std::vector<float> expected({0.f, 1.f});
+
+    CHECK(dest == expected);
+}
+
+TEST_CASE("math/curve/autosample_quadbezier/curved")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(1, 1, 0));
+
+    std::vector<float> dest;
+    autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.1, 0.1);
+    CHECK(dest.size() == 20);
+}
+
+TEST_CASE("math/curve/autosample_quadbezier/slightly_curved")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(1, 0.1, 0));
+
+    std::vector<float> dest;
+    autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.01, 0.001);
+    CHECK(dest.size() == 10);
+}

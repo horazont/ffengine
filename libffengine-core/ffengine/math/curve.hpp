@@ -24,6 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_MATH_CURVE_H
 #define SCC_ENGINE_MATH_CURVE_H
 
+#include <functional>
 #include <ostream>
 
 #include "ffengine/math/algo.hpp"
@@ -78,6 +79,145 @@ struct QuadBezier
 
 typedef QuadBezier<Vector3f> QuadBezier3f;
 typedef QuadBezier<Vector3d> QuadBezier3d;
+
+template <typename bezier_vector_t>
+inline float bisect_quadbezier(const QuadBezier<bezier_vector_t> &curve,
+                               std::function<int(const QuadBezier<bezier_vector_t>&, float)> predicate,
+                               float t_min,
+                               float t_max)
+{
+    while (t_max - t_min >= 1e-6) {
+        const float t_center = (t_max + t_min) / 2;
+        /* std::cout << "t_center = " << t_center << std::endl; */
+        const int predicate_result = predicate(curve, t_center);
+        if (predicate_result == 0) {
+            return t_center;
+        } else if (predicate_result > 0) {
+            t_max = t_center;
+        } else {
+            t_min = t_center;
+        }
+    }
+    return t_max;
+}
+
+template <typename bezier_vector_t>
+inline float bisect_quadbezier_length(const QuadBezier<bezier_vector_t> &curve,
+                                      const bezier_vector_t &origin,
+                                      const float t_min,
+                                      const float t_max,
+                                      const float distance,
+                                      const float epsilon)
+{
+    std::function<int(const QuadBezier<bezier_vector_t> &curve, float t)> predicate = [distance, epsilon, &origin](
+            const QuadBezier<bezier_vector_t> &curve,
+            float t) {
+        const bezier_vector_t pos = curve[t];
+        const float curr_distance = (pos - origin).length();
+        if (std::abs(curr_distance - distance) <= epsilon) {
+            return 0;
+        } else if (curr_distance > distance) {
+            return 1;
+        } else {
+            return -1;
+        }
+    };
+    return bisect_quadbezier(curve, predicate, t_min, t_max);
+}
+
+
+template <typename bezier_vector_t>
+inline float bisect_quadbezier_tangent_angle(const QuadBezier<bezier_vector_t> &curve,
+                                             const bezier_vector_t &tangent,
+                                             const float t_min,
+                                             const float t_max,
+                                             const float angle,
+                                             const float epsilon)
+{
+    std::function<int(const QuadBezier<bezier_vector_t> &curve, float t)> predicate = [angle, epsilon, &tangent](
+            const QuadBezier<bezier_vector_t> &curve,
+            float t) -> int {
+        const bezier_vector_t curr_tangent = curve.diff(t).normalized();
+        const float curr_angle = std::acos(curr_tangent * tangent);
+        /*  std::cout << "tangent = " << tangent << "; " << "curr_tangent = " << curr_tangent << "; dotp = " << (curr_tangent * tangent) << "; α = " << curr_angle << std::endl; */
+        if (std::abs(curr_angle - angle) <= epsilon) {
+            return 0;
+        } else if (curr_angle > angle) {
+            return 1;
+        } else {
+            return -1;
+        }
+    };
+    return bisect_quadbezier(curve, predicate, t_min, t_max);
+}
+
+
+template <typename bezier_vector_t, typename OutputIterator>
+inline void autosample_quadbezier(const QuadBezier<bezier_vector_t> &curve,
+                                  OutputIterator dest,
+                                  const float threshold = 0.01,
+                                  const float min_length = 0.001,
+                                  const float epsilon = 0.0001)
+{
+    float t = 0;
+    bezier_vector_t prev_position = curve[t];
+    bezier_vector_t prev_tangent = curve.diff(t).normalized();
+    bezier_vector_t next_tangent;
+    bezier_vector_t next_position;
+    float t_next;
+    *dest++ = t;
+    for (;; t = t_next, *dest++ = t, prev_tangent = next_tangent, prev_position = next_position) {
+        /* std::cout << "iterate! t=" << t << std::endl; */
+        const float tangent_step = prev_tangent.length() / 10.f;
+        float t_lower = t;
+        t_next = t + tangent_step;
+
+        next_position = curve[t_next];
+        if ((next_position - prev_position).length() < min_length) {
+            t_next = bisect_quadbezier_length(curve, prev_position, t_lower, t_next, min_length, 0.01);
+            t_lower = t_next;
+        }
+
+        if (t_next >= 1.f) {
+            /* std::cout << "at end of curve" << std::endl; */
+            *dest++ = 1.f;
+            return;
+        }
+
+        next_tangent = curve.diff(t_next).normalized();
+        /* std::cout << "prev tangent: " << prev_tangent << std::endl; */
+        while (std::acos(prev_tangent * next_tangent) < threshold && t_next < 1.f) {
+            t_lower = t_next;
+            t_next += tangent_step;
+            next_tangent = curve.diff(t_next).normalized();
+            /*std::cout << "next tangent: " << next_tangent << std::endl;
+            std::cout << "angle " << std::acos(prev_tangent * next_tangent) << std::endl;
+            std::cout << "t_lower = " << t_lower << "; t_next = " << t_next << std::endl;*/
+        };
+
+        if (t_next >= 1.f) {
+            /* std::cout << "at end of curve" << std::endl; */
+            *dest++ = 1.f;
+            return;
+        }
+
+        if (t_lower == t_next) {
+            /* std::cout << "at max resolution" << std::endl; */
+            next_position = curve[t_next];
+            continue;
+        }
+
+        /* std::cout << "bisecting" << std::endl; */
+        t_next = bisect_quadbezier_tangent_angle(curve, prev_tangent,
+                                                 t_lower,
+                                                 t_next,
+                                                 threshold,
+                                                 epsilon);
+        next_tangent = curve.diff(t_next).normalized();
+        next_position = curve[t_next];
+    }
+}
+
 
 namespace std {
 
