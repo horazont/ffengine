@@ -129,8 +129,8 @@ TEST_CASE("math/curve/QuadBezier/split_inplace")
 TEST_CASE("math/curve/QuadBezier/split")
 {
     const QuadBezier3f curve(Vector3f(0, 0, 0),
-                       Vector3f(1, 0, 0),
-                       Vector3f(2, 0, 0));
+                             Vector3f(1, 0, 0),
+                             Vector3f(2, 0, 0));
 
     QuadBezier3f part1;
     QuadBezier3f part2;
@@ -182,3 +182,30 @@ TEST_CASE("math/curve/autosample_quadbezier/slightly_curved")
     autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.01, 0.001);
     CHECK(dest.size() == 10);
 }
+
+
+
+TEST_CASE("math/curve/sampled_curve_length/straight")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(2, 0, 0));
+
+    std::vector<float> ts({0, 0.5, 1});
+    CHECK(sampled_curve_length(curve, ts.begin(), ts.end()) == 2);
+}
+
+TEST_CASE("math/curve/sampled_curve_length/curved")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(1, 1, 0));
+
+    std::vector<float> ts({0, 0.5, 1});
+
+    const float len1 = Vector3f(0.75, 0.25, 0).length();
+    const float len2 = (Vector3f(0.75, 0.25, 0) - Vector3f(1, 1, 0)).length();
+
+    CHECK(sampled_curve_length(curve, ts.begin(), ts.end()) == len1+len2);
+}
+

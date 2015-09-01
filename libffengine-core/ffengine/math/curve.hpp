@@ -30,9 +30,10 @@ the AUTHORS file.
 #include "ffengine/math/algo.hpp"
 #include "ffengine/math/vector.hpp"
 
-template <typename vector_t>
+template <typename _vector_t>
 struct QuadBezier
 {
+    typedef _vector_t vector_t;
     typedef typename vector_t::vector_float_t float_t;
 
     QuadBezier() = default;
@@ -239,6 +240,27 @@ inline void autosample_quadbezier(const QuadBezier<bezier_vector_t> &curve,
         next_tangent = curve.diff(t_next).normalized();
         next_position = curve[t_next];
     }
+}
+
+
+template <typename curve_t, typename InputIterator>
+typename curve_t::float_t sampled_curve_length(const curve_t &curve,
+                                               InputIterator iter,
+                                               InputIterator end)
+{
+    if (iter == end) {
+        return 0.f;
+    }
+
+    typename curve_t::float_t len = 0.f;
+    typename curve_t::vector_t previous_point = curve[*iter++];
+    for (; iter != end; ++iter) {
+        typename curve_t::vector_t next_point = curve[*iter];
+        len += (next_point - previous_point).length();
+        previous_point = next_point;
+    }
+
+    return len;
 }
 
 
