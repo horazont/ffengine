@@ -109,6 +109,43 @@ TEST_CASE("math/curve/QuadBezier/diff")
     CHECK(curve.diff(1.f) == Vector3f(0, 4, 0));
 }
 
+TEST_CASE("math/curve/QuadBezier/split_inplace")
+{
+    QuadBezier3f curve(Vector3f(0, 0, 0),
+                       Vector3f(1, 0, 0),
+                       Vector3f(2, 0, 0));
+
+    const QuadBezier3f part(curve.split_inplace(0.5));
+
+    CHECK(curve == QuadBezier3f(Vector3f(0, 0, 0),
+                                Vector3f(0.5, 0, 0),
+                                Vector3f(1, 0, 0)));
+
+    CHECK(part == QuadBezier3f(Vector3f(1, 0, 0),
+                               Vector3f(1.5, 0, 0),
+                               Vector3f(2, 0, 0)));
+}
+
+TEST_CASE("math/curve/QuadBezier/split")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                       Vector3f(1, 0, 0),
+                       Vector3f(2, 0, 0));
+
+    QuadBezier3f part1;
+    QuadBezier3f part2;
+
+    std::tie(part1, part2) = curve.split(0.5);
+
+    CHECK(part1 == QuadBezier3f(Vector3f(0, 0, 0),
+                                Vector3f(0.5, 0, 0),
+                                Vector3f(1, 0, 0)));
+
+    CHECK(part2 == QuadBezier3f(Vector3f(1, 0, 0),
+                                Vector3f(1.5, 0, 0),
+                                Vector3f(2, 0, 0)));
+}
+
 
 TEST_CASE("math/curve/autosample_quadbezier/straight_line")
 {

@@ -33,6 +33,8 @@ the AUTHORS file.
 template <typename vector_t>
 struct QuadBezier
 {
+    typedef typename vector_t::vector_float_t float_t;
+
     QuadBezier() = default;
 
     template <typename p1_t, typename p2_t, typename p3_t>
@@ -58,6 +60,27 @@ struct QuadBezier
     inline bool operator!=(const QuadBezier<other_vector_t> &other) const
     {
         return !(*this == other);
+    }
+
+    // splitting
+
+    inline QuadBezier split_inplace(const float_t t)
+    {
+        const vector_t p2_1 = (*this)[t];
+        const vector_t p2_2 = p2 + t*(p3 - p2);
+        const vector_t p2_3 = p3;
+
+        p2 = p1 + t*(p2 - p1);
+        p3 = p2_1;
+
+        return QuadBezier(p2_1, p2_2, p2_3);
+    }
+
+    inline std::pair<QuadBezier, QuadBezier> split(const float_t t) const
+    {
+        QuadBezier c1(*this);
+        const QuadBezier c2 = c1.split_inplace(t);
+        return std::make_pair(c1, c2);
     }
 
     // evaluating
