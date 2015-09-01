@@ -67,6 +67,13 @@ struct QuadBezier
         return sqr(1-t)*p1 + 2*(1-t)*t*p2 + sqr(t)*p3;
     }
 
+
+    template <typename float_t>
+    inline Vector<float_t, vector_t::dimension> diff(float_t t) const
+    {
+        return 2*(1-t)*(p2 - p1) + 2*t*(p3 - p2);
+    }
+
 };
 
 typedef QuadBezier<Vector3f> QuadBezier3f;

@@ -97,3 +97,14 @@ TEST_CASE("math/curve/QuadBezier/[]")
     CHECK(curve[0.75f] == Vector3f(0.9375, 0.5625, 0));
     CHECK(curve[1.f] == Vector3f(1, 1, 0));
 }
+
+TEST_CASE("math/curve/QuadBezier/diff")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(2, 0, 0),
+                             Vector3f(2, 2, 0));
+
+    CHECK(curve.diff(0.f) == Vector3f(4, 0, 0));
+    CHECK(curve.diff(0.25f) == Vector3f(3, 1, 0));
+    CHECK(curve.diff(1.f) == Vector3f(0, 4, 0));
+}
