@@ -146,6 +146,50 @@ TEST_CASE("math/curve/QuadBezier/split")
                                 Vector3f(2, 0, 0)));
 }
 
+TEST_CASE("math/curve/QuadBezier/split/recursive")
+{
+    QuadBezier3f curve(Vector3f(0, 0, 0),
+                       Vector3f(1, 0, 0),
+                       Vector3f(1, 1, 0));
+
+    QuadBezier3f part(curve.split_inplace(0.25f));
+
+    CHECK(curve[0.f] == Vector3f(0, 0, 0));
+    CHECK(curve[1.f] == Vector3f(0.4375, 0.0625, 0));
+    CHECK((part[1./3.] - Vector3f(0.75, 0.25, 0)).abssum() < 1e-6);
+    CHECK(part[2./3.] == Vector3f(0.9375, 0.5625, 0));
+    CHECK(part[1.f] == Vector3f(1, 1, 0));
+}
+
+TEST_CASE("math/curve/QuadBezier/segmentize")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(1, 0, 0),
+                             Vector3f(2, 0, 0));
+
+
+    std::vector<float_t> ts({0.25, 0.5, 0.75});
+    std::vector<QuadBezier3f> segments;
+
+    curve.segmentize(ts.begin(), ts.end(), std::back_inserter(segments));
+
+    std::vector<QuadBezier3f> expected({
+                                           QuadBezier3f(Vector3f(0, 0, 0),
+                                                        Vector3f(0.25, 0, 0),
+                                                        Vector3f(0.5, 0, 0)),
+                                           QuadBezier3f(Vector3f(0.5, 0, 0),
+                                                        Vector3f(0.75, 0, 0),
+                                                        Vector3f(1.0, 0, 0)),
+                                           QuadBezier3f(Vector3f(1.0, 0, 0),
+                                                        Vector3f(1.25, 0, 0),
+                                                        Vector3f(1.5, 0, 0)),
+                                           QuadBezier3f(Vector3f(1.5, 0, 0),
+                                                        Vector3f(1.75, 0, 0),
+                                                        Vector3f(2.0, 0, 0))
+                                       });
+    CHECK(segments == expected);
+}
+
 
 TEST_CASE("math/curve/autosample_quadbezier/straight_line")
 {

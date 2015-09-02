@@ -84,6 +84,26 @@ struct QuadBezier
         return std::make_pair(c1, c2);
     }
 
+    template <typename InputIterator, typename OutputIterator>
+    inline void segmentize(InputIterator iter, InputIterator end,
+                           OutputIterator dest) const
+    {
+        QuadBezier remaining_curve(*this);
+
+        float_t t_offset = 0.;
+        float_t t_scale = 1.;
+        for (; iter != end; ++iter) {
+            const float_t segment_t = *iter;
+            const float_t split_t = (segment_t + t_offset) * t_scale;
+            t_offset = -segment_t;
+            t_scale = 1./(1-segment_t);
+
+            std::tie(*dest++, remaining_curve) = remaining_curve.split(split_t);
+        }
+
+        *dest++ = remaining_curve;
+    }
+
     // evaluating
 
     template <typename float_t>
