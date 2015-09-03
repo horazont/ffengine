@@ -258,8 +258,8 @@ FancyTerrainInterface::FancyTerrainInterface(const sim::Terrain &terrain,
         throw std::runtime_error("(terrain size-1) / (grid size-1) must be power of two");
     }
 
-#ifdef DISABLE_QUADTREE
-    logger.log(io::LOG_WARNING, "QuadTree hittest disabled at compile time!");
+#ifndef DISABLE_QUADTREE
+    logger.log(io::LOG_WARNING, "QuadTree hittest (SLOW!) enabled at compile time!");
 #endif
 }
 
