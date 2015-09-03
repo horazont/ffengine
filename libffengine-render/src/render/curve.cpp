@@ -30,8 +30,8 @@ namespace engine {
 QuadBezier3fDebug::QuadBezier3fDebug(Material &mat, unsigned int steps):
     m_mat(mat),
     m_steps(steps),
-    m_vbo_alloc(mat.vbo().allocate(steps+1)),
-    m_ibo_alloc(mat.ibo().allocate(steps+1))
+    m_vbo_alloc(mat.vbo().allocate(steps+2)),
+    m_ibo_alloc(mat.ibo().allocate(steps+4))
 {
     {
         const uint16_t base = m_vbo_alloc.base();
@@ -39,6 +39,9 @@ QuadBezier3fDebug::QuadBezier3fDebug(Material &mat, unsigned int steps):
         for (unsigned int step = 0; step <= steps; ++step) {
             *dest++ = base + step;
         }
+        *dest++ = base + steps + 1;
+        *dest++ = base;
+        *dest++ = base + steps;
         m_ibo_alloc.mark_dirty();
     }
 }
@@ -74,6 +77,7 @@ void QuadBezier3fDebug::sync(RenderContext &context,
                         positioning.get_origin() + positioning.get_orientation().rotate(p),
                         t);
         }
+        slice[m_steps+1] = Vector4f(m_curve.p2, 0.5);
         m_vbo_alloc.mark_dirty();
         m_mat.sync();
     }
