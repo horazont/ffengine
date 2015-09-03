@@ -73,6 +73,11 @@ protected:
     void update_bounds(Sphere new_bounds);
 
 public:
+    inline const Sphere &bounds() const
+    {
+        return m_bounding_sphere;
+    }
+
     const Octree *octree() const;
     Octree *octree();
 
@@ -101,6 +106,11 @@ struct OctreeRayHitInfo
      * The t value along the ray when it exited the node.
      */
     float tmax;
+
+    inline bool operator<(const OctreeRayHitInfo &other) const
+    {
+        return tmin < other.tmin;
+    }
 };
 
 
