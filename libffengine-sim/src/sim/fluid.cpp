@@ -77,7 +77,7 @@ Fluid::Fluid(const Terrain &terrain):
                                  std::to_string(IFluidSim::block_size));
     }
 
-    m_impl->set_ocean_level(5.f);
+    m_impl->set_ocean_level(0.f);
 }
 
 Fluid::~Fluid()
