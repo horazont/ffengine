@@ -49,8 +49,13 @@ private:
 
     std::vector<std::tuple<IBOAllocation, VBOAllocation, unsigned int> > m_allocations;
 
+    std::vector<Vector4f> m_tmp_fluid_data_cache;
+    std::vector<unsigned int> m_tmp_index_mapping;
+    std::vector<std::tuple<Vector3f, Vector4f> > m_tmp_vertex_data;
+    std::vector<uint16_t> m_tmp_index_data;
+
 protected:
-    void copy_into_vertex_cache(Vector3f *dest,
+    void copy_into_vertex_cache(Vector4f *dest,
                                 const sim::FluidBlock &src,
                                 const unsigned int x0,
                                 const unsigned int y0,
@@ -61,12 +66,16 @@ protected:
                                 const float world_x0,
                                 const float world_y0);
 
-    void copy_multi_into_vertex_cache(Vector3f *dest,
+    void copy_multi_into_vertex_cache(Vector4f *dest,
                                       const unsigned int x0,
                                       const unsigned int y0,
                                       const unsigned int width,
                                       const unsigned int height,
                                       const unsigned int oversample, const unsigned int dest_width);
+
+
+    unsigned int request_vertex_inject(const float x0f, const float y0f, const unsigned int oversample,
+                                       const unsigned int x, const unsigned int y);
 
     void produce_geometry(const unsigned int blockx,
                           const unsigned int blocky,

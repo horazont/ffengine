@@ -23,6 +23,8 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/fluid.hpp"
 
+#include <map>
+
 namespace engine {
 
 CPUFluid::CPUFluid(const unsigned int terrain_size,
@@ -35,8 +37,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     m_block_size(sim::IFluidSim::block_size),
     m_mat(VBOFormat({
                         VBOAttribute(3),  // position
-                        VBOAttribute(3),  // normal
-                        VBOAttribute(3)   // tangent
+                        VBOAttribute(4)   // fluid data
                     }))
 {
     if ((grid_size-1) != m_block_size) {
@@ -56,8 +57,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
                 context);
 
     m_mat.declare_attribute("position", 0);
-    m_mat.declare_attribute("normal", 1);
-    m_mat.declare_attribute("tangent", 2);
+    m_mat.declare_attribute("fluiddata", 1);
 
     success = success && m_mat.link();
     if (!success) {
@@ -65,7 +65,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     }
 }
 
-void CPUFluid::copy_into_vertex_cache(Vector3f *dest,
+void CPUFluid::copy_into_vertex_cache(Vector4f *dest,
                                       const sim::FluidBlock &src,
                                       const unsigned int x0,
                                       const unsigned int y0,
@@ -81,17 +81,11 @@ void CPUFluid::copy_into_vertex_cache(Vector3f *dest,
         const sim::FluidCellMeta *meta = src.local_cell_meta(x0, y);
 
         for (unsigned int x = x0; x < x0 + width; x += step) {
-            if (cell->fluid_height > 1e-5) {
-                *dest++ = Vector3f(
-                            world_x0+x,
-                            world_y0+y,
-                            cell->fluid_height + meta->terrain_height);
-            } else {
-                *dest++ = Vector3f(
-                            world_x0+x,
-                            world_y0+y,
-                            NAN);
-            }
+            *dest++ = Vector4f(
+                        meta->terrain_height,
+                        cell->fluid_height,
+                        cell->fluid_flow[0],
+                        cell->fluid_flow[1]);
             cell += step;
             meta += step;
         }
@@ -100,7 +94,7 @@ void CPUFluid::copy_into_vertex_cache(Vector3f *dest,
     }
 }
 
-void CPUFluid::copy_multi_into_vertex_cache(Vector3f *dest,
+void CPUFluid::copy_multi_into_vertex_cache(Vector4f *dest,
                                             const unsigned int x0,
                                             const unsigned int y0,
                                             const unsigned int width,
@@ -165,24 +159,98 @@ void CPUFluid::copy_multi_into_vertex_cache(Vector3f *dest,
     }
 }
 
+unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
+                                             const unsigned int oversample,
+                                             const unsigned int x,
+                                             const unsigned int y)
+{
+    const unsigned int src_index = y*(m_block_size+3)+x;
+
+    {
+        unsigned int existing = m_tmp_index_mapping[src_index];
+        if (existing != std::numeric_limits<unsigned int>::max()) {
+            return existing;
+        }
+    }
+
+    const Vector4f &original = m_tmp_fluid_data_cache[src_index];
+    Vector3f pos(x0f+x*oversample, y0f+y*oversample, 0);
+
+    if (original[eY] >= 1e-5) {
+        pos[eZ] = original[eX] + original[eY];
+    } else {
+        unsigned int valids = 0;
+
+        int ystart = -1;
+        int yend = 1;
+        if (y <= 1) {
+            ystart = 0;
+        }
+        if (y >= m_block_size+1) {
+            yend = 0;
+        }
+
+        int xstart = -1;
+        int xend = 1;
+        if (x <= 1) {
+            xstart = 0;
+        }
+        if (x >= m_block_size+1) {
+            xend = 0;
+        }
+
+        Vector4f data;
+        for (int yo = ystart; yo <= yend; ++yo) {
+            for (int xo = xstart; xo <= xend; ++xo) {
+                if (xo == yo && xo == 0) {
+                    continue;
+                }
+
+                const Vector4f &fluid_data = m_tmp_fluid_data_cache[(y+yo)*(m_block_size+3)+x+xo];
+                if (fluid_data[eY] >= 1e-5) {
+                    valids += 1;
+                    data += fluid_data;
+                }
+            }
+        }
+
+        if (valids == 0) {
+            return std::numeric_limits<unsigned int>::max();
+        }
+
+        data /= (float)valids;
+
+        float height = data[eX] + data[eY];
+        // if terrain size < average neighbour fluid height
+        /*if (original[eX] < height) {
+            return std::numeric_limits<unsigned int>::max();
+        }*/
+        pos[eZ] = height;
+    }
+
+    unsigned int index = m_tmp_vertex_data.size();
+    m_tmp_vertex_data.emplace_back(pos, original);
+    m_tmp_index_mapping[src_index] = index;
+
+    return index;
+}
+
 void CPUFluid::produce_geometry(const unsigned int blockx,
                                 const unsigned int blocky,
                                 const unsigned int world_size,
                                 const unsigned int oversample)
 {
-    const unsigned int vcache_size = m_block_size+3;
+    const unsigned int fcache_size = m_block_size+3;
 
-    IBOAllocation ibo_alloc(m_mat.ibo().allocate(m_block_size*m_block_size*6));
-    VBOAllocation vbo_alloc(m_mat.vbo().allocate((m_block_size+1)*(m_block_size+1)));
+    m_tmp_fluid_data_cache.resize(fcache_size*fcache_size, Vector4f());
+    m_tmp_index_mapping.resize(m_tmp_fluid_data_cache.size(),
+                               std::numeric_limits<unsigned int>::max());
 
-    std::vector<Vector3f> vertex_cache;
-    vertex_cache.resize(vcache_size*vcache_size, Vector3f(0, 0, 0));
-
-    Vector3f *dest = &vertex_cache[0];
+    Vector4f *dest = &m_tmp_fluid_data_cache[0];
     unsigned int x0 = blockx*m_block_size;
     unsigned int y0 = blocky*m_block_size;
-    unsigned int width = vcache_size;
-    unsigned int height = vcache_size;
+    unsigned int width = fcache_size;
+    unsigned int height = fcache_size;
 
     bool west_edge = false;
     bool north_edge = false;
@@ -207,7 +275,7 @@ void CPUFluid::produce_geometry(const unsigned int blockx,
         x0 -= oversample;
     }
     if (y0 == 0) {
-        dest += vcache_size;
+        dest += fcache_size;
         height -= 1;
         south_edge = true;
     } else {
@@ -215,76 +283,131 @@ void CPUFluid::produce_geometry(const unsigned int blockx,
     }
 
     /* std::cout << oversample << std::endl; */
-    copy_multi_into_vertex_cache(dest, x0, y0, width, height, oversample, vcache_size);
+    copy_multi_into_vertex_cache(dest, x0, y0, width, height, oversample, fcache_size);
 
     if (north_edge) {
         for (unsigned int x = 0; x < m_block_size; ++x) {
-            const Vector3f &ref = vertex_cache[(vcache_size-3)*vcache_size+x+1];
-            vertex_cache[(vcache_size-2)*vcache_size+x+1] = ref + Vector3f(0, oversample, 0);
-            vertex_cache[(vcache_size-1)*vcache_size+x+1] = ref + Vector3f(0, 2*oversample, 0);
+            const Vector4f &ref = m_tmp_fluid_data_cache[(fcache_size-3)*fcache_size+x+1];
+            m_tmp_fluid_data_cache[(fcache_size-2)*fcache_size+x+1] = ref;
+            m_tmp_fluid_data_cache[(fcache_size-1)*fcache_size+x+1] = ref;
         }
     }
 
     if (west_edge) {
         for (unsigned int y = 0; y < m_block_size; ++y) {
-            const Vector3f &ref = vertex_cache[(y+1)*vcache_size+vcache_size-3];
-            vertex_cache[(y+1)*vcache_size+vcache_size-2] = ref + Vector3f(oversample, 0, 0);
-            vertex_cache[(y+1)*vcache_size+vcache_size-1] = ref + Vector3f(2*oversample, 0, 0);
+            const Vector4f &ref = m_tmp_fluid_data_cache[(y+1)*fcache_size+fcache_size-3];
+            m_tmp_fluid_data_cache[(y+1)*fcache_size+fcache_size-2] = ref;
+            m_tmp_fluid_data_cache[(y+1)*fcache_size+fcache_size-1] = ref;
         }
     }
 
     if (west_edge || north_edge) {
-        const Vector3f &ref_west = vertex_cache[m_block_size*vcache_size+vcache_size-3];
-        const Vector3f &ref_north = vertex_cache[(vcache_size-3)*vcache_size+m_block_size];
-        vertex_cache[(vcache_size-2)*vcache_size+vcache_size-2] = Vector3f(
-                    ref_west[eX]+oversample,
-                    ref_north[eY]+oversample,
-                    (ref_west[eZ] + ref_north[eZ]) / 2.f);
+        const Vector4f &ref_west = m_tmp_fluid_data_cache[m_block_size*fcache_size+fcache_size-3];
+        const Vector4f &ref_north = m_tmp_fluid_data_cache[(fcache_size-3)*fcache_size+m_block_size];
+        m_tmp_fluid_data_cache[(fcache_size-2)*fcache_size+fcache_size-2] = (ref_west + ref_north) / 2.f;
     }
 
     if (south_edge) {
         for (unsigned int x = 0; x < m_block_size; ++x) {
-            const Vector3f &ref = vertex_cache[vcache_size+x+1];
-            vertex_cache[x+1] = ref + Vector3f(0, -oversample, 0);
+            const Vector4f &ref = m_tmp_fluid_data_cache[fcache_size+x+1];
+            m_tmp_fluid_data_cache[x+1] = ref;
         }
     }
 
     if (east_edge) {
         for (unsigned int y = 0; y < m_block_size; ++y) {
-            const Vector3f &ref = vertex_cache[(y+1)*vcache_size+1];
-            vertex_cache[(y+1)*vcache_size] = ref + Vector3f(-oversample, 0, 0);
+            const Vector4f &ref = m_tmp_fluid_data_cache[(y+1)*fcache_size+1];
+            m_tmp_fluid_data_cache[(y+1)*fcache_size] = ref;
         }
     }
 
+    const float x0f = float(blockx*m_block_size) - oversample;
+    const float y0f = float(blocky*m_block_size) - oversample;
+
+    // in this run, we add all the other vertices and also the faces
+    for (unsigned int y = 2; y < m_block_size+2; ++y) {
+        for (unsigned int x = 2; x < m_block_size+2; ++x) {
+            unsigned int this_index = request_vertex_inject(
+                        x0f, y0f, oversample,
+                        x, y);
+            unsigned int left_index = request_vertex_inject(
+                        x0f, y0f, oversample,
+                        x-1, y);
+            unsigned int below_index = request_vertex_inject(
+                        x0f, y0f, oversample,
+                        x, y-1);
+            unsigned int below_left_index = request_vertex_inject(
+                        x0f, y0f, oversample,
+                        x-1, y-1);
+
+            bool this_valid = this_index != std::numeric_limits<unsigned int>::max();
+            bool left_valid = left_index != std::numeric_limits<unsigned int>::max();
+            bool below_valid = below_index != std::numeric_limits<unsigned int>::max();
+            bool below_left_valid = below_left_index != std::numeric_limits<unsigned int>::max();
+
+            if (this_valid && left_valid && below_valid && below_left_valid) {
+                const float this_height = std::get<0>(m_tmp_vertex_data[this_index])[eZ];
+                const float left_height = std::get<0>(m_tmp_vertex_data[left_index])[eZ];
+                const float below_height = std::get<0>(m_tmp_vertex_data[below_index])[eZ];
+                const float below_left_height = std::get<0>(m_tmp_vertex_data[below_left_index])[eZ];
+
+                if (abs(this_height - below_left_height) > abs(left_height - below_height)) {
+                    m_tmp_index_data.push_back(this_index);
+                    m_tmp_index_data.push_back(left_index);
+                    m_tmp_index_data.push_back(below_index);
+
+                    m_tmp_index_data.push_back(below_index);
+                    m_tmp_index_data.push_back(left_index);
+                    m_tmp_index_data.push_back(below_left_index);
+                } else {
+                    m_tmp_index_data.push_back(below_index);
+                    m_tmp_index_data.push_back(this_index);
+                    m_tmp_index_data.push_back(below_left_index);
+
+                    m_tmp_index_data.push_back(below_left_index);
+                    m_tmp_index_data.push_back(this_index);
+                    m_tmp_index_data.push_back(left_index);
+                }
+            } else if (this_valid && left_valid && below_valid) {
+                m_tmp_index_data.push_back(this_index);
+                m_tmp_index_data.push_back(left_index);
+                m_tmp_index_data.push_back(below_index);
+            } else if (this_valid && left_valid && below_left_valid) {
+                m_tmp_index_data.push_back(below_left_index);
+                m_tmp_index_data.push_back(this_index);
+                m_tmp_index_data.push_back(left_index);
+            } else if (this_valid && below_valid && below_left_valid) {
+                m_tmp_index_data.push_back(below_index);
+                m_tmp_index_data.push_back(this_index);
+                m_tmp_index_data.push_back(below_left_index);
+            } else if (below_valid && left_valid && below_left_valid) {
+                m_tmp_index_data.push_back(below_index);
+                m_tmp_index_data.push_back(left_index);
+                m_tmp_index_data.push_back(below_left_index);
+            }
+        }
+    }
+
+    IBOAllocation ibo_alloc(m_mat.ibo().allocate(m_tmp_index_data.size()));
+    VBOAllocation vbo_alloc(m_mat.vbo().allocate(m_tmp_vertex_data.size()));
+
     {
         auto pos_slice = VBOSlice<Vector3f>(vbo_alloc, 0);
-        for (unsigned int y = 0; y < m_block_size+1; ++y) {
-            for (unsigned int x = 0; x < m_block_size+1; ++x) {
-                pos_slice[y*(m_block_size+1)+x] = vertex_cache[(y+1)*vcache_size+x+1];
-            }
+        auto fd_slice = VBOSlice<Vector4f>(vbo_alloc, 1);
+        for (unsigned int i = 0; i < m_tmp_vertex_data.size(); ++i) {
+            pos_slice[i] = std::get<0>(m_tmp_vertex_data[i]);
+            fd_slice[i] = std::get<1>(m_tmp_vertex_data[i]);
         }
         vbo_alloc.mark_dirty();
     }
 
     {
         uint16_t *dest = ibo_alloc.get();
-        for (unsigned int y = 0; y < m_block_size; ++y) {
-            for (unsigned int x = 0; x < m_block_size; ++x) {
-                const unsigned int vertex_base = (m_block_size+1)*y + x;
-                *dest++ = vertex_base;
-                *dest++ = vertex_base + 1;
-                *dest++ = vertex_base + m_block_size + 1;
-
-                *dest++ = vertex_base + m_block_size + 1;
-                *dest++ = vertex_base + 1;
-                *dest++ = vertex_base + m_block_size + 1 + 1;
-            }
-        }
+        memcpy(dest, m_tmp_index_data.data(), sizeof(uint16_t)*m_tmp_index_data.size());
         ibo_alloc.mark_dirty();
     }
 
-    m_allocations.emplace_back(
-                std::make_tuple(std::move(ibo_alloc), std::move(vbo_alloc), world_size));
+    m_allocations.emplace_back(std::move(ibo_alloc), std::move(vbo_alloc), world_size);
 }
 
 void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
@@ -296,6 +419,10 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
                          slice.basey / grid_cells,
                          slice.lod,
                          slice.lod / grid_cells);
+        m_tmp_index_data.clear();
+        m_tmp_fluid_data_cache.clear();
+        m_tmp_index_mapping.clear();
+        m_tmp_vertex_data.clear();
     }
     m_mat.sync();
     m_mat.shader().bind();
@@ -304,7 +431,7 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
 
 void CPUFluid::render(RenderContext &context, const FullTerrainNode &fullterrain)
 {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     m_mat.shader().bind();
     glUniform1f(m_mat.shader().uniform_location("scale_to_radius"), fullterrain.scale_to_radius());
     for (auto &allocs: m_allocations) {
