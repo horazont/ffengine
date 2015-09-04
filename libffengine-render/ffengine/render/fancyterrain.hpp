@@ -65,7 +65,9 @@ public:
      *
      * @opengl
      */
-    FancyTerrainNode(FancyTerrainInterface &terrain,
+    FancyTerrainNode(const unsigned int terrain_size,
+                     const unsigned int grid_size,
+                     FancyTerrainInterface &terrain,
                      GLResourceManager &resources);
     ~FancyTerrainNode() override;
 

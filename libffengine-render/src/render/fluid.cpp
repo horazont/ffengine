@@ -23,199 +23,297 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/fluid.hpp"
 
-// #define TIMELOG_FLUID_RENDER
-
-#ifdef TIMELOG_FLUID_RENDER
-#include <chrono>
-typedef std::chrono::steady_clock timelog_clock;
-
-#define TIMELOG_ms(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x).count()
-#endif
-
 namespace engine {
 
-static io::Logger &logger = io::logging().get_logger("render.fluid");
-
-const unsigned int cells = 120;
-const unsigned int width = 120;
-const unsigned int height = 120;
-
-FluidNode::FluidNode(sim::Fluid &fluidsim):
+CPUFluid::CPUFluid(const unsigned int terrain_size,
+                   const unsigned int grid_size,
+                   GLResourceManager &resources,
+                   const sim::Fluid &fluidsim):
+    FullTerrainRenderer(terrain_size, grid_size),
+    m_resources(resources),
     m_fluidsim(fluidsim),
-    m_fluiddata(GL_RGBA32F,
-                fluidsim.blocks().cells_per_axis(),
-                fluidsim.blocks().cells_per_axis(),
-                GL_RGBA,
-                GL_FLOAT),
-    m_material(VBOFormat({
-                             VBOAttribute(3)
-                         })),
-    m_vbo_alloc(m_material.vbo().allocate((cells+1)*(cells+1))),
-    m_ibo_alloc(m_material.ibo().allocate(cells*cells*4))
+    m_block_size(sim::IFluidSim::block_size),
+    m_mat(VBOFormat({
+                        VBOAttribute(3),  // position
+                        VBOAttribute(3),  // normal
+                        VBOAttribute(3)   // tangent
+                    }))
 {
-    {
-        auto slice = VBOSlice<Vector3f>(m_vbo_alloc, 0);
-        unsigned int i = 0;
-        for (unsigned int y = 0; y <= cells; y++)
-        {
-            const float yf = float(y) / cells * 2.f - 1.f;
-            for (unsigned int x = 0; x <= cells; x++)
-            {
-                const float xf = float(x) / cells * 2.f - 1.f;
-                slice[i] = Vector3f(xf*width/2.f, yf*height/2.f, 0);
-                ++i;
-            }
-        }
+    if ((grid_size-1) != m_block_size) {
+        throw std::logic_error("terrain grid_size does not match fluidsim block_size");
     }
 
-    {
-        uint16_t *dest = m_ibo_alloc.get();
-        for (unsigned int y = 0; y < cells; y++) {
-            for (unsigned int x = 0; x < cells; x++) {
-                const unsigned int curr_base = y*(cells+1) + x;
-                *dest++ = curr_base;
-                *dest++ = curr_base + (cells+1);
-                *dest++ = curr_base + (cells+1) + 1;
-                *dest++ = curr_base + 1;
-            }
-        }
-    }
+    spp::EvaluationContext context(m_resources.shader_library());
 
-    m_vbo_alloc.mark_dirty();
-    m_ibo_alloc.mark_dirty();
+    bool success = true;
 
-    bool success = m_material.shader().attach_resource(
-                GL_VERTEX_SHADER,
-                ":/shaders/fluid/main.vert");
-    success = success && m_material.shader().attach_resource(
-                GL_GEOMETRY_SHADER,
-                ":/shaders/fluid/main.geom");
-    success = success && m_material.shader().attach_resource(
-                GL_FRAGMENT_SHADER,
-                ":/shaders/fluid/main.frag");
+    success = success && m_mat.shader().attach(
+                m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
+                context);
 
+    success = success && m_mat.shader().attach(
+                m_resources.load_shader_checked(":/shaders/fluid/cpu.frag"),
+                context);
 
-    m_material.declare_attribute("position", 0);
+    m_mat.declare_attribute("position", 0);
+    m_mat.declare_attribute("normal", 1);
+    m_mat.declare_attribute("tangent", 2);
 
-    success = success && m_material.link();
+    success = success && m_mat.link();
     if (!success) {
-        throw std::runtime_error("shader failed to compile or link");
+        throw std::runtime_error("material failed to compile or link");
     }
-
-    m_material.shader().bind();
-    glUniform1f(m_material.shader().uniform_location("width"),
-                m_fluidsim.blocks().cells_per_axis());
-    glUniform1f(m_material.shader().uniform_location("height"),
-                m_fluidsim.blocks().cells_per_axis());
-
-
-    RenderContext::configure_shader(m_material.shader());
-
-    m_fluiddata.bind();
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    m_material.attach_texture("fluiddata", &m_fluiddata);
-
-    raise_last_gl_error();
 }
 
-void FluidNode::fluidsim_to_gl_texture()
+void CPUFluid::copy_into_vertex_cache(Vector3f *dest,
+                                      const sim::FluidBlock &src,
+                                      const unsigned int x0,
+                                      const unsigned int y0,
+                                      const unsigned int width,
+                                      const unsigned int height,
+                                      const unsigned int row_stride,
+                                      const unsigned int step,
+                                      const float world_x0,
+                                      const float world_y0)
 {
-    const unsigned int block_cells = sim::IFluidSim::block_size*sim::IFluidSim::block_size;
+    for (unsigned int y = y0; y < y0 + height; y += step) {
+        const sim::FluidCell *cell = src.local_cell_front(x0, y);
+        const sim::FluidCellMeta *meta = src.local_cell_meta(x0, y);
 
-#ifdef TIMELOG_FLUID_RENDER
-    timelog_clock::time_point t0 = timelog_clock::now();
-    timelog_clock::time_point t_upload;
-#endif
-
-    // terrain_height, fluid_height, flowx, flowy
-    m_transfer_buffer.resize(block_cells);
-
-    sim::FluidBlocks &blocks = m_fluidsim.blocks();
-    {
-        auto lock = blocks.read_frontbuffer();
-        for (unsigned int y = 0; y < blocks.blocks_per_axis(); ++y)
-        {
-            for (unsigned int x = 0; x < blocks.blocks_per_axis(); ++x)
-            {
-                const sim::FluidBlock *block = blocks.block(x, y);
-                if (!block->front_meta().active) {
-                    continue;
-                }
-
-                Vector4f *dest = &m_transfer_buffer.front();
-                const sim::FluidCellMeta *meta = block->local_cell_meta(0, 0);
-                const sim::FluidCell *cell = block->local_cell_front(0, 0);
-                for (unsigned int i = 0; i < block_cells; ++i) {
-                    *dest = Vector4f(meta->terrain_height, cell->fluid_height,
-                                     cell->fluid_flow[0], cell->fluid_flow[1]);
-
-                    ++dest;
-                    ++meta;
-                    ++cell;
-                }
-                glTexSubImage2D(GL_TEXTURE_2D, 0,
-                                x*sim::IFluidSim::block_size,
-                                y*sim::IFluidSim::block_size,
-                                sim::IFluidSim::block_size,
-                                sim::IFluidSim::block_size,
-                                GL_RGBA,
-                                GL_FLOAT,
-                                m_transfer_buffer.data());
+        for (unsigned int x = x0; x < x0 + width; x += step) {
+            if (cell->fluid_height > 1e-5) {
+                *dest++ = Vector3f(
+                            world_x0+x,
+                            world_y0+y,
+                            cell->fluid_height + meta->terrain_height);
+            } else {
+                *dest++ = Vector3f(
+                            world_x0+x,
+                            world_y0+y,
+                            NAN);
             }
+            cell += step;
+            meta += step;
+        }
+
+        dest += row_stride;
+    }
+}
+
+void CPUFluid::copy_multi_into_vertex_cache(Vector3f *dest,
+                                            const unsigned int x0,
+                                            const unsigned int y0,
+                                            const unsigned int width,
+                                            const unsigned int height,
+                                            const unsigned int oversample,
+                                            const unsigned int dest_width)
+{
+    const unsigned int oversampled_width = width * oversample;
+    const unsigned int oversampled_height = height * oversample;
+
+    unsigned int ybase = y0;
+    unsigned int ydest = 0;
+
+    while (ybase < y0 + oversampled_height) {
+        const unsigned int blocky = ybase / m_block_size;
+        const unsigned int celly = ybase % m_block_size;
+
+        const unsigned int copy_height = std::min(m_block_size - celly, (height - ydest)*oversample);
+
+        unsigned int xbase = x0;
+        unsigned int xdest = 0;
+
+        while (xbase < x0 + oversampled_width) {
+            const unsigned int blockx = xbase / m_block_size;
+            const unsigned int cellx = xbase % m_block_size;
+
+            const unsigned int copy_width = std::min(m_block_size - cellx, (width - xdest)*oversample);
+
+            const unsigned int row_stride = dest_width - (copy_width+oversample-1)/oversample;
+
+            /*std::cout << "xbase: " << xbase << "; "
+                      << "ybase: " << ybase << "; "
+                      << "cellx: " << cellx << "; "
+                      << "celly: " << celly << "; "
+                      << "copy_width: " << copy_width << "; "
+                      << "copy_height: " << copy_height << "; "
+                      << std::endl;*/
+
+            copy_into_vertex_cache(&dest[ydest*dest_width+xdest],
+                                   *m_fluidsim.blocks().block(blockx, blocky),
+                                   cellx, celly,
+                                   copy_width, copy_height,
+                                   row_stride,
+                                   oversample,
+                                   blockx*m_block_size,
+                                   blocky*m_block_size);
+
+            xbase += copy_width;
+            if (copy_width % oversample != 0) {
+                xbase += (oversample - (copy_width % oversample));
+            }
+
+            xdest += (copy_width+oversample-1) / oversample;
+        }
+
+        ybase += copy_height;
+        if (copy_height % oversample != 0) {
+            ybase += (oversample - (copy_height % oversample));
+        }
+
+        ydest += (copy_height+oversample-1) / oversample;
+    }
+}
+
+void CPUFluid::produce_geometry(const unsigned int blockx,
+                                const unsigned int blocky,
+                                const unsigned int world_size,
+                                const unsigned int oversample)
+{
+    const unsigned int vcache_size = m_block_size+3;
+
+    IBOAllocation ibo_alloc(m_mat.ibo().allocate(m_block_size*m_block_size*6));
+    VBOAllocation vbo_alloc(m_mat.vbo().allocate((m_block_size+1)*(m_block_size+1)));
+
+    std::vector<Vector3f> vertex_cache;
+    vertex_cache.resize(vcache_size*vcache_size, Vector3f(0, 0, 0));
+
+    Vector3f *dest = &vertex_cache[0];
+    unsigned int x0 = blockx*m_block_size;
+    unsigned int y0 = blocky*m_block_size;
+    unsigned int width = vcache_size;
+    unsigned int height = vcache_size;
+
+    bool west_edge = false;
+    bool north_edge = false;
+    bool south_edge = false;
+    bool east_edge = false;
+
+    if (x0 + world_size >= m_fluidsim.blocks().cells_per_axis()-1) {
+        width -= 2;
+        west_edge = true;
+    }
+
+    if (y0 + world_size >= m_fluidsim.blocks().cells_per_axis()-1) {
+        height -= 2;
+        north_edge = true;
+    }
+
+    if (x0 == 0) {
+        dest += 1;
+        width -= 1;
+        east_edge = true;
+    } else {
+        x0 -= oversample;
+    }
+    if (y0 == 0) {
+        dest += vcache_size;
+        height -= 1;
+        south_edge = true;
+    } else {
+        y0 -= oversample;
+    }
+
+    /* std::cout << oversample << std::endl; */
+    copy_multi_into_vertex_cache(dest, x0, y0, width, height, oversample, vcache_size);
+
+    if (north_edge) {
+        for (unsigned int x = 0; x < m_block_size; ++x) {
+            const Vector3f &ref = vertex_cache[(vcache_size-3)*vcache_size+x+1];
+            vertex_cache[(vcache_size-2)*vcache_size+x+1] = ref + Vector3f(0, oversample, 0);
+            vertex_cache[(vcache_size-1)*vcache_size+x+1] = ref + Vector3f(0, 2*oversample, 0);
         }
     }
-    raise_last_gl_error();
 
-#ifdef TIMELOG_FLUID_RENDER
-    t_upload = timelog_clock::now();
-    logger.logf(io::LOG_DEBUG, "fluid: texture upload: %.2f ms",
-                TIMELOG_ms(t_upload - t0));
-#endif
+    if (west_edge) {
+        for (unsigned int y = 0; y < m_block_size; ++y) {
+            const Vector3f &ref = vertex_cache[(y+1)*vcache_size+vcache_size-3];
+            vertex_cache[(y+1)*vcache_size+vcache_size-2] = ref + Vector3f(oversample, 0, 0);
+            vertex_cache[(y+1)*vcache_size+vcache_size-1] = ref + Vector3f(2*oversample, 0, 0);
+        }
+    }
+
+    if (west_edge || north_edge) {
+        const Vector3f &ref_west = vertex_cache[m_block_size*vcache_size+vcache_size-3];
+        const Vector3f &ref_north = vertex_cache[(vcache_size-3)*vcache_size+m_block_size];
+        vertex_cache[(vcache_size-2)*vcache_size+vcache_size-2] = Vector3f(
+                    ref_west[eX]+oversample,
+                    ref_north[eY]+oversample,
+                    (ref_west[eZ] + ref_north[eZ]) / 2.f);
+    }
+
+    if (south_edge) {
+        for (unsigned int x = 0; x < m_block_size; ++x) {
+            const Vector3f &ref = vertex_cache[vcache_size+x+1];
+            vertex_cache[x+1] = ref + Vector3f(0, -oversample, 0);
+        }
+    }
+
+    if (east_edge) {
+        for (unsigned int y = 0; y < m_block_size; ++y) {
+            const Vector3f &ref = vertex_cache[(y+1)*vcache_size+1];
+            vertex_cache[(y+1)*vcache_size] = ref + Vector3f(-oversample, 0, 0);
+        }
+    }
+
+    {
+        auto pos_slice = VBOSlice<Vector3f>(vbo_alloc, 0);
+        for (unsigned int y = 0; y < m_block_size+1; ++y) {
+            for (unsigned int x = 0; x < m_block_size+1; ++x) {
+                pos_slice[y*(m_block_size+1)+x] = vertex_cache[(y+1)*vcache_size+x+1];
+            }
+        }
+        vbo_alloc.mark_dirty();
+    }
+
+    {
+        uint16_t *dest = ibo_alloc.get();
+        for (unsigned int y = 0; y < m_block_size; ++y) {
+            for (unsigned int x = 0; x < m_block_size; ++x) {
+                const unsigned int vertex_base = (m_block_size+1)*y + x;
+                *dest++ = vertex_base;
+                *dest++ = vertex_base + 1;
+                *dest++ = vertex_base + m_block_size + 1;
+
+                *dest++ = vertex_base + m_block_size + 1;
+                *dest++ = vertex_base + 1;
+                *dest++ = vertex_base + m_block_size + 1 + 1;
+            }
+        }
+        ibo_alloc.mark_dirty();
+    }
+
+    m_allocations.emplace_back(
+                std::make_tuple(std::move(ibo_alloc), std::move(vbo_alloc), world_size));
 }
 
-void FluidNode::attach_waves_texture(Texture2D *tex)
+void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
 {
-    m_material.attach_texture("waves", tex);
+    const unsigned int grid_cells = fullterrain.grid_size()-1;
+    m_allocations.clear();
+    for (const TerrainSlice &slice: fullterrain.slices_to_render()) {
+        produce_geometry(slice.basex / grid_cells,
+                         slice.basey / grid_cells,
+                         slice.lod,
+                         slice.lod / grid_cells);
+    }
+    m_mat.sync();
+    m_mat.shader().bind();
+    glUniform3fv(m_mat.shader().uniform_location("lod_viewpoint"), 1, context.viewpoint().as_array);
 }
 
-void FluidNode::attach_scene_colour_texture(Texture2D *tex)
+void CPUFluid::render(RenderContext &context, const FullTerrainNode &fullterrain)
 {
-    m_material.attach_texture("scene", tex);
-}
-
-void FluidNode::attach_scene_depth_texture(Texture2D *tex)
-{
-    m_material.attach_texture("scene_depth", tex);
-}
-
-void FluidNode::advance(TimeInterval seconds)
-{
-    m_t += seconds;
-}
-
-void FluidNode::render(RenderContext &context)
-{
-    /*glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);*/
-    m_material.bind();
-    glUniform3fv(m_material.shader().uniform_location("viewpoint"),
-                 1,
-                 context.viewpoint().as_array);
-    glUniform2f(m_material.shader().uniform_location("viewport"),
-                context.viewport_width(), context.viewport_height());
-    context.draw_elements(GL_LINES_ADJACENCY, m_material, m_ibo_alloc);
-    /*glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);*/
-}
-
-void FluidNode::sync(RenderContext &)
-{
-    m_material.bind();
-    m_material.sync();
-    glUniform1f(m_material.shader().uniform_location("t"),
-                m_t);
-    m_fluiddata.bind();
-    fluidsim_to_gl_texture();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    m_mat.shader().bind();
+    glUniform1f(m_mat.shader().uniform_location("scale_to_radius"), fullterrain.scale_to_radius());
+    for (auto &allocs: m_allocations) {
+        unsigned int world_size = std::get<2>(allocs);
+        glUniform1f(m_mat.shader().uniform_location("chunk_size"), world_size);
+        glUniform1f(m_mat.shader().uniform_location("chunk_lod_scale"), world_size / m_block_size);
+        context.draw_elements_base_vertex(GL_TRIANGLES, m_mat, std::get<0>(allocs), std::get<1>(allocs).base());
+    }
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 }

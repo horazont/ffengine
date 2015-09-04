@@ -53,6 +53,14 @@ TerrainSlice::TerrainSlice(unsigned int basex,
 
 /* engine::FullTerrainRenderer */
 
+FullTerrainRenderer::FullTerrainRenderer(const unsigned int terrain_size,
+                                         const unsigned int grid_size):
+    m_terrain_size(terrain_size),
+    m_grid_size(grid_size)
+{
+
+}
+
 FullTerrainRenderer::~FullTerrainRenderer()
 {
 

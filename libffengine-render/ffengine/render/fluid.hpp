@@ -21,53 +21,66 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#ifndef SCC_ENGINE_RENDER_FLUID_H
-#define SCC_ENGINE_RENDER_FLUID_H
+#ifndef SCC_RENDER_FLUID_H
+#define SCC_RENDER_FLUID_H
 
 #include "ffengine/sim/fluid.hpp"
 
-#include "ffengine/render/scenegraph.hpp"
+#include "ffengine/gl/resource.hpp"
 
+#include "ffengine/render/fullterrain.hpp"
 
 namespace engine {
 
-/**
- * Render the frontbuffer of a sim::Fluid simulation.
- */
-class FluidNode: public scenegraph::Node
+class CPUFluid: public FullTerrainRenderer
 {
 public:
-    FluidNode(sim::Fluid &fluidsim);
+    CPUFluid(const unsigned int terrain_size,
+             const unsigned int grid_size,
+             GLResourceManager &resources,
+             const sim::Fluid &fluidsim);
 
 private:
-    sim::Fluid &m_fluidsim;
-    double m_t;
+    GLResourceManager &m_resources;
+    const sim::Fluid &m_fluidsim;
+    const unsigned int m_block_size;
 
-    Texture2D m_fluiddata;
+    Material m_mat;
 
-    Material m_material;
-
-    VBOAllocation m_vbo_alloc;
-    IBOAllocation m_ibo_alloc;
-
-    std::vector<Vector4f> m_transfer_buffer;
+    std::vector<std::tuple<IBOAllocation, VBOAllocation, unsigned int> > m_allocations;
 
 protected:
-    void fluidsim_to_gl_texture();
+    void copy_into_vertex_cache(Vector3f *dest,
+                                const sim::FluidBlock &src,
+                                const unsigned int x0,
+                                const unsigned int y0,
+                                const unsigned int width,
+                                const unsigned int height,
+                                const unsigned int row_stride,
+                                const unsigned int step,
+                                const float world_x0,
+                                const float world_y0);
+
+    void copy_multi_into_vertex_cache(Vector3f *dest,
+                                      const unsigned int x0,
+                                      const unsigned int y0,
+                                      const unsigned int width,
+                                      const unsigned int height,
+                                      const unsigned int oversample, const unsigned int dest_width);
+
+    void produce_geometry(const unsigned int blockx,
+                          const unsigned int blocky,
+                          const unsigned int world_size,
+                          const unsigned int oversample);
 
 public:
-    void attach_waves_texture(Texture2D *tex);
-    void attach_scene_colour_texture(Texture2D *tex);
-    void attach_scene_depth_texture(Texture2D *tex);
-
-public:
-    void advance(TimeInterval seconds) override;
-    void render(RenderContext &context) override;
-    void sync(RenderContext &context) override;
+    void sync(RenderContext &context,
+              const FullTerrainNode &fullterrain) override;
+    void render(RenderContext &context,
+                const FullTerrainNode &fullterrain) override;
 
 };
 
 }
 
-#endif // SCC_ENGINE_RENDER_GRID_H
-
+#endif

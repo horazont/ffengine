@@ -127,7 +127,7 @@ public:
     template <typename T, typename... arg_ts>
     T &emplace(arg_ts&&... args)
     {
-        auto obj = std::make_unique<T>(std::forward<arg_ts>(args)...);
+        auto obj = std::make_unique<T>(m_terrain_size, m_grid_size, std::forward<arg_ts>(args)...);
         T &result = *obj;
         m_renderers.emplace_back(std::move(obj));
         return result;
@@ -156,6 +156,15 @@ public:
     inline unsigned int max_detail_level() const
     {
         return m_max_depth;
+    }
+
+    /**
+     * The number of cells in the smallest grid (that is, at the highest
+     * level of detail).
+     */
+    inline unsigned int grid_size() const
+    {
+        return m_grid_size;
     }
 
     /**
@@ -204,13 +213,19 @@ public:
 class FullTerrainRenderer
 {
 public:
+    FullTerrainRenderer(const unsigned int terrain_size,
+                        const unsigned int grid_size);
     virtual ~FullTerrainRenderer();
+
+protected:
+    const unsigned int m_terrain_size;
+    const unsigned int m_grid_size;
 
 public:
     virtual void sync(RenderContext &context,
-                      const FullTerrainNode &slices_to_render) = 0;
+                      const FullTerrainNode &fullterrain) = 0;
     virtual void render(RenderContext &context,
-                        const FullTerrainNode &slices_to_render) = 0;
+                        const FullTerrainNode &fullterrain) = 0;
 
 };
 

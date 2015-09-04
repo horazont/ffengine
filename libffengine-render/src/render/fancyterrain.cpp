@@ -43,8 +43,11 @@ static io::Logger &logger = io::logging().get_logger("render.fancyterrain");
 static const Vector3f fake_viewpoint(30, 30, 200);
 
 
-FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
+FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
+                                   const unsigned int grid_size,
+                                   FancyTerrainInterface &terrain_interface,
                                    GLResourceManager &resources):
+    FullTerrainRenderer(terrain_size, grid_size),
     m_resources(resources),
     m_eval_context(resources.shader_library()),
     m_terrain_interface(terrain_interface),
@@ -73,8 +76,6 @@ FancyTerrainNode::FancyTerrainNode(FancyTerrainInterface &terrain_interface,
     m_ibo_allocation(m_ibo.allocate((terrain_interface.grid_size()-1)*(terrain_interface.grid_size()-1)*4)),
     m_cache_invalidation(0, 0, m_terrain.size(), m_terrain.size())
 {
-    const unsigned int grid_size = terrain_interface.grid_size();
-
     uint16_t *dest = m_ibo_allocation.get();
     for (unsigned int y = 0; y < grid_size-1; y++) {
         for (unsigned int x = 0; x < grid_size-1; x++) {

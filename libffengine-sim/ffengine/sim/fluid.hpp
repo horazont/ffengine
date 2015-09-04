@@ -111,6 +111,11 @@ public:
         return m_blocks;
     }
 
+    inline const FluidBlocks &blocks() const
+    {
+        return m_blocks;
+    }
+
     void start();
     void to_gl_texture() const;
     void wait_for();
