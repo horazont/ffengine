@@ -384,30 +384,42 @@ protected:
 
     void reserve(const unsigned int min_blocks)
     {
-        const unsigned int required_size = min_blocks * m_block_length;
-        const unsigned int old_size = m_local_buffer.size();
-        unsigned int new_size = old_size;
-        if (new_size == 0) {
-            new_size = 1;
+        const unsigned int old_blocks = m_local_buffer.size() / m_block_length;
+        unsigned int new_blocks = old_blocks;
+        if (new_blocks == 0) {
+            new_blocks = 1;
         }
-        while (required_size > new_size) {
-            new_size *= 2;
+        while (min_blocks > new_blocks) {
+            new_blocks *= 2;
         }
-        if (new_size <= old_size) {
+        if (new_blocks <= old_blocks) {
             return;
         }
+
+        const unsigned int new_size = new_blocks * m_block_length;
+
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "reserve: reallocating to %u elements (%u blocks)",
+                             new_size,
+                             new_blocks);
 
         m_local_buffer.resize(new_size);
         if (m_regions.size() > 0) {
             GLArrayRegion &last_region = **(m_regions.end() - 1);
             if (!last_region.m_in_use) {
-                last_region.m_count += (new_size - old_size) / m_block_length;
+                gl_array_logger.logf(io::LOG_DEBUG,
+                                     "reserve: appending %d blocks to existing region", new_blocks - old_blocks);
+                last_region.m_count += new_blocks - old_blocks;
                 return;
             }
         }
 
-        append_region(old_size / m_block_length,
-                      (new_size - old_size) / m_block_length);
+        GLArrayRegion &region = append_region(old_blocks, new_blocks - old_blocks);
+
+        gl_array_logger.logf(io::LOG_DEBUG,
+                             "reserve: created region %u with %u blocks",
+                             region.m_id,
+                             region.m_count);
     }
 
     bool reserve_remote()
