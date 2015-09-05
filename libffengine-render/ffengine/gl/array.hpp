@@ -691,6 +691,11 @@ public:
         return m_region_map[region_id]->m_start;
     }
 
+    std::size_t vertices() const
+    {
+        return m_local_buffer.size();
+    }
+
     void bind() override
     {
         glBindBuffer(gl_target, this->m_glid);

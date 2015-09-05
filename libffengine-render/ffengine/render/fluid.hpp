@@ -32,6 +32,18 @@ the AUTHORS file.
 
 namespace engine {
 
+struct FluidSlice
+{
+    FluidSlice(IBOAllocation &&ibo_alloc, VBOAllocation &&vbo_alloc,
+               unsigned int size);
+
+    IBOAllocation m_ibo_alloc;
+    VBOAllocation m_vbo_alloc;
+    unsigned int m_size;
+
+    unsigned int m_last_used;
+};
+
 class CPUFluid: public FullTerrainRenderer
 {
 public:
@@ -44,15 +56,19 @@ private:
     GLResourceManager &m_resources;
     const sim::Fluid &m_fluidsim;
     const unsigned int m_block_size;
+    const unsigned int m_lods;
 
     Material m_mat;
 
-    std::vector<std::tuple<IBOAllocation, VBOAllocation, unsigned int> > m_allocations;
+    std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
+    std::vector<FluidSlice*> m_render_slices;
 
+    std::vector<const sim::FluidBlock*> m_tmp_used_blocks;
     std::vector<Vector4f> m_tmp_fluid_data_cache;
     std::vector<unsigned int> m_tmp_index_mapping;
     std::vector<std::tuple<Vector3f, Vector4f> > m_tmp_vertex_data;
     std::vector<uint16_t> m_tmp_index_data;
+
 
 protected:
     void copy_into_vertex_cache(Vector4f *dest,
@@ -71,16 +87,24 @@ protected:
                                       const unsigned int y0,
                                       const unsigned int width,
                                       const unsigned int height,
-                                      const unsigned int oversample, const unsigned int dest_width);
+                                      const unsigned int oversample,
+                                      const unsigned int dest_width);
+
+    void invalidate_caches(const unsigned int blockx,
+                           const unsigned int blocky);
 
 
-    unsigned int request_vertex_inject(const float x0f, const float y0f, const unsigned int oversample,
-                                       const unsigned int x, const unsigned int y);
+    unsigned int request_vertex_inject(const float x0f,
+                                       const float y0f,
+                                       const unsigned int oversample,
+                                       const unsigned int x,
+                                       const unsigned int y);
 
-    void produce_geometry(const unsigned int blockx,
-                          const unsigned int blocky,
-                          const unsigned int world_size,
-                          const unsigned int oversample);
+    std::unique_ptr<FluidSlice> produce_geometry(
+            const unsigned int blockx,
+            const unsigned int blocky,
+            const unsigned int world_size,
+            const unsigned int oversample);
 
 public:
     void sync(RenderContext &context,

@@ -64,6 +64,38 @@ struct TerrainSlice
     }
 };
 
+}
+
+
+namespace std {
+
+template<>
+struct hash<engine::TerrainSlice>
+{
+public:
+    typedef engine::TerrainSlice argument_type;
+    typedef typename hash<unsigned int>::result_type result_type;
+
+private:
+    hash<unsigned int> m_int_hash;
+
+public:
+    result_type operator()(const engine::TerrainSlice &slice) const
+    {
+        if (slice.valid) {
+            return m_int_hash(slice.basex) ^ m_int_hash(slice.basey) ^ m_int_hash(slice.lod);
+        }
+        // same hash for all invalid slices
+        return 0;
+    }
+
+};
+
+}
+
+
+namespace engine {
+
 
 class FullTerrainRenderer;
 

@@ -25,7 +25,31 @@ the AUTHORS file.
 
 #include <map>
 
+#define TIMELOG_SYNC
+
+#if defined(TIMELOG_SYNC) || defined(TIMELOG_RENDER)
+#include <chrono>
+typedef std::chrono::steady_clock timelog_clock;
+#define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
+#endif
+
 namespace engine {
+
+static io::Logger &logger = io::logging().get_logger("render.fluid.cpu");
+
+/* engine::FluidSlice */
+
+FluidSlice::FluidSlice(IBOAllocation &&ibo_alloc,
+                       VBOAllocation &&vbo_alloc,
+                       unsigned int size):
+    m_ibo_alloc(std::move(ibo_alloc)),
+    m_vbo_alloc(std::move(vbo_alloc)),
+    m_size(size)
+{
+
+}
+
+/* engine::CPUFluid */
 
 CPUFluid::CPUFluid(const unsigned int terrain_size,
                    const unsigned int grid_size,
@@ -35,6 +59,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     m_resources(resources),
     m_fluidsim(fluidsim),
     m_block_size(sim::IFluidSim::block_size),
+    m_lods(log2_of_pot((terrain_size-1)/(grid_size-1))+1),
     m_mat(VBOFormat({
                         VBOAttribute(3),  // position
                         VBOAttribute(4)   // fluid data
@@ -42,6 +67,16 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
 {
     if ((grid_size-1) != m_block_size) {
         throw std::logic_error("terrain grid_size does not match fluidsim block_size");
+    }
+
+    m_slice_cache.resize(m_lods);
+    for (unsigned int i = 0; i < m_lods; ++i) {
+        const unsigned int logblocks = m_lods - i - 1;
+        std::cout << i << " " << logblocks << " " << ((1<<logblocks)*(1<<logblocks)) << std::endl;
+        m_slice_cache[i].resize((1<<logblocks)*(1<<logblocks));
+        for (unsigned int j = 0; j < m_slice_cache[i].size(); ++j) {
+            m_slice_cache[i][j] = std::make_pair(false, nullptr);
+        }
     }
 
     spp::EvaluationContext context(m_resources.shader_library());
@@ -159,6 +194,36 @@ void CPUFluid::copy_multi_into_vertex_cache(Vector4f *dest,
     }
 }
 
+void CPUFluid::invalidate_caches(const unsigned int blockx,
+                                 const unsigned int blocky)
+{
+    unsigned int divisor = 1;
+    unsigned int blocks = (1<<(m_lods-1));
+    for (unsigned int lod = 0; lod < m_lods; ++lod) {
+
+        const unsigned int lodblockx = blockx / divisor;
+        const unsigned int lodblocky = blocky / divisor;
+
+        const bool invalidate_left = (blockx > 0) && ((blockx % divisor) == 0);
+        const bool invalidate_below = (blocky > 0) && ((blocky % divisor) == 0);
+
+        m_slice_cache[lod][lodblocky*blocks+lodblockx] = std::make_pair(false, nullptr);
+
+        if (invalidate_left) {
+            m_slice_cache[lod][lodblocky*blocks+lodblockx-1] = std::make_pair(false, nullptr);
+            if (invalidate_below) {
+                m_slice_cache[lod][(lodblocky-1)*blocks+lodblockx-1] = std::make_pair(false, nullptr);
+            }
+        }
+        if (invalidate_below) {
+            m_slice_cache[lod][(lodblocky-1)*blocks+lodblockx] = std::make_pair(false, nullptr);
+        }
+
+        divisor *= 2;
+        blocks /= 2;
+    }
+}
+
 unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
                                              const unsigned int oversample,
                                              const unsigned int x,
@@ -235,10 +300,10 @@ unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
     return index;
 }
 
-void CPUFluid::produce_geometry(const unsigned int blockx,
-                                const unsigned int blocky,
-                                const unsigned int world_size,
-                                const unsigned int oversample)
+std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx,
+                                                       const unsigned int blocky,
+                                                       const unsigned int world_size,
+                                                       const unsigned int oversample)
 {
     const unsigned int fcache_size = m_block_size+3;
 
@@ -388,6 +453,10 @@ void CPUFluid::produce_geometry(const unsigned int blockx,
         }
     }
 
+    if (m_tmp_vertex_data.empty() || m_tmp_index_data.empty()) {
+        return nullptr;
+    }
+
     IBOAllocation ibo_alloc(m_mat.ibo().allocate(m_tmp_index_data.size()));
     VBOAllocation vbo_alloc(m_mat.vbo().allocate(m_tmp_vertex_data.size()));
 
@@ -407,26 +476,96 @@ void CPUFluid::produce_geometry(const unsigned int blockx,
         ibo_alloc.mark_dirty();
     }
 
-    m_allocations.emplace_back(std::move(ibo_alloc), std::move(vbo_alloc), world_size);
+    return std::make_unique<FluidSlice>(std::move(ibo_alloc),
+                                        std::move(vbo_alloc),
+                                        world_size);
 }
 
 void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
 {
-    const unsigned int grid_cells = fullterrain.grid_size()-1;
-    m_allocations.clear();
+#ifdef TIMELOG_SYNC
+    const timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_invalidate, t_geometry, t_upload;
+#endif
+
+    const sim::FluidBlock *block = m_fluidsim.blocks().block(0, 0);
+    for (unsigned int blocky = 0;
+         blocky < m_fluidsim.blocks().blocks_per_axis();
+         ++blocky)
+    {
+        for (unsigned int blockx = 0;
+             blockx < m_fluidsim.blocks().blocks_per_axis();
+             ++blockx)
+        {
+            if (block->front_meta().active) {
+                // invalidate caches for block
+                invalidate_caches(blockx, blocky);
+            }
+            ++block;
+        }
+    }
+
+#ifdef TIMELOG_SYNC
+    t_invalidate = timelog_clock::now();
+#endif
+
+    m_render_slices.clear();
     for (const TerrainSlice &slice: fullterrain.slices_to_render()) {
-        produce_geometry(slice.basex / grid_cells,
-                         slice.basey / grid_cells,
-                         slice.lod,
-                         slice.lod / grid_cells);
+        const unsigned int lod = slice.lod / m_block_size;
+        const unsigned int loglod = log2_of_pot(lod);
+        const unsigned int lodblocks = (1<<(m_lods - loglod - 1));
+        const unsigned int blockx = slice.basex / m_block_size;
+        const unsigned int blocky = slice.basey / m_block_size;
+        const unsigned int lodblockx = blockx / lod;
+        const unsigned int lodblocky = blocky / lod;
+
+        {
+            auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
+            // if valid
+            if (cache_entry.first) {
+                // if has geometry
+                if (cache_entry.second) {
+                    m_render_slices.push_back(cache_entry.second.get());
+                }
+                continue;
+            }
+        }
+
+        auto geometry_slice = produce_geometry(blockx,
+                                               blocky,
+                                               slice.lod,
+                                               slice.lod / m_block_size);
+        if (geometry_slice) {
+            m_render_slices.push_back(geometry_slice.get());
+        }
+
+        m_slice_cache[loglod][lodblocky*lodblocks+lodblockx] = std::make_pair(
+                    true,
+                    std::move(geometry_slice));
+
         m_tmp_index_data.clear();
         m_tmp_fluid_data_cache.clear();
         m_tmp_index_mapping.clear();
         m_tmp_vertex_data.clear();
+        m_tmp_used_blocks.clear();
     }
+
+#ifdef TIMELOG_SYNC
+    t_geometry = timelog_clock::now();
+#endif
+
     m_mat.sync();
     m_mat.shader().bind();
     glUniform3fv(m_mat.shader().uniform_location("lod_viewpoint"), 1, context.viewpoint().as_array);
+
+#ifdef TIMELOG_SYNC
+    t_upload = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "sync: vbo size     = %zu (glid=%d)", m_mat.vbo().vertices(), m_mat.vbo().glid());
+    logger.logf(io::LOG_DEBUG, "sync: ibo size     = %zu (glid=%d)", m_mat.ibo().vertices(), m_mat.ibo().glid());
+    logger.logf(io::LOG_DEBUG, "sync: t_invalidate = %.2f ms", ms_cast(t_invalidate - t0).count());
+    logger.logf(io::LOG_DEBUG, "sync: t_geometry   = %.2f ms", ms_cast(t_geometry - t_invalidate).count());
+    logger.logf(io::LOG_DEBUG, "sync: t_upload     = %.2f ms", ms_cast(t_upload - t_geometry).count());
+#endif
 }
 
 void CPUFluid::render(RenderContext &context, const FullTerrainNode &fullterrain)
@@ -434,11 +573,11 @@ void CPUFluid::render(RenderContext &context, const FullTerrainNode &fullterrain
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     m_mat.shader().bind();
     glUniform1f(m_mat.shader().uniform_location("scale_to_radius"), fullterrain.scale_to_radius());
-    for (auto &allocs: m_allocations) {
-        unsigned int world_size = std::get<2>(allocs);
+    for (FluidSlice *slice: m_render_slices) {
+        unsigned int world_size = slice->m_size;
         glUniform1f(m_mat.shader().uniform_location("chunk_size"), world_size);
         glUniform1f(m_mat.shader().uniform_location("chunk_lod_scale"), world_size / m_block_size);
-        context.draw_elements_base_vertex(GL_TRIANGLES, m_mat, std::get<0>(allocs), std::get<1>(allocs).base());
+        context.draw_elements_base_vertex(GL_TRIANGLES, m_mat, slice->m_ibo_alloc, slice->m_vbo_alloc.base());
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
