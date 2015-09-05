@@ -27,6 +27,15 @@ the AUTHORS file.
 
 #include "ffengine/io/log.hpp"
 
+// #define TIMELOG_SCENEGRAPH
+
+#ifdef TIMELOG_SCENEGRAPH
+#include <chrono>
+typedef std::chrono::steady_clock timelog_clock;
+#define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
+#endif
+
+
 namespace engine {
 
 static io::Logger &logger = io::logging().get_logger("render.scenegraph");
@@ -454,11 +463,25 @@ void OctreeGroup::advance(TimeInterval seconds)
 
 void OctreeGroup::sync(RenderContext &context)
 {
+#ifdef TIMELOG_SCENEGRAPH
+    timelog_clock::time_point t0 = timelog_clock::now();
+    timelog_clock::time_point t_sync, t_select, t_push;
+#endif
+
     m_positioning.reset();
     m_root.sync(context, m_octree, m_positioning);
 
     m_hitset.clear();
+
+#ifdef TIMELOG_SCENEGRAPH
+    t_sync = timelog_clock::now();
+#endif
+
     m_octree.select_nodes_by_frustum(context.frustum(), m_hitset);
+
+#ifdef TIMELOG_SCENEGRAPH
+    t_select = timelog_clock::now();
+#endif
 
     m_to_render.clear();
     for (const ffe::OctreeNode *const node: m_hitset)
@@ -480,6 +503,14 @@ void OctreeGroup::sync(RenderContext &context)
         }
     }
     m_selected_objects = m_to_render.size();
+
+#ifdef TIMELOG_SCENEGRAPH
+    t_push = timelog_clock::now();
+    logger.logf(io::LOG_DEBUG, "sync:");
+    logger.logf(io::LOG_DEBUG, "  t_sync   = %.2f ms", ms_cast(t_sync - t0).count());
+    logger.logf(io::LOG_DEBUG, "  t_select = %.2f ms", ms_cast(t_select - t_sync).count());
+    logger.logf(io::LOG_DEBUG, "  t_push   = %.2f ms", ms_cast(t_push - t_select).count());
+#endif
 }
 
 void OctreeGroup::render(RenderContext &context)
