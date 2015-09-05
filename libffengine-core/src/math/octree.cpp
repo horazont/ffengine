@@ -200,7 +200,7 @@ bool OctreeNode::merge()
     }
 
     for (unsigned int i = 0; i < 8; ++i) {
-        if (m_children[i] && !m_children[i]->m_is_split) {
+        if (m_children[i] && m_children[i]->m_is_split) {
             // check whether any child node is split, we cannot merge then
             return false;
         }
@@ -227,8 +227,26 @@ bool OctreeNode::merge()
     m_split_planes[1].enabled = false;
     m_split_planes[2].enabled = false;
 
+    m_nonempty_children = 0;
+
     m_is_split = false;
     return true;
+}
+
+void OctreeNode::merge_recursive()
+{
+    if (!m_is_split) {
+        return;
+    }
+
+    for (unsigned int i = 0; i < 8; ++i) {
+        OctreeNode *child = m_children[i].get();
+        if (child) {
+            child->merge_recursive();
+        }
+    }
+
+    merge();
 }
 
 void OctreeNode::notify_empty_child(unsigned int index)
@@ -418,9 +436,16 @@ bool OctreeNode::split()
         destination = find_child_for(*iter);
         if (destination != CHILD_SELF) {
             iter = m_objects.erase(iter);
-            autocreate_child(destination).insert_object(obj);
+            autocreate_child(destination).insert_object(obj, false);
         } else {
             ++iter;
+        }
+    }
+
+    for (unsigned int i = 0; i < 8; ++i) {
+        OctreeNode *child = m_children[i].get();
+        if (child && child->m_objects.size() >= SPLIT_THRESHOLD) {
+            child->split();
         }
     }
 
@@ -428,7 +453,7 @@ bool OctreeNode::split()
     return true;
 }
 
-OctreeNode *OctreeNode::insert_object(OctreeObject *obj)
+OctreeNode *OctreeNode::insert_object(OctreeObject *obj, bool allow_split)
 {
     unsigned int destination;
     if (m_is_split) {
@@ -441,12 +466,12 @@ OctreeNode *OctreeNode::insert_object(OctreeObject *obj)
         m_objects.push_back(obj);
         invalidate_bounds();
         obj->m_parent = this;
-        if (!m_is_split && m_objects.size() >= SPLIT_THRESHOLD) {
+        if (!m_is_split && m_objects.size() >= SPLIT_THRESHOLD && allow_split) {
             split();
             return obj->m_parent;
         }
     } else {
-        return autocreate_child(destination).insert_object(obj);
+        return autocreate_child(destination).insert_object(obj, allow_split);
     }
     return this;
 }
@@ -470,7 +495,7 @@ Octree::Octree():
 OctreeNode *Octree::insert_object(OctreeObject *obj)
 {
     assert(!obj->m_parent);
-    return m_root.insert_object(obj);
+    return m_root.insert_object(obj, true);
 }
 
 void Octree::remove_object(OctreeObject *obj)
@@ -479,6 +504,14 @@ void Octree::remove_object(OctreeObject *obj)
         return;
     }
     obj->m_parent->remove_object(obj);
+}
+
+void Octree::rebalance()
+{
+    m_root.merge_recursive();
+    if (m_root.size() >= OctreeNode::SPLIT_THRESHOLD) {
+        m_root.split();
+    }
 }
 
 }

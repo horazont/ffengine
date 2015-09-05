@@ -271,7 +271,7 @@ protected:
      * @param obj OctreeObject to insert
      * @return The OctreeNode which finally got the object.
      */
-    OctreeNode *insert_object(OctreeObject *obj);
+    OctreeNode *insert_object(OctreeObject *obj, bool allow_split);
 
     void invalidate_bounds();
 
@@ -286,6 +286,11 @@ protected:
      * @return true if the node could be merged, false otherwise.
      */
     bool merge();
+
+    /**
+     * Recursively merge all children of this node and then this node.
+     */
+    void merge_recursive();
 
     /**
      * Notify that the child at \a index is empty.
@@ -505,6 +510,11 @@ public:
      * @param obj The object to remove.
      */
     void remove_object(OctreeObject *obj);
+
+    /**
+     * Re-merges and re-splits the entire octree.
+     */
+    void rebalance();
 
     /**
      * Select octree nodes using a ray intersection test.
