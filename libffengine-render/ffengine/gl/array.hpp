@@ -329,6 +329,28 @@ protected:
                 }
                 aggregation_backlog = 0;
                 continue;
+            } else {
+                // this is safe, we only erase during this loop, which only
+                // invalidates iterators *behind* the erasure
+                // in addition, if this region will be merged away, it will be
+                // a "best" region and found will be true.
+                if (region.m_count >= nblocks) {
+                    gl_array_logger.logf(io::LOG_DEBUG,
+                                         "candidate region (%p) %d: start=%u, in_use=%d, count=%u",
+                                         &region, region.m_id,
+                                         region.m_start,
+                                         region.m_in_use,
+                                         region.m_count);
+                    if (found && region.m_count < (*best)->m_count) {
+                        // use smaller region if possible
+                        // this is only a weak heuristic; merge_aggregated is
+                        // likely to use a larger region than we currently have
+                        best = iterator;
+                    } else if (!found) {
+                        best = iterator;
+                        found = true;
+                    }
+                }
             }
 
             aggregation_backlog += 1;
@@ -341,7 +363,7 @@ protected:
 
         if (found) {
             gl_array_logger.logf(io::LOG_DEBUG,
-                                 "using merged region %d with %d elements",
+                                 "using region %d with %d elements",
                                  (*best)->m_id,
                                  (*best)->m_count);
             return best;
@@ -539,8 +561,8 @@ public:
                              this->m_glid,
                              nblocks);
 
-        auto iterator = m_regions.begin();
-        for (; iterator != m_regions.end(); ++iterator)
+        auto iterator = m_regions.end();
+        /*for (; iterator != m_regions.end(); ++iterator)
         {
             GLArrayRegion &region = **iterator;
             gl_array_logger.logf(io::LOG_DEBUG,
@@ -567,12 +589,12 @@ public:
                                  "region %d looks suitable",
                                  region.m_id);
             break;
-        }
+        }*/
 
         if (iterator == m_regions.end())
         {
             gl_array_logger.log(io::LOG_DEBUG,
-                                "out of buffer memory");
+                                "always using compact_or_expand");
             // out of memory
             iterator = compact_or_expand(nblocks);
             gl_array_logger.logf(io::LOG_DEBUG,
