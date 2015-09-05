@@ -25,7 +25,7 @@ the AUTHORS file.
 
 #include <map>
 
-#define TIMELOG_SYNC
+// #define TIMELOG_SYNC
 
 #if defined(TIMELOG_SYNC) || defined(TIMELOG_RENDER)
 #include <chrono>
