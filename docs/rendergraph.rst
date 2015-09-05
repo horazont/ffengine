@@ -26,6 +26,7 @@ A Material consists of:
 * possibly shared VBO
 * possibly shared IBO
 * list of passes in which the geometry renders, where for each pass there is:
+
   * shader to use
   * VAO to use
 
@@ -44,6 +45,8 @@ For creating the rendering instructions, the objects receive information about:
 * The camera being used (and thus, view matrix)
 * The target viewport size (and thus, together with the camera, the projection
   matrix)
+* Transforms applied by parent nodes (thus, the model matrix, if any)
+  (TODO: replace the model matrix by quaternion + translation in all shaders)
 
 The render instructions are split into instructions for each pass and
 upconverted to full render instructions consisting of
