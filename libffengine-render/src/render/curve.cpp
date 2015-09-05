@@ -117,6 +117,7 @@ void QuadBezier3fRoadTest::sync(RenderContext &context,
     }
 
     if (m_curve_changed) {
+        m_curve_changed = false;
         m_vbo_alloc = nullptr;
         m_ibo_alloc = nullptr;
 
