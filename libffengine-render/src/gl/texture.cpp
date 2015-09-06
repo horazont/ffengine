@@ -26,7 +26,7 @@ the AUTHORS file.
 #include "ffengine/gl/util.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 GLint get_suitable_format_for_null(const GLenum internal_format)
 {

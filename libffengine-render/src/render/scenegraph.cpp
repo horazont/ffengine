@@ -36,7 +36,7 @@ typedef std::chrono::steady_clock timelog_clock;
 #endif
 
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &logger = io::logging().get_logger("render.scenegraph");
 

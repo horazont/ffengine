@@ -28,7 +28,7 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 class QuadBezier3fDebug: public scenegraph::OctNode,
                          public RenderableOctreeObject

@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/grid.hpp"
 
-namespace engine {
+namespace ffe {
 
 GridNode::GridNode(const unsigned int xcells,
                    const unsigned int ycells,

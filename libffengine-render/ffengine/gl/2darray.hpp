@@ -26,7 +26,7 @@ the AUTHORS file.
 
 #include <GL/glew.h>
 
-namespace engine {
+namespace ffe {
 
 class GL2DArray
 {

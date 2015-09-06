@@ -32,7 +32,7 @@ the AUTHORS file.
 #include "ffengine/common/resource.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class _GLObjectBase: public Resource
 {

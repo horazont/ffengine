@@ -30,7 +30,7 @@ the AUTHORS file.
 #include "ffengine/gl/shader.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class VAO: public GLObject<GL_VERTEX_ARRAY_BINDING>
 {

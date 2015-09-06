@@ -26,7 +26,7 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 /**
  * Render a line grid, coloured based on coordinates.
@@ -48,10 +48,10 @@ public:
              const float size);
 
 private:
-    engine::Material m_material;
+    ffe::Material m_material;
 
-    engine::VBOAllocation m_vbo_alloc;
-    engine::IBOAllocation m_ibo_alloc;
+    ffe::VBOAllocation m_vbo_alloc;
+    ffe::IBOAllocation m_ibo_alloc;
 
 public:
     void render(RenderContext &context) override;

@@ -28,7 +28,7 @@ the AUTHORS file.
 
 #include <iostream>
 
-namespace engine {
+namespace ffe {
 
 GLint gl_get_integer(const GLenum pname);
 

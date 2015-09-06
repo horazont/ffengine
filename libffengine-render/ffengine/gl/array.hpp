@@ -38,7 +38,7 @@ the AUTHORS file.
 
 #include "ffengine/io/log.hpp"
 
-namespace engine {
+namespace ffe {
 
 extern io::Logger &gl_array_logger;
 

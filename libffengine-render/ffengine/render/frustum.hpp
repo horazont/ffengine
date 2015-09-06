@@ -26,7 +26,7 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 class FrustumNode: public scenegraph::Node
 {

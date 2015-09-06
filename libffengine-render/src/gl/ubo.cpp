@@ -26,7 +26,7 @@ the AUTHORS file.
 #include <iostream>
 
 
-namespace engine {
+namespace ffe {
 
 UBOBase::UBOBase(const GLsizei size, void *storage, const GLenum usage):
     GLObject<GL_UNIFORM_BUFFER_BINDING>(),

@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/oct_sphere.hpp"
 
-namespace engine {
+namespace ffe {
 
 OctSphere::OctSphere(Material &mat, float radius):
     OctNode(),

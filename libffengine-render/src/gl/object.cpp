@@ -28,7 +28,7 @@ the AUTHORS file.
 #include <cassert>
 
 
-namespace engine {
+namespace ffe {
 
 _GLObjectBase::_GLObjectBase():
     m_glid(0)

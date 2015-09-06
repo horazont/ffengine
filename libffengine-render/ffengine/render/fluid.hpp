@@ -30,7 +30,7 @@ the AUTHORS file.
 
 #include "ffengine/render/fullterrain.hpp"
 
-namespace engine {
+namespace ffe {
 
 struct FluidSlice
 {

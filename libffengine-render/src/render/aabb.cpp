@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/aabb.hpp"
 
-namespace engine {
+namespace ffe {
 
 DynamicAABBs::DynamicAABBs(DiscoverCallback &&cb):
     scenegraph::Node(),

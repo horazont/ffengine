@@ -27,7 +27,7 @@ the AUTHORS file.
 #include "ffengine/math/intersect.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 /* engine::TerrainSlice */
 

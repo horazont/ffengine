@@ -40,7 +40,7 @@ the AUTHORS file.
 
 #include "ffengine/render/camera.hpp"
 
-namespace engine {
+namespace ffe {
 
 
 class RenderableOctreeObject: public ffe::OctreeObject

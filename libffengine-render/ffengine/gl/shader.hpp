@@ -41,7 +41,7 @@ the AUTHORS file.
 #include "ffengine/io/log.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 struct ShaderVertexAttribute
 {

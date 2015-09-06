@@ -34,7 +34,7 @@ the AUTHORS file.
 #include "ffengine/render/fancyterraindata.hpp"
 #include "ffengine/render/fullterrain.hpp"
 
-namespace engine {
+namespace ffe {
 
 /**
  * Scenegraph node which renders a terrain using the CDLOD algorithm by

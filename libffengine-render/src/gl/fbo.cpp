@@ -30,7 +30,7 @@ the AUTHORS file.
 #include "ffengine/gl/util.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &logger = io::logging().get_logger("gl.fbo");
 

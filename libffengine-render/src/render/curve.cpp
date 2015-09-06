@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/curve.hpp"
 
-namespace engine {
+namespace ffe {
 
 /* engine::QuadBezier3fDebug */
 

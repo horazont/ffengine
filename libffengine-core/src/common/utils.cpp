@@ -26,7 +26,7 @@ the AUTHORS file.
 #include "ffengine/io/log.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &nw_logger = io::logging().get_logger("common.utils.NotifiableWorker");
 

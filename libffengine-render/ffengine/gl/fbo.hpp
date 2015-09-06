@@ -35,7 +35,7 @@ the AUTHORS file.
 #include "ffengine/gl/texture.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class Renderbuffer: public GLObject<GL_RENDERBUFFER_BINDING>,
                     public GL2DArray

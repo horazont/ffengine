@@ -30,7 +30,7 @@ the AUTHORS file.
 
 #define DISABLE_QUADTREE
 
-namespace engine {
+namespace ffe {
 
 class NTMapGenerator: public sim::TerrainWorker
 {

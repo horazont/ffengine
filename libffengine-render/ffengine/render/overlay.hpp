@@ -26,7 +26,7 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 /**
  * THIS STUFF DOES NOT WORK!
@@ -37,12 +37,12 @@ public:
     OverlayNode(Texture2D &depthbuffer);
 
 private:
-    engine::Material m_material;
+    ffe::Material m_material;
 
     Texture2D &m_depthbuffer;
 
-    engine::VBOAllocation m_vbo_alloc;
-    engine::IBOAllocation m_ibo_alloc;
+    ffe::VBOAllocation m_vbo_alloc;
+    ffe::IBOAllocation m_ibo_alloc;
 
     Vector2f m_min, m_max;
 

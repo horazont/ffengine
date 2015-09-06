@@ -37,7 +37,7 @@ the AUTHORS file.
 #include "ffengine/gl/array.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class VBOAttribute
 {

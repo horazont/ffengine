@@ -24,7 +24,7 @@ the AUTHORS file.
 #include "ffengine/gl/2darray.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 GL2DArray::GL2DArray(const GLenum internal_format,
                      const GLsizei width,

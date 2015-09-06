@@ -34,7 +34,7 @@ the AUTHORS file.
 #include "ffengine/math/vector.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 typedef Vector<unsigned int, 2> ViewportSize;
 

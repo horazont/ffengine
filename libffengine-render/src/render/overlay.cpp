@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/overlay.hpp"
 
-namespace engine {
+namespace ffe {
 
 OverlayNode::OverlayNode(Texture2D &depthbuffer):
     scenegraph::Node(),

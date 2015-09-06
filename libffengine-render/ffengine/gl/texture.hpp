@@ -30,7 +30,7 @@ the AUTHORS file.
 #include "ffengine/gl/2darray.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class Texture
 {

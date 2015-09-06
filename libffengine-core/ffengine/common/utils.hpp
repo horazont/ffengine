@@ -37,7 +37,7 @@ the AUTHORS file.
 #include <thread>
 #include <vector>
 
-namespace engine {
+namespace ffe {
 
 class NotifiableWorker
 {

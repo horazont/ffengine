@@ -24,7 +24,7 @@ the AUTHORS file.
 #include "ffengine/render/pointer.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 PointerNode::PointerNode(const float radius):
     scenegraph::Node(),

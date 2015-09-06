@@ -26,7 +26,7 @@ the AUTHORS file.
 
 #include "ffengine/gl/array.hpp"
 
-namespace engine {
+namespace ffe {
 
 class IBO: public GLArray<uint16_t,
                           GL_ELEMENT_ARRAY_BUFFER,

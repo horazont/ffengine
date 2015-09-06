@@ -29,7 +29,7 @@ the AUTHORS file.
 #include "ffengine/io/log.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &logger = io::logging().get_logger("gl.resource");
 
@@ -61,7 +61,7 @@ const spp::Program &GLResourceManager::load_shader_checked(const std::string &pa
     return *prog;
 }
 
-std::unique_ptr<std::istream> engine::QFileLoader::open(const std::string &path)
+std::unique_ptr<std::istream> ffe::QFileLoader::open(const std::string &path)
 {
     QFile source_file(QString::fromStdString(path));
     if (!source_file.open(QIODevice::ReadOnly | QIODevice::Text))

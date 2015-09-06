@@ -30,7 +30,7 @@ the AUTHORS file.
 #include <unordered_map>
 
 
-namespace engine {
+namespace ffe {
 
 class ResourceManager;
 

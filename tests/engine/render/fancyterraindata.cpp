@@ -25,5 +25,5 @@ the AUTHORS file.
 
 #include "ffengine/render/fancyterraindata.hpp"
 
-using namespace engine;
+using namespace ffe;
 using namespace sim;

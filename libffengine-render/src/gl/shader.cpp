@@ -35,7 +35,7 @@ the AUTHORS file.
 #include "ffengine/io/log.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 io::Logger &shader_logger = io::logging().get_logger("gl.shader");
 

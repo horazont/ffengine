@@ -24,7 +24,7 @@ the AUTHORS file.
 #include "ffengine/gl/vbo.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 VBOAttribute::VBOAttribute(unsigned int length):
     length(length)

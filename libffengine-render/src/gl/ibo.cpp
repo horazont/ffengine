@@ -24,7 +24,7 @@ the AUTHORS file.
 #include "ffengine/gl/ibo.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 IBO::IBO()
 {

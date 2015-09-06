@@ -23,7 +23,7 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/camera.hpp"
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &camera_logger = io::logging().get_logger("render.camera");
 

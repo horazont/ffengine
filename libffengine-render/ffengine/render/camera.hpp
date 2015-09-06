@@ -30,7 +30,7 @@ the AUTHORS file.
 
 #include "ffengine/render/rendergraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 class CameraController
 {

@@ -24,7 +24,7 @@ the AUTHORS file.
 #include "ffengine/gl/array.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 io::Logger &gl_array_logger = io::logging().get_logger("gl.array");
 

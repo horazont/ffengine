@@ -31,7 +31,7 @@ namespace io {
 
 static inline int check_fd(int fd) {
     if (fd == -1) {
-        engine::raise_last_os_error();
+        ffe::raise_last_os_error();
     }
     return fd;
 }

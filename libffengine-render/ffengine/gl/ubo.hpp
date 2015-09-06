@@ -34,7 +34,7 @@ the AUTHORS file.
 #include "ffengine/math/vector.hpp"
 #include "ffengine/math/matrix.hpp"
 
-namespace engine {
+namespace ffe {
 
 #include "ubo_type_wrappers.inc.hpp"
 

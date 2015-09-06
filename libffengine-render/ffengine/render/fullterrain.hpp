@@ -26,7 +26,7 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 struct TerrainSlice
 {
@@ -70,17 +70,17 @@ struct TerrainSlice
 namespace std {
 
 template<>
-struct hash<engine::TerrainSlice>
+struct hash<ffe::TerrainSlice>
 {
 public:
-    typedef engine::TerrainSlice argument_type;
+    typedef ffe::TerrainSlice argument_type;
     typedef typename hash<unsigned int>::result_type result_type;
 
 private:
     hash<unsigned int> m_int_hash;
 
 public:
-    result_type operator()(const engine::TerrainSlice &slice) const
+    result_type operator()(const ffe::TerrainSlice &slice) const
     {
         if (slice.valid) {
             return m_int_hash(slice.basex) ^ m_int_hash(slice.basey) ^ m_int_hash(slice.lod);
@@ -94,7 +94,7 @@ public:
 }
 
 
-namespace engine {
+namespace ffe {
 
 
 class FullTerrainRenderer;

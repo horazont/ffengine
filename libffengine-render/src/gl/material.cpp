@@ -28,7 +28,7 @@ the AUTHORS file.
 #include "ffengine/render/rendergraph.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 io::Logger &logger = io::logging().get_logger("gl.material");
 
@@ -102,12 +102,12 @@ GLint Material::attach_texture(const std::string &name, Texture2D *tex)
         }
 
         m_shader.bind();
-        engine::raise_last_gl_error();
+        ffe::raise_last_gl_error();
         logger.logf(io::LOG_DEBUG,
                     "assigning unit %d to sampler at location %d",
                     unit, uniform_info.loc);
         glUniform1i(uniform_info.loc, unit);
-        engine::raise_last_gl_error();
+        ffe::raise_last_gl_error();
     } else {
         logger.logf(io::LOG_DEBUG, "could not detect uniform location "
                                    "(may be inactive)");

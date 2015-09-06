@@ -28,7 +28,7 @@ the AUTHORS file.
 #include "ffengine/io/log.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 io::Logger &gl_vao_logger = io::logging().get_logger("gl.vao");
 

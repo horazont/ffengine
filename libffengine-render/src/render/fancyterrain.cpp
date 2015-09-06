@@ -36,7 +36,7 @@ typedef std::chrono::steady_clock timelog_clock;
 #define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
 #endif
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &logger = io::logging().get_logger("render.fancyterrain");
 

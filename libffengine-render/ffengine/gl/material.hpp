@@ -34,7 +34,7 @@ the AUTHORS file.
 #include "ffengine/gl/vao.hpp"
 
 
-namespace engine {
+namespace ffe {
 
 class Material: public Resource
 {

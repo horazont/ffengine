@@ -51,7 +51,7 @@ void FDStream::flush() {
 std::size_t FDStream::read(void *data, const std::size_t length) {
     std::ptrdiff_t readBytes = ::read(_fd, data, length);
     if (readBytes == -1) {
-        engine::raise_last_os_error();
+        ffe::raise_last_os_error();
     }
     return readBytes;
 }
@@ -59,7 +59,7 @@ std::size_t FDStream::read(void *data, const std::size_t length) {
 std::size_t FDStream::seek(const int whence, const std::ptrdiff_t offset) {
     std::ptrdiff_t soughtOffset = lseek(_fd, offset, whence);
     if (offset == -1) {
-        engine::raise_last_os_error();
+        ffe::raise_last_os_error();
     }
     return soughtOffset;
 }
@@ -78,7 +78,7 @@ std::size_t FDStream::tell() const {
 std::size_t FDStream::write(const void *data, const std::size_t length) {
     std::ptrdiff_t writtenBytes = ::write(_fd, data, length);
     if (writtenBytes == -1) {
-        engine::raise_last_os_error();
+        ffe::raise_last_os_error();
     }
     return writtenBytes;
 }

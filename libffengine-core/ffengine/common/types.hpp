@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_COMMON_TYPES_H
 #define SCC_ENGINE_COMMON_TYPES_H
 
-namespace engine {
+namespace ffe {
 
 typedef float TimeInterval;
 

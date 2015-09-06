@@ -31,7 +31,7 @@ the AUTHORS file.
 
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 class DynamicAABBs: public scenegraph::Node
 {
@@ -45,10 +45,10 @@ private:
     std::vector<AABB> m_aabbs;
     DiscoverCallback m_discover_cb;
 
-    engine::Material m_material;
+    ffe::Material m_material;
 
-    engine::VBOAllocation m_vbo_alloc;
-    engine::IBOAllocation m_ibo_alloc;
+    ffe::VBOAllocation m_vbo_alloc;
+    ffe::IBOAllocation m_ibo_alloc;
 
 public:
     void render(RenderContext &context) override;

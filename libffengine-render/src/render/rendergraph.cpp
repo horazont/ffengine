@@ -26,7 +26,7 @@ the AUTHORS file.
 #include "ffengine/render/camera.hpp"
 #include "ffengine/render/scenegraph.hpp"
 
-namespace engine {
+namespace ffe {
 
 static io::Logger &logger = io::logging().get_logger("render.rendergraph");
 
@@ -58,7 +58,7 @@ void RenderContext::draw_elements(GLenum primitive,
     raise_last_gl_error();
     prepare_draw();
     using_material.bind();
-    ::engine::draw_elements(indicies, primitive);
+    ::ffe::draw_elements(indicies, primitive);
     raise_last_gl_error();
 }
 
@@ -70,7 +70,7 @@ void RenderContext::draw_elements_less(GLenum primitive,
     raise_last_gl_error();
     prepare_draw();
     using_material.bind();
-    ::engine::draw_elements(indicies, primitive, nmax);
+    ::ffe::draw_elements(indicies, primitive, nmax);
     raise_last_gl_error();
 }
 
@@ -83,7 +83,7 @@ void RenderContext::draw_elements_base_vertex(
     raise_last_gl_error();
     prepare_draw();
     using_material.bind();
-    ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex);
+    ::ffe::draw_elements_base_vertex(indicies, primitive, base_vertex);
     raise_last_gl_error();
 }
 
@@ -97,7 +97,7 @@ void RenderContext::draw_elements_base_vertex_less(
     raise_last_gl_error();
     prepare_draw();
     using_material.bind();
-    ::engine::draw_elements_base_vertex(indicies, primitive, base_vertex, nmax);
+    ::ffe::draw_elements_base_vertex(indicies, primitive, base_vertex, nmax);
     raise_last_gl_error();
 }
 
