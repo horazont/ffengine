@@ -24,13 +24,18 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_RENDER_CAMERA_H
 #define SCC_ENGINE_RENDER_CAMERA_H
 
+#include <GL/glew.h>
+
 #include "ffengine/common/types.hpp"
 
+#include "ffengine/math/matrix.hpp"
 #include "ffengine/math/shapes.hpp"
 
-#include "ffengine/render/rendergraph.hpp"
 
 namespace ffe {
+
+typedef Vector<unsigned int, 2> ViewportSize;
+
 
 class CameraController
 {
@@ -139,7 +144,7 @@ public:
     virtual void advance(TimeInterval seconds);
     virtual std::tuple<Matrix4f, Matrix4f> render_projection(
             GLsizei viewport_width,
-            GLsizei viewport_height) = 0;
+            GLsizei viewport_height) const = 0;
     virtual void sync() = 0;
 
 };
@@ -255,7 +260,7 @@ public:
     void advance(TimeInterval seconds) override;
     std::tuple<Matrix4f, Matrix4f> render_projection(
             GLsizei viewport_width,
-            GLsizei viewport_height) override;
+            GLsizei viewport_height) const override;
     void sync() override;
 
 };

@@ -5,7 +5,6 @@ set(ENGINE_HEADERS
   ffengine/gl/array.hpp
   ffengine/gl/fbo.hpp
   ffengine/gl/ibo.hpp
-  ffengine/gl/material.hpp
   ffengine/gl/mesh.hpp
   ffengine/gl/object.hpp
   ffengine/gl/resource.hpp
@@ -17,6 +16,7 @@ set(ENGINE_HEADERS
   ffengine/gl/util.hpp
   ffengine/gl/vao.hpp
   ffengine/gl/vbo.hpp
+  ffengine/render/renderpass.hpp
   ffengine/render/aabb.hpp
   ffengine/render/camera.hpp
   ffengine/render/curve.hpp
@@ -27,7 +27,6 @@ set(ENGINE_HEADERS
   ffengine/render/grid.hpp
   ffengine/render/oct_sphere.hpp
   ffengine/render/pointer.hpp
-  ffengine/render/rendergraph.hpp
   ffengine/render/scenegraph.hpp
   )
 
@@ -36,7 +35,6 @@ set(ENGINE_SRC
   src/gl/array.cpp
   src/gl/fbo.cpp
   src/gl/ibo.cpp
-  src/gl/material.cpp
   src/gl/object.cpp
   src/gl/resource.cpp
   src/gl/shader.cpp
@@ -45,6 +43,7 @@ set(ENGINE_SRC
   src/gl/util.cpp
   src/gl/vao.cpp
   src/gl/vbo.cpp
+  src/render/renderpass.cpp
   src/render/aabb.cpp
   src/render/camera.cpp
   src/render/curve.cpp
@@ -55,7 +54,6 @@ set(ENGINE_SRC
   src/render/grid.cpp
   src/render/oct_sphere.cpp
   src/render/pointer.cpp
-  src/render/rendergraph.cpp
   src/render/scenegraph.cpp
   )
 

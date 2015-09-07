@@ -26,7 +26,8 @@ the AUTHORS file.
 
 #include "ffengine/math/curve.hpp"
 
-#include "ffengine/render/scenegraph.hpp"
+#include "ffengine/render/renderpass.hpp"
+
 
 namespace ffe {
 

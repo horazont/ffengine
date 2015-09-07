@@ -35,13 +35,13 @@ the AUTHORS file.
 #include "ffengine/math/octree.hpp"
 
 #include "ffengine/gl/ibo.hpp"
-#include "ffengine/gl/material.hpp"
 #include "ffengine/gl/vao.hpp"
 
 #include "ffengine/render/camera.hpp"
 
 namespace ffe {
 
+class RenderContext;
 
 class RenderableOctreeObject: public ffe::OctreeObject
 {

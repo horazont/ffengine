@@ -25,6 +25,8 @@ the AUTHORS file.
 #define SCC_ENGINE_RENDER_OCT_SPHERE_H
 
 #include "ffengine/render/scenegraph.hpp"
+#include "ffengine/render/renderpass.hpp"
+
 
 namespace ffe {
 

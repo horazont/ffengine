@@ -47,6 +47,7 @@ For creating the rendering instructions, the objects receive information about:
   matrix)
 * Transforms applied by parent nodes (thus, the model matrix, if any)
   (TODO: replace the model matrix by quaternion + translation in all shaders)
+* Something which takes their rendering instructions
 
 The render instructions are split into instructions for each pass and
 upconverted to full render instructions consisting of

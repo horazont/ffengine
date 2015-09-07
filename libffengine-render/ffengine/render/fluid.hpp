@@ -29,6 +29,8 @@ the AUTHORS file.
 #include "ffengine/gl/resource.hpp"
 
 #include "ffengine/render/fullterrain.hpp"
+#include "ffengine/render/renderpass.hpp"
+
 
 namespace ffe {
 
@@ -50,9 +52,13 @@ public:
     CPUFluid(const unsigned int terrain_size,
              const unsigned int grid_size,
              GLResourceManager &resources,
-             const sim::Fluid &fluidsim);
+             const sim::Fluid &fluidsim,
+             RenderPass &transparent_pass,
+             RenderPass &water_pass);
 
 private:
+    RenderPass &m_transparent_pass;
+    RenderPass &m_water_pass;
     GLResourceManager &m_resources;
     const sim::Fluid &m_fluidsim;
     const unsigned int m_block_size;

@@ -54,8 +54,12 @@ FluidSlice::FluidSlice(IBOAllocation &&ibo_alloc,
 CPUFluid::CPUFluid(const unsigned int terrain_size,
                    const unsigned int grid_size,
                    GLResourceManager &resources,
-                   const sim::Fluid &fluidsim):
+                   const sim::Fluid &fluidsim,
+                   RenderPass &transparent_pass,
+                   RenderPass &water_pass):
     FullTerrainRenderer(terrain_size, grid_size),
+    m_transparent_pass(transparent_pass),
+    m_water_pass(water_pass),
     m_resources(resources),
     m_fluidsim(fluidsim),
     m_block_size(sim::IFluidSim::block_size),
@@ -83,13 +87,17 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
 
     bool success = true;
 
-    success = success && m_mat.shader().attach(
-                m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
-                context);
+    {
+        MaterialPass &pass = m_mat.make_pass_material(m_transparent_pass);
 
-    success = success && m_mat.shader().attach(
-                m_resources.load_shader_checked(":/shaders/fluid/cpu.frag"),
-                context);
+        success = success && pass.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
+                    context);
+
+        success = success && pass.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/fluid/cpu.frag"),
+                    context);
+    }
 
     m_mat.declare_attribute("position", 0);
     m_mat.declare_attribute("fluiddata", 1);
@@ -554,9 +562,19 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
     t_geometry = timelog_clock::now();
 #endif
 
-    m_mat.sync();
-    m_mat.shader().bind();
-    glUniform3fv(m_mat.shader().uniform_location("lod_viewpoint"), 1, context.viewpoint().as_array);
+    for (auto iter = m_mat.cbegin();
+         iter != m_mat.cend();
+         ++iter)
+    {
+        ShaderProgram &shader = iter->second->shader();
+        shader.bind();
+        glUniform3fv(shader.uniform_location("lod_viewpoint"),
+                     1, context.viewpoint().as_array);
+        glUniform1f(shader.uniform_location("scale_to_radius"),
+                    fullterrain.scale_to_radius());
+    }
+
+    m_mat.sync_buffers();
 
 #ifdef TIMELOG_SYNC
     t_upload = timelog_clock::now();
@@ -568,18 +586,22 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
 #endif
 }
 
-void CPUFluid::render(RenderContext &context, const FullTerrainNode &fullterrain)
+void CPUFluid::render(RenderContext &context, const FullTerrainNode &)
 {
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    m_mat.shader().bind();
-    glUniform1f(m_mat.shader().uniform_location("scale_to_radius"), fullterrain.scale_to_radius());
     for (FluidSlice *slice: m_render_slices) {
         unsigned int world_size = slice->m_size;
-        glUniform1f(m_mat.shader().uniform_location("chunk_size"), world_size);
-        glUniform1f(m_mat.shader().uniform_location("chunk_lod_scale"), world_size / m_block_size);
-        context.draw_elements_base_vertex(GL_TRIANGLES, m_mat, slice->m_ibo_alloc, slice->m_vbo_alloc.base());
+        context.render_all(AABB{}, GL_TRIANGLES, m_mat,
+                           slice->m_ibo_alloc,
+                           slice->m_vbo_alloc,
+                           [world_size, this](MaterialPass &pass){
+                               glUniform1f(pass.shader().uniform_location("chunk_size"),
+                                           world_size);
+                               glUniform1f(pass.shader().uniform_location("chunk_lod_scale"),
+                                           world_size / m_block_size);
+                           });
     }
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 }

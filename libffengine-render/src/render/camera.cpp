@@ -23,6 +23,9 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/render/camera.hpp"
 
+#include "ffengine/io/log.hpp"
+
+
 namespace ffe {
 
 static io::Logger &camera_logger = io::logging().get_logger("render.camera");
@@ -314,7 +317,7 @@ void PerspectivalCamera::advance(TimeInterval seconds)
 
 std::tuple<Matrix4f, Matrix4f> PerspectivalCamera::render_projection(
         GLsizei viewport_width,
-        GLsizei viewport_height)
+        GLsizei viewport_height) const
 {
     const Matrix4f proj = proj_perspective(
                 m_render_fovy,

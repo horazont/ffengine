@@ -25,12 +25,11 @@ the AUTHORS file.
 
 namespace ffe {
 
-GridNode::GridNode(const unsigned int xcells,
+GridNode::GridNode(Material &mat,
+                   const unsigned int xcells,
                    const unsigned int ycells,
                    const float size):
-    m_material(VBOFormat({
-                             VBOAttribute(3)
-                         })),
+    m_material(mat),
     m_vbo_alloc(m_material.vbo().allocate((xcells+1+ycells+1)*2)),
     m_ibo_alloc(m_material.ibo().allocate((xcells+1+ycells+1)*2))
 {
@@ -60,44 +59,12 @@ GridNode::GridNode(const unsigned int xcells,
     m_vbo_alloc.mark_dirty();
     m_ibo_alloc.mark_dirty();
 
-    bool success = m_material.shader().attach(
-                GL_VERTEX_SHADER,
-                "#version 330\n"
-                "layout(std140) uniform MatrixBlock {"
-                "  layout(row_major) mat4 proj;"
-                "  layout(row_major) mat4 view;"
-                "  layout(row_major) mat4 model;"
-                "  layout(row_major) mat3 normal;"
-                "};"
-                "in vec3 position;"
-                "out vec2 posxy;"
-                "void main() {"
-                "  gl_Position = proj*view*model*vec4(position, 1.0f);"
-                "  posxy = position.xy;"
-                "}");
-
-    success = success && m_material.shader().attach(
-                GL_FRAGMENT_SHADER,
-                "#version 330\n"
-                "out vec4 color;"
-                "in vec2 posxy;"
-                "void main() {"
-                "  color = vec4(posxy/"+std::to_string(xcells/2)+".f, 0.5, 1.0);"
-                "}");
-
-    m_material.declare_attribute("position", 0);
-
-    if (!m_material.link())
-    {
-        throw std::runtime_error("failed to build shader");
-    }
-
-    m_material.sync();
+    m_material.sync_buffers();
 }
 
 void GridNode::render(RenderContext &context)
 {
-    context.draw_elements(GL_LINES, m_material, m_ibo_alloc);
+    context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
 void GridNode::sync(RenderContext &)

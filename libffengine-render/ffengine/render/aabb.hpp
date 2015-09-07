@@ -30,6 +30,8 @@ the AUTHORS file.
 #include "ffengine/math/shapes.hpp"
 
 #include "ffengine/render/scenegraph.hpp"
+#include "ffengine/render/renderpass.hpp"
+
 
 namespace ffe {
 
@@ -39,16 +41,16 @@ public:
     using DiscoverCallback = std::function<void(std::vector<AABB>&)>;
 
 public:
-    DynamicAABBs(DiscoverCallback &&cb);
+    DynamicAABBs(Material &mat, DiscoverCallback &&cb);
 
 private:
+    Material &m_material;
+
     std::vector<AABB> m_aabbs;
     DiscoverCallback m_discover_cb;
 
-    ffe::Material m_material;
-
-    ffe::VBOAllocation m_vbo_alloc;
-    ffe::IBOAllocation m_ibo_alloc;
+    VBOAllocation m_vbo_alloc;
+    IBOAllocation m_ibo_alloc;
 
 public:
     void render(RenderContext &context) override;

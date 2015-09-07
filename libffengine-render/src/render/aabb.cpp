@@ -25,34 +25,20 @@ the AUTHORS file.
 
 namespace ffe {
 
-DynamicAABBs::DynamicAABBs(DiscoverCallback &&cb):
+DynamicAABBs::DynamicAABBs(Material &mat, DiscoverCallback &&cb):
     scenegraph::Node(),
-    m_discover_cb(std::move(cb)),
-    m_material(VBOFormat({
-                             VBOAttribute(4)
-                         }))
+    m_material(mat),
+    m_discover_cb(std::move(cb))
 {
-    bool success = m_material.shader().attach_resource(
-                GL_VERTEX_SHADER,
-                ":/shaders/aabb/main.vert");
-    success = success && m_material.shader().attach_resource(
-                GL_FRAGMENT_SHADER,
-                ":/shaders/aabb/main.frag");
 
-    m_material.declare_attribute("position_t", 0);
-
-    success = success && m_material.link();
-
-    if (!success) {
-        throw std::runtime_error("failed to compile or link shader");
-    }
 }
 
 void DynamicAABBs::render(RenderContext &context)
 {
-    context.draw_elements_base_vertex_less(GL_LINES, m_material, m_ibo_alloc,
+    context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
+    /*context.draw_elements_base_vertex_less(GL_LINES, m_material, m_ibo_alloc,
                                            m_vbo_alloc.base(),
-                                           m_aabbs.size()*24);
+                                           m_aabbs.size()*24);*/
 }
 
 void DynamicAABBs::sync(RenderContext &)
@@ -62,7 +48,7 @@ void DynamicAABBs::sync(RenderContext &)
     const unsigned int boxes = m_aabbs.size();
     const unsigned int vertices = boxes * 8;
 
-    if (!m_vbo_alloc || m_vbo_alloc.length() < vertices)
+    if (!m_vbo_alloc || m_vbo_alloc.length() != vertices)
     {
         // reallocate
         m_vbo_alloc = nullptr;
@@ -128,7 +114,7 @@ void DynamicAABBs::sync(RenderContext &)
     }
     m_vbo_alloc.mark_dirty();
 
-    m_material.sync();
+    m_material.sync_buffers();
 }
 
 }

@@ -34,21 +34,20 @@ QuadBezier3fDebug::QuadBezier3fDebug(Material &mat, unsigned int steps):
     m_ibo_alloc(mat.ibo().allocate(steps+4))
 {
     {
-        const uint16_t base = m_vbo_alloc.base();
         uint16_t *dest = m_ibo_alloc.get();
         for (unsigned int step = 0; step <= steps; ++step) {
-            *dest++ = base + step;
+            *dest++ = step;
         }
-        *dest++ = base + steps + 1;
-        *dest++ = base;
-        *dest++ = base + steps;
+        *dest++ = steps + 1;
+        *dest++ = 0;
+        *dest++ = steps;
         m_ibo_alloc.mark_dirty();
     }
 }
 
 void QuadBezier3fDebug::render(RenderContext &context)
 {
-    context.draw_elements(GL_LINE_STRIP, m_mat, m_ibo_alloc);
+    context.render_all(AABB{}, GL_LINE_STRIP, m_mat, m_ibo_alloc, m_vbo_alloc);
 }
 
 void QuadBezier3fDebug::sync(RenderContext &context,
@@ -79,7 +78,7 @@ void QuadBezier3fDebug::sync(RenderContext &context,
         }
         slice[m_steps+1] = Vector4f(m_curve.p2, 0.5);
         m_vbo_alloc.mark_dirty();
-        m_mat.sync();
+        m_mat.sync_buffers();
     }
 }
 
@@ -96,8 +95,10 @@ QuadBezier3fRoadTest::QuadBezier3fRoadTest(Material &mat, unsigned int steps):
 void QuadBezier3fRoadTest::render(RenderContext &context)
 {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    context.draw_elements(GL_TRIANGLES, m_mat, m_ibo_alloc);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    context.render_all(
+                AABB{}, GL_TRIANGLES, m_mat, m_ibo_alloc, m_vbo_alloc,
+                [](MaterialPass &){ glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); },
+                [](MaterialPass &){ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); });
 }
 
 void QuadBezier3fRoadTest::sync(RenderContext &context,
@@ -164,7 +165,7 @@ void QuadBezier3fRoadTest::sync(RenderContext &context,
                         t);
         }
         m_vbo_alloc.mark_dirty();
-        m_mat.sync();
+        m_mat.sync_buffers();
     }
 }
 

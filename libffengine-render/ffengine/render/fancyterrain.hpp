@@ -33,6 +33,8 @@ the AUTHORS file.
 #include "ffengine/render/scenegraph.hpp"
 #include "ffengine/render/fancyterraindata.hpp"
 #include "ffengine/render/fullterrain.hpp"
+#include "ffengine/render/renderpass.hpp"
+
 
 namespace ffe {
 
@@ -68,11 +70,13 @@ public:
     FancyTerrainNode(const unsigned int terrain_size,
                      const unsigned int grid_size,
                      FancyTerrainInterface &terrain,
-                     GLResourceManager &resources);
+                     GLResourceManager &resources,
+                     RenderPass &solid_pass);
     ~FancyTerrainNode() override;
 
 private:
     GLResourceManager &m_resources;
+    RenderPass &m_solid_pass;
     spp::EvaluationContext m_eval_context;
 
     FancyTerrainInterface &m_terrain_interface;
@@ -105,6 +109,8 @@ private:
 protected:
     void render_all(RenderContext &context, Material &material,
                     const FullTerrainNode::Slices &slices_to_render);
+    void sync_material(RenderContext &context, Material &material,
+                       const float scale_to_radius);
 
 public:
     void attach_blend_texture(Texture2D *tex);

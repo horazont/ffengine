@@ -26,11 +26,9 @@ the AUTHORS file.
 
 namespace ffe {
 
-PointerNode::PointerNode(const float radius):
+PointerNode::PointerNode(Material &mat, const float radius):
     scenegraph::Node(),
-    m_material(VBOFormat({
-                             VBOAttribute(3)
-                         })),
+    m_material(mat),
     m_vbo_alloc(m_material.vbo().allocate(8)),
     m_ibo_alloc(m_material.ibo().allocate(36))
 {
@@ -107,42 +105,12 @@ PointerNode::PointerNode(const float radius):
     m_vbo_alloc.mark_dirty();
     m_ibo_alloc.mark_dirty();
 
-    bool success = m_material.shader().attach(
-                GL_VERTEX_SHADER,
-                "#version 330\n"
-                "layout(std140) uniform MatrixBlock {"
-                "  layout(row_major) mat4 proj;"
-                "  layout(row_major) mat4 view;"
-                "  layout(row_major) mat4 model;"
-                "  layout(row_major) mat3 normal;"
-                "};"
-                "in vec3 position;"
-                "void main() {"
-                "  gl_Position = proj * view * model * vec4(position, 1.f);"
-                "}");
-
-    success = success && m_material.shader().attach(
-                GL_FRAGMENT_SHADER,
-                "#version 330\n"
-                "out vec4 color;"
-                "void main() {"
-                "  color = vec4(0.8, 0.9, 1.0, 0.8);"
-                "}");
-
-    m_material.declare_attribute("position", 0);
-
-    success = success && m_material.link();
-
-    if (!success) {
-        throw std::runtime_error("failed to link shader");
-    }
-
-    m_material.sync();
+    m_material.sync_buffers();
 }
 
 void PointerNode::render(RenderContext &context)
 {
-    context.draw_elements(GL_TRIANGLES, m_material, m_ibo_alloc);
+    context.render_all(AABB{}, GL_TRIANGLES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
 void PointerNode::sync(RenderContext &)

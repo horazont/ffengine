@@ -25,6 +25,8 @@ the AUTHORS file.
 #define SCC_ENGINE_RENDER_GRID_H
 
 #include "ffengine/render/scenegraph.hpp"
+#include "ffengine/render/renderpass.hpp"
+
 
 namespace ffe {
 
@@ -43,15 +45,16 @@ public:
      *
      * @opengl
      */
-    GridNode(const unsigned int xcells,
+    GridNode(Material &mat,
+             const unsigned int xcells,
              const unsigned int ycells,
              const float size);
 
 private:
-    ffe::Material m_material;
+    Material &m_material;
 
-    ffe::VBOAllocation m_vbo_alloc;
-    ffe::IBOAllocation m_ibo_alloc;
+    VBOAllocation m_vbo_alloc;
+    IBOAllocation m_ibo_alloc;
 
 public:
     void render(RenderContext &context) override;

@@ -135,7 +135,7 @@ const AttributeMapping &ArrayDeclaration::get_attribute(const std::string &name)
 
 std::unique_ptr<VAO> ArrayDeclaration::make_vao(
         const ShaderProgram &for_shader,
-        bool add_vbo_hints)
+        bool add_vbo_hints) const
 {
     std::unique_ptr<VAO> result = std::unique_ptr<VAO>(new VAO());
     result->bind();

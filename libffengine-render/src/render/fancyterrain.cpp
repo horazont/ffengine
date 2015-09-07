@@ -46,9 +46,10 @@ static const Vector3f fake_viewpoint(30, 30, 200);
 FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
                                    const unsigned int grid_size,
                                    FancyTerrainInterface &terrain_interface,
-                                   GLResourceManager &resources):
+                                   GLResourceManager &resources, RenderPass &solid_pass):
     FullTerrainRenderer(terrain_size, grid_size),
     m_resources(resources),
+    m_solid_pass(solid_pass),
     m_eval_context(resources.shader_library()),
     m_terrain_interface(terrain_interface),
     m_terrain(terrain_interface.terrain()),
@@ -99,35 +100,44 @@ FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
 
     bool success = true;
 
-    success = success && m_material.shader().attach(
-                resources.load_shader_checked(":/shaders/terrain/main.vert"),
-                ctx,
-                GL_VERTEX_SHADER);
-    success = success && m_material.shader().attach(
-                resources.load_shader_checked(":/shaders/terrain/main.geom"),
-                ctx,
-                GL_GEOMETRY_SHADER);
-    success = success && m_material.shader().attach(
-                resources.load_shader_checked(":/shaders/terrain/main.frag"),
-                ctx,
-                GL_FRAGMENT_SHADER);
+    {
+        MaterialPass &mat = m_material.make_pass_material(solid_pass);
+        mat.set_order(-2);
 
+        success = success && mat.shader().attach(
+                    resources.load_shader_checked(":/shaders/terrain/main.vert"),
+                    ctx,
+                    GL_VERTEX_SHADER);
+        success = success && mat.shader().attach(
+                    resources.load_shader_checked(":/shaders/terrain/main.geom"),
+                    ctx,
+                    GL_GEOMETRY_SHADER);
+        success = success && mat.shader().attach(
+                    resources.load_shader_checked(":/shaders/terrain/main.frag"),
+                    ctx,
+                    GL_FRAGMENT_SHADER);
+    }
     m_material.declare_attribute("position", 0);
 
     success = success && m_material.link();
 
-    success = success && m_normal_debug_material.shader().attach(
-                resources.load_shader_checked(":/shaders/terrain/main.vert"),
-                ctx,
-                GL_VERTEX_SHADER);
-    success = success && m_normal_debug_material.shader().attach(
-                resources.load_shader_checked(":/shaders/terrain/normal_debug.geom"),
-                ctx,
-                GL_GEOMETRY_SHADER);
-    success = success && m_normal_debug_material.shader().attach(
-                resources.load_shader_checked(":/shaders/generic/normal_debug.frag"),
-                ctx,
-                GL_FRAGMENT_SHADER);
+    {
+        MaterialPass &mat = m_normal_debug_material.make_pass_material(solid_pass);
+        mat.set_order(-1);
+
+        success = success && mat.shader().attach(
+                    resources.load_shader_checked(":/shaders/terrain/main.vert"),
+                    ctx,
+                    GL_VERTEX_SHADER);
+        success = success && mat.shader().attach(
+                    resources.load_shader_checked(":/shaders/terrain/normal_debug.geom"),
+                    ctx,
+                    GL_GEOMETRY_SHADER);
+        success = success && mat.shader().attach(
+                    resources.load_shader_checked(":/shaders/generic/normal_debug.frag"),
+                    ctx,
+                    GL_FRAGMENT_SHADER);
+    }
 
     m_normal_debug_material.declare_attribute("position", 0);
 
@@ -137,19 +147,27 @@ FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
         throw std::runtime_error("failed to compile or link shader");
     }
 
-    m_material.shader().bind();
-    glUniform2f(m_material.shader().uniform_location("chunk_translation"),
-                0.0, 0.0);
     m_material.attach_texture("heightmap", &m_heightmap);
     m_material.attach_texture("normalt", &m_normalt);
+    {
+        MaterialPass &mat = m_material.make_pass_material(solid_pass);
+        mat.shader().bind();
+        glUniform2f(mat.shader().uniform_location("chunk_translation"),
+                    0.0, 0.0);
 
-    m_normal_debug_material.shader().bind();
-    glUniform2f(m_normal_debug_material.shader().uniform_location("chunk_translation"),
-                0.0, 0.0);
+    }
+
     m_normal_debug_material.attach_texture("heightmap", &m_heightmap);
     m_normal_debug_material.attach_texture("normalt", &m_normalt);
-    glUniform1f(m_normal_debug_material.shader().uniform_location("normal_length"),
-                2.);
+    {
+        MaterialPass &mat = m_normal_debug_material.make_pass_material(solid_pass);
+        mat.shader().bind();
+        glUniform2f(mat.shader().uniform_location("chunk_translation"),
+                    0.0, 0.0);
+        glUniform1f(mat.shader().uniform_location("normal_length"),
+                    2.);
+
+    }
 
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
@@ -174,21 +192,23 @@ FancyTerrainNode::~FancyTerrainNode()
 inline void render_slice(RenderContext &context,
                          Material &material,
                          IBOAllocation &ibo_allocation,
+                         VBOAllocation &vbo_allocation,
                          const float x, const float y,
                          const float scale)
 {
     /*const float xtex = (float(slot_index % texture_cache_size) + 0.5/grid_size) / texture_cache_size;
     const float ytex = (float(slot_index / texture_cache_size) + 0.5/grid_size) / texture_cache_size;*/
 
-    glUniform1f(material.shader().uniform_location("chunk_size"),
-                scale);
-    glUniform2f(material.shader().uniform_location("chunk_translation"),
-                x, y);
     /*std::cout << "rendering" << std::endl;
     std::cout << "  translationx  = " << x << std::endl;
     std::cout << "  translationy  = " << y << std::endl;
     std::cout << "  scale         = " << scale << std::endl;*/
-    context.draw_elements(GL_LINES_ADJACENCY, material, ibo_allocation);
+    context.render_all(AABB{}, GL_LINES_ADJACENCY, material,
+                       ibo_allocation, vbo_allocation,
+                       [scale, x, y](MaterialPass &pass){
+                           glUniform1f(pass.shader().uniform_location("chunk_size"), scale);
+                           glUniform2f(pass.shader().uniform_location("chunk_translation"), x, y);
+                       });
 }
 
 void FancyTerrainNode::render_all(RenderContext &context, Material &material,
@@ -199,8 +219,25 @@ void FancyTerrainNode::render_all(RenderContext &context, Material &material,
         const float y = slice.basey;
         const float scale = slice.lod;
 
-        render_slice(context, material, m_ibo_allocation,
+        render_slice(context, material, m_ibo_allocation, m_vbo_allocation,
                      x, y, scale);
+    }
+}
+
+void FancyTerrainNode::sync_material(RenderContext &context,
+                                     Material &material,
+                                     const float scale_to_radius)
+{
+    for (auto iter = material.cbegin();
+         iter != material.cend();
+         ++iter)
+    {
+        MaterialPass &pass = *iter->second;
+        pass.shader().bind();
+        glUniform3fv(pass.shader().uniform_location("lod_viewpoint"),
+                     1, context.viewpoint()/*fake_viewpoint*/.as_array);
+        glUniform1f(pass.shader().uniform_location("scale_to_radius"),
+                    scale_to_radius);
     }
 }
 
@@ -233,14 +270,23 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
     spp::EvaluationContext ctx(m_eval_context);
     ctx.define1f("ZOFFSET", 1.);
 
-    bool success = mat.shader().attach(
-                m_resources.load_shader_checked(":/shaders/terrain/main.vert"),
-                ctx,
-                GL_VERTEX_SHADER);
-    success = success && mat.shader().attach(
-                m_resources.load_shader_checked(":/shaders/terrain/main.geom"),
-                ctx,
-                GL_GEOMETRY_SHADER);
+    bool success = true;
+
+    for (auto iter = mat.cbegin();
+         iter != mat.cend();
+         ++iter)
+    {
+        MaterialPass &pass_mat = *iter->second;
+
+        success = pass_mat.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/terrain/main.vert"),
+                    ctx,
+                    GL_VERTEX_SHADER);
+        success = success && pass_mat.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/terrain/main.geom"),
+                    ctx,
+                    GL_GEOMETRY_SHADER);
+    }
 
     mat.declare_attribute("position", 0);
 
@@ -280,9 +326,6 @@ void FancyTerrainNode::render(RenderContext &context,
     timelog_clock::time_point t_solid, t_overlay;
 #endif
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
-    m_material.bind();
-    glUniform3fv(m_material.shader().uniform_location("lod_viewpoint"),
-                 1, context.viewpoint()/*fake_viewpoint*/.as_array);
     render_all(context, m_material, render_terrain.slices_to_render());
     /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
 #ifdef TIMELOG_RENDER
@@ -298,9 +341,6 @@ void FancyTerrainNode::render(RenderContext &context,
     for (auto &overlay: m_render_overlays)
     {
         Material &material = *overlay.material;
-        material.bind();
-        glUniform3fv(material.shader().uniform_location("lod_viewpoint"),
-                     1, context.viewpoint()/*fake_viewpoint*/.as_array);
         for (auto &slice: render_terrain.slices_to_render())
         {
             const unsigned int x = slice.basex;
@@ -310,7 +350,7 @@ void FancyTerrainNode::render(RenderContext &context,
             sim::TerrainRect slice_rect(x, y, x+scale, y+scale);
             if (slice_rect.overlaps(overlay.clip_rect)) {
                 render_slice(context,
-                             material, m_ibo_allocation,
+                             material, m_ibo_allocation, m_vbo_allocation,
                              x, y, scale);
             }
         }
@@ -338,9 +378,9 @@ void FancyTerrainNode::sync(RenderContext &context,
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
-        item.first->shader().bind();
-        glUniform1f(item.first->shader().uniform_location("scale_to_radius"),
-                    render_terrain.scale_to_radius());
+        sync_material(context,
+                      *item.first,
+                      render_terrain.scale_to_radius());
         m_render_overlays.emplace_back(
                     RenderOverlay{item.first, item.second.clip_rect}
                     );
@@ -350,12 +390,12 @@ void FancyTerrainNode::sync(RenderContext &context,
     t_overlays = timelog_clock::now();
 #endif
 
-    m_material.shader().bind();
-    glUniform1f(m_material.shader().uniform_location("scale_to_radius"),
-                render_terrain.scale_to_radius());
-    m_normal_debug_material.shader().bind();
-    glUniform1f(m_normal_debug_material.shader().uniform_location("scale_to_radius"),
-                render_terrain.scale_to_radius());
+    sync_material(context,
+                  m_material,
+                  render_terrain.scale_to_radius());
+    sync_material(context,
+                  m_normal_debug_material,
+                  render_terrain.scale_to_radius());
 
     m_heightmap.bind();
     if (m_linear_filter) {

@@ -86,7 +86,7 @@ public:
     }
 
     std::unique_ptr<VAO> make_vao(const ShaderProgram &for_shader,
-                                  bool add_vbo_hints=false);
+                                  bool add_vbo_hints=false) const;
 
     void set_ibo(IBO *ibo);
 

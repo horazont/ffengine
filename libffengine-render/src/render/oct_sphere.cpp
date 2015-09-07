@@ -84,11 +84,12 @@ OctSphere::OctSphere(Material &mat, float radius):
 
 void OctSphere::render(RenderContext &context)
 {
-    context.push_transformation(translation4(m_origin));
-    m_material.bind();
+    //context.push_transformation(translation4(m_origin));
+    //m_material.bind();
     /*std::cout << "rendering at " << m_origin << std::endl; */
-    context.draw_elements(GL_TRIANGLES, m_material, m_ibo_alloc);
-    context.pop_transformation();
+    //context.draw_elements(GL_TRIANGLES, m_material, m_ibo_alloc);
+    //context.pop_transformation();
+    context.render_all(AABB{}, GL_TRIANGLES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
 void OctSphere::sync(RenderContext &, ffe::Octree &octree,

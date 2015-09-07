@@ -27,6 +27,8 @@ the AUTHORS file.
 
 #include "ffengine/io/log.hpp"
 
+#include "ffengine/render/renderpass.hpp"
+
 // #define TIMELOG_SCENEGRAPH
 
 #ifdef TIMELOG_SCENEGRAPH
@@ -255,9 +257,9 @@ Transformation::Transformation(std::unique_ptr<Node> &&child):
 
 void Transformation::render(RenderContext &context)
 {
-    context.push_transformation(m_render_transform);
+    // FIXME: context.push_transformation(m_render_transform);
     ParentNode::render(context);
-    context.pop_transformation();
+    // FIXME: context.pop_transformation();
 }
 
 void Transformation::sync(RenderContext &context)
