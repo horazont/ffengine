@@ -300,6 +300,8 @@ bool FancyTerrainNode::configure_overlay_material(Material &mat)
     mat.attach_texture("heightmap", &m_heightmap);
     mat.attach_texture("normalt", &m_normalt);
 
+    mat.set_depth_mask(false);
+
     return true;
 }
 
@@ -327,7 +329,6 @@ void FancyTerrainNode::render(RenderContext &context,
     update_material(context, m_material);
     render_all(context, m_material, slices);
 
-    glDepthMask(GL_FALSE);
     for (auto &overlay: m_render_overlays)
     {
         Material &material = *overlay.material;
@@ -346,7 +347,6 @@ void FancyTerrainNode::render(RenderContext &context,
             }
         }
     }
-    glDepthMask(GL_TRUE);
 }
 
 void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)

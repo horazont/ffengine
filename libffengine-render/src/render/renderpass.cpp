@@ -146,16 +146,12 @@ void MaterialPass::set_order(int order)
 void MaterialPass::setup()
 {
     bind();
-    if (m_material.polygon_mode() != GL_FILL) {
-        glPolygonMode(GL_FRONT_AND_BACK, m_material.polygon_mode());
-    }
+    m_material.setup();
 }
 
 void MaterialPass::teardown()
 {
-    if (m_material.polygon_mode() != GL_FILL) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
+    m_material.teardown();
 }
 
 /* ffe::Material */
@@ -165,7 +161,8 @@ Material::Material():
     m_vbo(nullptr),
     m_ibo(nullptr),
     m_linked(false),
-    m_polygon_mode(GL_FILL)
+    m_polygon_mode(GL_FILL),
+    m_depth_mask(true)
 {
 
 }
@@ -175,7 +172,8 @@ Material::Material(const VBOFormat &format):
     m_vbo(new VBO(format)),
     m_ibo(new IBO),
     m_linked(false),
-    m_polygon_mode(GL_FILL)
+    m_polygon_mode(GL_FILL),
+    m_depth_mask(true)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -185,7 +183,8 @@ Material::Material(VBO &vbo, IBO &ibo):
     m_vbo(&vbo),
     m_ibo(&ibo),
     m_linked(false),
-    m_polygon_mode(GL_FILL)
+    m_polygon_mode(GL_FILL),
+    m_depth_mask(true)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -196,6 +195,7 @@ Material::Material(Material &&src):
     m_ibo(std::move(src.m_ibo)),
     m_linked(src.m_linked),
     m_polygon_mode(src.m_polygon_mode),
+    m_depth_mask(src.m_depth_mask),
     m_vertex_attrs(std::move(src.m_vertex_attrs)),
     m_passes(std::move(src.m_passes))
 {
@@ -218,6 +218,7 @@ Material &Material::operator=(Material &&src)
     m_linked = src.m_linked;
     src.m_linked = false;
     m_polygon_mode = src.m_polygon_mode;
+    m_depth_mask = src.m_depth_mask;
     m_vertex_attrs = std::move(src.m_vertex_attrs);
     m_passes = std::move(src.m_passes);
     return *this;
@@ -228,6 +229,26 @@ Material::~Material()
     if (m_buffers_owned) {
         delete m_vbo;
         delete m_ibo;
+    }
+}
+
+void Material::setup()
+{
+    if (m_polygon_mode != GL_FILL) {
+        glPolygonMode(GL_FRONT_AND_BACK, m_polygon_mode);
+    }
+    if (!m_depth_mask) {
+        glDepthMask(GL_FALSE);
+    }
+}
+
+void Material::teardown()
+{
+    if (!m_depth_mask) {
+        glDepthMask(GL_TRUE);
+    }
+    if (m_polygon_mode != GL_FILL) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 }
 

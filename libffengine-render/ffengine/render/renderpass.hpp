@@ -176,10 +176,15 @@ private:
     bool m_linked;
 
     GLenum m_polygon_mode;
+    bool m_depth_mask;
 
     ArrayDeclaration m_vertex_attrs;
 
     std::unordered_map<RenderPass*, std::unique_ptr<MaterialPass> > m_passes;
+
+protected:
+    void setup();
+    void teardown();
 
 public:
     void attach_texture(const std::string &name, Texture2D *tex);
@@ -242,9 +247,19 @@ public:
     }
 
 public:
+    inline bool depth_mask() const
+    {
+        return m_depth_mask;
+    }
+
     inline GLenum polygon_mode() const
     {
         return m_polygon_mode;
+    }
+
+    inline void set_depth_mask(const bool mask)
+    {
+        m_depth_mask = mask;
     }
 
     inline void set_polygon_mode(const GLenum mode)
@@ -258,6 +273,7 @@ public:
         return std::make_unique<Material>(ref.vbo(), ref.ibo());
     }
 
+    friend class MaterialPass;
 };
 
 
