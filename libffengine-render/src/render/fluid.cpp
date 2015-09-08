@@ -57,6 +57,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     m_fluidsim(fluidsim),
     m_block_size(sim::IFluidSim::block_size),
     m_lods(log2_of_pot((terrain_size-1)/(grid_size-1))+1),
+    m_max_slices(2*(terrain_size-1)/(grid_size-1)), // this is usually much more than needed
     m_mat(VBOFormat({
                         VBOAttribute(3),  // position
                         VBOAttribute(4)   // fluid data
@@ -502,6 +503,7 @@ void CPUFluid::prepare(RenderContext &context,
             // if has geometry
             if (cache_entry.second) {
                 render_slices.push_back(cache_entry.second.get());
+                cache_entry.second->m_usage_level += 1;
             }
             continue;
         }
@@ -512,6 +514,7 @@ void CPUFluid::prepare(RenderContext &context,
                                                slice.lod / m_block_size);
         if (geometry_slice) {
             render_slices.push_back(geometry_slice.get());
+            geometry_slice->m_usage_level += 1;
         }
 
         cache_entry = std::make_pair(
@@ -575,6 +578,45 @@ void CPUFluid::sync(const FullTerrainNode &fullterrain)
                 invalidate_caches(blockx, blocky);
             }
             ++block;
+        }
+    }
+
+    m_tmp_slices.clear();
+    for (unsigned int subcache_idx = 0;
+         subcache_idx < m_slice_cache.size();
+         ++subcache_idx)
+    {
+        const auto &cache = m_slice_cache[subcache_idx];
+
+        for (unsigned int slice_idx = 0;
+             slice_idx < cache.size();
+             ++slice_idx)
+        {
+            const auto &cache_entry = cache[slice_idx];
+
+            if (!cache_entry.first || !cache_entry.second) {
+                continue;
+            }
+
+            CacheTuple tmp(subcache_idx, slice_idx, cache_entry.second->m_usage_level);
+            cache_entry.second->m_usage_level = 0;
+            auto dest_iter = std::lower_bound(
+                        m_tmp_slices.begin(),
+                        m_tmp_slices.end(),
+                        tmp,
+                        [](const CacheTuple &a, const CacheTuple &b) {
+                            return std::get<2>(a) < std::get<2>(b);
+                        });
+
+            m_tmp_slices.emplace(dest_iter, std::move(tmp));
+        }
+    }
+
+    if (m_tmp_slices.size() > m_max_slices) {
+        const unsigned int to_evict = m_tmp_slices.size() - m_max_slices;
+        for (unsigned int i = 0; i < to_evict; ++i) {
+            auto &entry = m_tmp_slices[i];
+            m_slice_cache[std::get<0>(entry)][std::get<1>(entry)] = std::make_pair(false, nullptr);
         }
     }
 

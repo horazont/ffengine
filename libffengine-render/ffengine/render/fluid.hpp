@@ -43,7 +43,15 @@ struct FluidSlice
     VBOAllocation m_vbo_alloc;
     unsigned int m_size;
 
-    unsigned int m_last_used;
+    /**
+     * The usage level describes how the fluid slice was used in the last frame.
+     *
+     * It is incremeted for each prepare() call which makes use of the slice.
+     * sync() will evict slices in each frame until a configurable threshold is
+     * reached. For this it will sort the slices by their usage level and start
+     * deleting them starting with the lowest usage level.
+     */
+    unsigned int m_usage_level;
 };
 
 class CPUFluid: public FullTerrainRenderer
@@ -64,6 +72,8 @@ private:
     const unsigned int m_block_size;
     const unsigned int m_lods;
 
+    unsigned int m_max_slices;
+
     Material m_mat;
 
     std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
@@ -74,6 +84,9 @@ private:
     std::vector<unsigned int> m_tmp_index_mapping;
     std::vector<std::tuple<Vector3f, Vector4f> > m_tmp_vertex_data;
     std::vector<uint16_t> m_tmp_index_data;
+
+    typedef std::tuple<unsigned int, unsigned int, unsigned int> CacheTuple;
+    std::vector<CacheTuple> m_tmp_slices;
 
 protected:
     void copy_into_vertex_cache(Vector4f *dest,
