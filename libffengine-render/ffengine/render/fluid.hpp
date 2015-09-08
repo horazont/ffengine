@@ -82,7 +82,7 @@ private:
     std::vector<const sim::FluidBlock*> m_tmp_used_blocks;
     std::vector<Vector4f> m_tmp_fluid_data_cache;
     std::vector<unsigned int> m_tmp_index_mapping;
-    std::vector<std::tuple<Vector3f, Vector4f> > m_tmp_vertex_data;
+    std::vector<std::tuple<Vector3f, Vector4f, Vector4f> > m_tmp_vertex_data;
     std::vector<uint16_t> m_tmp_index_data;
 
     typedef std::tuple<unsigned int, unsigned int, unsigned int> CacheTuple;

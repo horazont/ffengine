@@ -60,6 +60,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     m_max_slices(2*(terrain_size-1)/(grid_size-1)), // this is usually much more than needed
     m_mat(VBOFormat({
                         VBOAttribute(3),  // position
+                        VBOAttribute(4),  // normal + tangent
                         VBOAttribute(4)   // fluid data
                     }))
 {
@@ -94,7 +95,8 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     }
 
     m_mat.declare_attribute("position", 0);
-    m_mat.declare_attribute("fluiddata", 1);
+    m_mat.declare_attribute("normal_t", 1);
+    m_mat.declare_attribute("fluiddata", 2);
 
     success = success && m_mat.link();
     if (!success) {
@@ -295,8 +297,47 @@ unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
         pos[eZ] = height;
     }
 
+    const unsigned int src_left_index = y*(m_block_size+3)+x-1;
+    const unsigned int src_right_index = y*(m_block_size+3)+x+1;
+    const unsigned int src_above_index = (y+1)*(m_block_size+3)+x;
+    const unsigned int src_below_index = (y-1)*(m_block_size+3)+x;
+
+    const Vector4f &left = m_tmp_fluid_data_cache[src_left_index];
+    const Vector4f &right = m_tmp_fluid_data_cache[src_right_index];
+    const Vector4f &above = m_tmp_fluid_data_cache[src_above_index];
+    const Vector4f &below = m_tmp_fluid_data_cache[src_below_index];
+
+    float tx_z = 0.f;
+    if (right[eY] >= 1e-5) {
+        tx_z += right[eX] + right[eY];
+    } else {
+        tx_z += pos[eZ];
+    }
+    if (left[eY] >= 1e-5) {
+        tx_z -= left[eX] + left[eY];
+    } else {
+        tx_z -= pos[eZ];
+    }
+
+    float ty_z = 0.f;
+    if (above[eY] >= 1e-5) {
+        ty_z += above[eX] + above[eY];
+    } else {
+        ty_z += pos[eZ];
+    }
+    if (below[eY] >= 1e-5) {
+        ty_z -= below[eX] + below[eY];
+    } else {
+        ty_z -= pos[eZ];
+    }
+
+    const Vector3f tx(Vector3f(2*oversample, 0, tx_z).normalized());
+    const Vector3f ty(Vector3f(0, 2*oversample, ty_z).normalized());
+
+    const Vector3f normal = tx % ty;
+
     unsigned int index = m_tmp_vertex_data.size();
-    m_tmp_vertex_data.emplace_back(pos, original);
+    m_tmp_vertex_data.emplace_back(pos, Vector4f(normal, ty_z), original);
     m_tmp_index_mapping[src_index] = index;
 
     return index;
@@ -464,10 +505,12 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
 
     {
         auto pos_slice = VBOSlice<Vector3f>(vbo_alloc, 0);
-        auto fd_slice = VBOSlice<Vector4f>(vbo_alloc, 1);
+        auto nt_slice = VBOSlice<Vector4f>(vbo_alloc, 1);
+        auto fd_slice = VBOSlice<Vector4f>(vbo_alloc, 2);
         for (unsigned int i = 0; i < m_tmp_vertex_data.size(); ++i) {
             pos_slice[i] = std::get<0>(m_tmp_vertex_data[i]);
-            fd_slice[i] = std::get<1>(m_tmp_vertex_data[i]);
+            nt_slice[i] = std::get<1>(m_tmp_vertex_data[i]);
+            fd_slice[i] = std::get<2>(m_tmp_vertex_data[i]);
         }
         vbo_alloc.mark_dirty();
     }
