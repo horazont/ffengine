@@ -511,7 +511,9 @@ PassInfo &RenderContext::pass_info(RenderPass *pass)
     return m_passes[pass];
 }
 
-void RenderContext::setup(const Camera &camera, const RenderTarget &target)
+void RenderContext::setup(const Camera &camera,
+                          const SceneGraph &scenegraph,
+                          const RenderTarget &target)
 {
     Matrix4f render_view = camera.render_view();
     Matrix4f inv_render_view = camera.render_inv_view();
@@ -523,8 +525,9 @@ void RenderContext::setup(const Camera &camera, const RenderTarget &target)
                 target.width(), target.height());
 
     m_matrix_ubo.set<1>(render_view);
-    m_matrix_ubo.set<2>(Matrix4f(Identity));
-    m_matrix_ubo.set<3>(Matrix3f(Identity));
+    m_matrix_ubo.set<2>(scenegraph.sun_colour());
+    m_matrix_ubo.set<3>(scenegraph.sun_direction());
+    m_matrix_ubo.set<4>(scenegraph.sky_colour());
     m_inv_matrix_ubo.set<1>(inv_render_view);
     m_inv_matrix_ubo.bind();
     m_inv_matrix_ubo.update_bound();
@@ -644,7 +647,8 @@ void RenderGraph::prepare()
     // we use the final target as reference for the viewport
     // if we ever need distinct targets sizes, we need to figure out how to
     // solve that best.
-    m_context.setup(m_scene.camera(), m_render_order.back()->target());
+    m_context.setup(m_scene.camera(), m_scene.scenegraph(),
+                    m_render_order.back()->target());
     m_scene.scenegraph().prepare(m_context);
 }
 
