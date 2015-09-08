@@ -14,7 +14,7 @@ Terrain
   <http://wscg.zcu.cz/wscg2007/Papers_2007/full/C43-full.pdf>`_
 
 * `"Real-Time Generation of Continuous Levels of Detail for Height Fields",
-  by Röttger<http://stereofx.org/#Papers>`_
+  by Röttger <http://stereofx.org/#Papers>`_
 
 Water
 -----
@@ -22,6 +22,10 @@ Water
 * `"Cellular Automata for Physical Modelling", by Tom Forsyth
   <https://home.comcast.net/~tom_forsyth/papers/cellular_automata_for_physical_modelling.html>`_
 
+* `"Tiled Directional Flow", by Frans van Hoesel
+  <https://dl.acm.org/citation.cfm?id=2037738>`_, descriptive article and videos
+  `available on their website
+  <http://www.rug.nl/science-and-society/centre-for-information-technology/research/hpcv/publications/watershader/>`_
 
 Octree
 ------
