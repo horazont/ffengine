@@ -936,7 +936,10 @@ public:
     SceneGraph();
 
 private:
-    Vector4f m_clear_color;
+    Vector4f m_sun_colour;
+    Vector3f m_sun_direction;
+    Vector4f m_sky_colour;
+
     scenegraph::Group m_root;
 
 public:
@@ -948,6 +951,36 @@ public:
     inline const scenegraph::Group &root() const
     {
         return m_root;
+    }
+
+    inline void set_sky_colour(const Vector4f &colour)
+    {
+        m_sky_colour = colour;
+    }
+
+    inline void set_sun_colour(const Vector4f &colour)
+    {
+        m_sun_colour = colour;
+    }
+
+    inline void set_sun_direction(const Vector3f &dir)
+    {
+        m_sun_direction = dir;
+    }
+
+    inline const Vector4f &sky_colour() const
+    {
+        return m_sky_colour;
+    }
+
+    inline const Vector4f &sun_colour() const
+    {
+        return m_sun_colour;
+    }
+
+    inline const Vector3f &sun_direction() const
+    {
+        return m_sun_direction;
     }
 
 public:
