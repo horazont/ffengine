@@ -528,6 +528,7 @@ void RenderContext::setup(const Camera &camera,
     m_matrix_ubo.set<2>(scenegraph.sun_colour());
     m_matrix_ubo.set<3>(scenegraph.sun_direction());
     m_matrix_ubo.set<4>(scenegraph.sky_colour());
+    m_matrix_ubo.set<5>(m_viewpoint);
     m_inv_matrix_ubo.set<1>(inv_render_view);
     m_inv_matrix_ubo.bind();
     m_inv_matrix_ubo.update_bound();
