@@ -143,13 +143,29 @@ void MaterialPass::set_order(int order)
     m_order = order;
 }
 
+void MaterialPass::setup()
+{
+    bind();
+    if (m_material.polygon_mode() != GL_FILL) {
+        glPolygonMode(GL_FRONT_AND_BACK, m_material.polygon_mode());
+    }
+}
+
+void MaterialPass::teardown()
+{
+    if (m_material.polygon_mode() != GL_FILL) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+}
+
 /* ffe::Material */
 
 Material::Material():
     m_buffers_owned(false),
     m_vbo(nullptr),
     m_ibo(nullptr),
-    m_linked(false)
+    m_linked(false),
+    m_polygon_mode(GL_FILL)
 {
 
 }
@@ -158,7 +174,8 @@ Material::Material(const VBOFormat &format):
     m_buffers_owned(true),
     m_vbo(new VBO(format)),
     m_ibo(new IBO),
-    m_linked(false)
+    m_linked(false),
+    m_polygon_mode(GL_FILL)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -167,7 +184,8 @@ Material::Material(VBO &vbo, IBO &ibo):
     m_buffers_owned(false),
     m_vbo(&vbo),
     m_ibo(&ibo),
-    m_linked(false)
+    m_linked(false),
+    m_polygon_mode(GL_FILL)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -177,6 +195,7 @@ Material::Material(Material &&src):
     m_vbo(std::move(src.m_vbo)),
     m_ibo(std::move(src.m_ibo)),
     m_linked(src.m_linked),
+    m_polygon_mode(src.m_polygon_mode),
     m_vertex_attrs(std::move(src.m_vertex_attrs)),
     m_passes(std::move(src.m_passes))
 {
@@ -198,6 +217,7 @@ Material &Material::operator=(Material &&src)
     src.m_ibo = nullptr;
     m_linked = src.m_linked;
     src.m_linked = false;
+    m_polygon_mode = src.m_polygon_mode;
     m_vertex_attrs = std::move(src.m_vertex_attrs);
     m_passes = std::move(src.m_passes);
     return *this;
@@ -322,7 +342,10 @@ void PassInfo::render()
     for (PassRenderInstruction &instruction: m_instructions) {
         MaterialPass *curr = instruction.material_pass;
         if (curr != prev) {
-            curr->bind();
+            if (prev) {
+                prev->teardown();
+            }
+            curr->setup();
             prev = curr;
         }
         if (instruction.setup) {
@@ -334,6 +357,9 @@ void PassInfo::render()
         if (instruction.teardown) {
             instruction.teardown(*curr);
         }
+    }
+    if (prev) {
+        prev->teardown();
     }
     reset();
 }

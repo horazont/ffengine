@@ -104,11 +104,7 @@ void QuadBezier3fRoadTest::prepare(RenderContext &)
 void QuadBezier3fRoadTest::render(RenderContext &context)
 {
     context.render_all(
-                AABB{}, GL_TRIANGLES, m_mat, m_ibo_alloc, m_vbo_alloc,
-                [](MaterialPass &){ glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); },
-                [](MaterialPass &){
-                     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-                });
+                AABB{}, GL_TRIANGLES, m_mat, m_ibo_alloc, m_vbo_alloc);
 }
 
 void QuadBezier3fRoadTest::sync(ffe::Octree &octree,

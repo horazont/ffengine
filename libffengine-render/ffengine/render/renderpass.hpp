@@ -142,6 +142,8 @@ public:
     void bind();
     void detach_texture(const std::string &name);
     void set_order(int order);
+    void setup();
+    void teardown();
 
     friend class Material;
 };
@@ -172,6 +174,8 @@ private:
     IBO *m_ibo;
 
     bool m_linked;
+
+    GLenum m_polygon_mode;
 
     ArrayDeclaration m_vertex_attrs;
 
@@ -235,6 +239,17 @@ public:
     inline operator bool() const
     {
         return (m_ibo && m_vbo);
+    }
+
+public:
+    inline GLenum polygon_mode() const
+    {
+        return m_polygon_mode;
+    }
+
+    inline void set_polygon_mode(const GLenum mode)
+    {
+        m_polygon_mode = mode;
     }
 
 public:
