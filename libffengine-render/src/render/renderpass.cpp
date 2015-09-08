@@ -589,19 +589,16 @@ void RenderGraph::render()
     }
 }
 
-void RenderGraph::sync()
+void RenderGraph::prepare()
 {
     m_locked_nodes.clear();
     m_render_order = m_ordered;
-
-    m_scene.camera().sync();
 
     // we use the final target as reference for the viewport
     // if we ever need distinct targets sizes, we need to figure out how to
     // solve that best.
     m_context.setup(m_scene.camera(), m_render_order.back()->target());
-
-    m_scene.scenegraph().sync(m_context);
+    m_scene.scenegraph().prepare(m_context);
 }
 
 }

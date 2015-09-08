@@ -46,7 +46,8 @@ class RenderContext;
 class RenderableOctreeObject: public ffe::OctreeObject
 {
 public:
-    virtual void render(RenderContext &context);
+    virtual void prepare(RenderContext &context) = 0;
+    virtual void render(RenderContext &context) = 0;
 
 };
 
@@ -103,7 +104,33 @@ public:
     virtual void advance(TimeInterval seconds);
 
     /**
-     * Render the node.
+     * Prepare all state data needed for rendering into render-only storage
+     * for the given render context.
+     *
+     * @param context The render context for which to synchronize this node.
+     *
+     * Calling methods which do drawcalls here has undefined effects,
+     * most likely they won’t appear anywhere because clearing of the buffers
+     * happens *after* prepare() and sync(). The RenderContext is already
+     * filled with camera-related information, such as the projection and the
+     * view matrices, as well as the viewpoint.
+     *
+     * Work which is independent of the current view should be done in sync(),
+     * which is called *before* this method is called.
+     *
+     * When this method is called, it is legal to access all memory available
+     * to the view.
+     *
+     * @see RenderContext.get_storage
+     * @see SceneStorage
+     * @see sync()
+     *
+     * @opengl
+     */
+    virtual void prepare(RenderContext &context) = 0;
+
+    /**
+     * Render the node into the render context.
      *
      * @param context Current rendering context
      *
@@ -111,29 +138,29 @@ public:
      * Anything outside that needs to be copied into GPU-only storage when the
      * sync() method is called.
      *
+     * No direct drawcalls must be made. Instead, drawcalls must be submitted
+     * to the RenderContext using its methods. The drawcalls are executed at
+     * an unspecified later point and in an order dependent on the material
+     * settings.
+     *
      * @opengl
      */
     virtual void render(RenderContext &context) = 0;
 
     /**
-     * Synchronize the node state to GPU-only data storage.
+     * Synchronize all view-agnostic data needed for rendering this node
+     * into render-only storage.
      *
-     * @param context The render context for which to synchronize this node.
-     *
-     * Calling methods which do drawcalls here has undefined effects,
-     * most likely they won’t appear anywhere because clearing of the buffers
-     * happens *after* sync(). The RenderContext is already filled with
-     * camera-related information, such as the projection and the view
-     * matrices, as well as the viewpoint.
+     * Data which is dependent on the current view can be synchronized in the
+     * prepare() method, which is called after sync() and possibly called
+     * multiple times for different Scene and RenderContext instances.
      *
      * When this method is called, it is legal to access all memory available
      * to the view.
      *
-     * @see RenderContext.get_storage SceneStorage
-     *
-     * @opengl
+     * @see prepare()
      */
-    virtual void sync(RenderContext &context) = 0;
+    virtual void sync() = 0;
 
 };
 
@@ -284,6 +311,24 @@ public:
     void advance(TimeInterval seconds) override;
 
     /**
+     * Copy the current list of nodes into render-storage and call sync()
+     * on all those nodes.
+     *
+     * @opengl
+     */
+    void sync() override;
+
+    /**
+     * Call prepare() on all children which were in the group when sync() was
+     * called last.
+     *
+     * @param context The render context to prepare for.
+     *
+     * @opengl
+     */
+    void prepare(RenderContext &context) override;
+
+    /**
      * Render all nodes which were in the group at the time sync() was
      * called last.
      *
@@ -294,16 +339,6 @@ public:
      * @opengl
      */
     void render(RenderContext &context) override;
-
-    /**
-     * Synchronize all children currently in the group for the next call to
-     * render().
-     *
-     * @param context The Scene to synchronize for.
-     *
-     * @opengl
-     */
-    void sync(RenderContext &context) override;
 
 };
 
@@ -347,7 +382,7 @@ public:
      *
      * @opengl
      */
-    void render(RenderContext &context) override;
+    void prepare(RenderContext &context) override;
 
     /**
      * Do nothing
@@ -356,8 +391,14 @@ public:
      *
      * @opengl
      */
-    void sync(RenderContext &context) override;
+    void render(RenderContext &context) override;
 
+    /**
+     * Do nothing.
+     *
+     * @opengl
+     */
+    void sync() override;
 };
 
 /**
@@ -435,6 +476,16 @@ public:
     void advance(TimeInterval seconds) override;
 
     /**
+     * Calls prepare() on the child which was present at the last call to
+     * sync(), if any.
+     *
+     * @param context The RenderContext to synchronize for.
+     *
+     * @opengl
+     */
+    void prepare(RenderContext &context) override;
+
+    /**
      * Render the child, if any.
      *
      * Renders the child which was present at the last call to sync(), if any.
@@ -446,16 +497,12 @@ public:
     void render(RenderContext &context) override;
 
     /**
-     * Synchronize the current child for rendering.
-     *
-     * Calls sync() on the child and synchronizes its pointer into GPU-only
-     * data storage.
-     *
-     * @param context The RenderContext to synchronize for.
+     * Store the currently present child in render storage and call sync() on
+     * it, if a child is present.
      *
      * @opengl
      */
-    void sync(RenderContext &context) override;
+    void sync() override;
 
 };
 
@@ -510,11 +557,11 @@ public:
      * Synchronize the current transformation for rendering into GPU-only data
      * storage.
      *
-     * @param context The Scene to synchronize for.
+     * Call ParentNode::sync().
      *
      * @opengl
      */
-    void sync(RenderContext &context) override;
+    void sync() override;
 
 };
 
@@ -557,11 +604,28 @@ public:
     virtual ~OctNode();
 
 public:
+    /**
+     * @see Node::advance()
+     */
     virtual void advance(TimeInterval seconds);
 
-    virtual void sync(RenderContext &context,
-                      ffe::Octree &octree,
+    /**
+     * Synchronize the view-agnostic data the Octree-Scenegraph-Node needs
+     * for rendering into render-storage.
+     *
+     * It is expected that all renderables are placed in the given \a octree
+     * during this call. The renderables must be RenderableOctreeObject
+     * instancee.
+     *
+     * @param octree The octree in which the RenderableOctreeObject instances
+     * shall be placed.
+     * @param positioning The current positioning context.
+     *
+     * @opengl
+     */
+    virtual void sync(ffe::Octree &octree,
                       OctContext &positioning);
+
 
 };
 
@@ -692,8 +756,7 @@ public:
 public:
     void advance(TimeInterval seconds) override;
 
-    void sync(RenderContext &context,
-              ffe::Octree &octree,
+    void sync(ffe::Octree &octree,
               OctContext &positioning) override;
 
 };
@@ -754,7 +817,7 @@ public:
 
 public:
     void advance(TimeInterval seconds) override;
-    void sync(RenderContext &context, ffe::Octree &octree,
+    void sync(ffe::Octree &octree,
               OctContext &positioning) override;
 
 };
@@ -781,7 +844,7 @@ public:
     }
 
 public:
-    void sync(RenderContext &context, ffe::Octree &octree,
+    void sync(ffe::Octree &octree,
               OctContext &positioning) override;
 
 };
@@ -808,7 +871,7 @@ public:
     }
 
 public:
-    void sync(RenderContext &context, ffe::Octree &octree,
+    void sync(ffe::Octree &octree,
               OctContext &positioning) override;
 
 };
@@ -824,7 +887,7 @@ private:
     OctContext m_positioning;
     std::vector<ffe::OctreeNode*> m_hitset;
 
-    std::vector<RenderableOctreeObject*> m_to_render;
+    std::unordered_map<RenderContext*, std::vector<RenderableOctreeObject*> > m_to_render;
 
     std::atomic_uint_least32_t m_selected_objects;
 
@@ -857,8 +920,9 @@ public:
 
 public:
     void advance(TimeInterval seconds) override;
-    void sync(RenderContext &context) override;
+    void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
+    void sync() override;
 
 };
 
@@ -892,8 +956,9 @@ public:
         m_root.advance(seconds);
     }
 
+    void prepare(RenderContext &context);
     void render(RenderContext &context);
-    void sync(RenderContext &context);
+    void sync();
 
 };
 

@@ -45,13 +45,17 @@ QuadBezier3fDebug::QuadBezier3fDebug(Material &mat, unsigned int steps):
     }
 }
 
+void QuadBezier3fDebug::prepare(RenderContext &)
+{
+
+}
+
 void QuadBezier3fDebug::render(RenderContext &context)
 {
     context.render_all(AABB{}, GL_LINE_STRIP, m_mat, m_ibo_alloc, m_vbo_alloc);
 }
 
-void QuadBezier3fDebug::sync(RenderContext &context,
-                             ffe::Octree &octree,
+void QuadBezier3fDebug::sync(ffe::Octree &octree,
                              scenegraph::OctContext &positioning)
 {
     if (m_curve_changed || !this->octree()) {
@@ -92,17 +96,22 @@ QuadBezier3fRoadTest::QuadBezier3fRoadTest(Material &mat, unsigned int steps):
 
 }
 
+void QuadBezier3fRoadTest::prepare(RenderContext &)
+{
+
+}
+
 void QuadBezier3fRoadTest::render(RenderContext &context)
 {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     context.render_all(
                 AABB{}, GL_TRIANGLES, m_mat, m_ibo_alloc, m_vbo_alloc,
                 [](MaterialPass &){ glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); },
-                [](MaterialPass &){ glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); });
+                [](MaterialPass &){
+                     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                });
 }
 
-void QuadBezier3fRoadTest::sync(RenderContext &context,
-                                ffe::Octree &octree,
+void QuadBezier3fRoadTest::sync(ffe::Octree &octree,
                                 scenegraph::OctContext &positioning)
 {
     if (m_curve_changed || !this->octree()) {
@@ -130,16 +139,15 @@ void QuadBezier3fRoadTest::sync(RenderContext &context,
         m_ibo_alloc = m_mat.ibo().allocate(m_steps*6);
         m_vbo_alloc = m_mat.vbo().allocate((m_steps+1)*2);
 
-        const uint16_t base = m_vbo_alloc.base();
         uint16_t *dest = m_ibo_alloc.get();
         for (unsigned int step = 0; step < m_steps; ++step) {
-            *dest++ = base + 2*step;
-            *dest++ = base + 2*step+1;
-            *dest++ = base + 2*(step+1);
+            *dest++ = 2*step;
+            *dest++ = 2*step+1;
+            *dest++ = 2*(step+1);
 
-            *dest++ = base + 2*(step+1);
-            *dest++ = base + 2*step+1;
-            *dest++ = base + 2*(step+1)+1;
+            *dest++ = 2*(step+1);
+            *dest++ = 2*step+1;
+            *dest++ = 2*(step+1)+1;
         }
         m_ibo_alloc.mark_dirty();
 

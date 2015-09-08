@@ -109,8 +109,9 @@ private:
 protected:
     void render_all(RenderContext &context, Material &material,
                     const FullTerrainNode::Slices &slices_to_render);
-    void sync_material(RenderContext &context, Material &material,
+    void sync_material(Material &material,
                        const float scale_to_radius);
+    void update_material(RenderContext &context, Material &material);
 
 public:
     void attach_blend_texture(Texture2D *tex);
@@ -218,10 +219,13 @@ public:
     }
 
 public:
+    void prepare(RenderContext &context,
+                 const FullTerrainNode &render_terrain,
+                 const FullTerrainNode::Slices &slices) override;
     void render(RenderContext &context,
-                const FullTerrainNode &render_terrain) override;
-    void sync(RenderContext &context,
-              const FullTerrainNode &render_terrain) override;
+                const FullTerrainNode &render_terrain,
+                const FullTerrainNode::Slices &slices) override;
+    void sync(const FullTerrainNode &fullterrain) override;
 
 };
 

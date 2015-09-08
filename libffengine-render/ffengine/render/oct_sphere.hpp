@@ -45,8 +45,9 @@ private:
     IBOAllocation m_ibo_alloc;
 
 public:
+    void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
-    void sync(RenderContext &context, ffe::Octree &octree,
+    void sync(ffe::Octree &octree,
               scenegraph::OctContext &positioning) override;
 
 };

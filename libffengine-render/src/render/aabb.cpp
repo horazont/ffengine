@@ -33,6 +33,11 @@ DynamicAABBs::DynamicAABBs(Material &mat, DiscoverCallback &&cb):
 
 }
 
+void DynamicAABBs::prepare(RenderContext &)
+{
+
+}
+
 void DynamicAABBs::render(RenderContext &context)
 {
     context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
@@ -41,7 +46,7 @@ void DynamicAABBs::render(RenderContext &context)
                                            m_aabbs.size()*24);*/
 }
 
-void DynamicAABBs::sync(RenderContext &)
+void DynamicAABBs::sync()
 {
     m_discover_cb(m_aabbs);
 

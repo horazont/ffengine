@@ -27,14 +27,6 @@ the AUTHORS file.
 #include "ffengine/math/intersect.hpp"
 #include "ffengine/io/log.hpp"
 
-// #define TIMELOG_SYNC
-// #define TIMELOG_RENDER
-
-#if defined(TIMELOG_SYNC) || defined(TIMELOG_RENDER)
-#include <chrono>
-typedef std::chrono::steady_clock timelog_clock;
-#define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
-#endif
 
 namespace ffe {
 
@@ -224,9 +216,21 @@ void FancyTerrainNode::render_all(RenderContext &context, Material &material,
     }
 }
 
-void FancyTerrainNode::sync_material(RenderContext &context,
-                                     Material &material,
+void FancyTerrainNode::sync_material(Material &material,
                                      const float scale_to_radius)
+{
+    for (auto iter = material.cbegin();
+         iter != material.cend();
+         ++iter)
+    {
+        MaterialPass &pass = *iter->second;
+        pass.shader().bind();
+        glUniform1f(pass.shader().uniform_location("scale_to_radius"),
+                    scale_to_radius);
+    }
+}
+
+void FancyTerrainNode::update_material(RenderContext &context, Material &material)
 {
     for (auto iter = material.cbegin();
          iter != material.cend();
@@ -236,8 +240,6 @@ void FancyTerrainNode::sync_material(RenderContext &context,
         pass.shader().bind();
         glUniform3fv(pass.shader().uniform_location("lod_viewpoint"),
                      1, context.viewpoint()/*fake_viewpoint*/.as_array);
-        glUniform1f(pass.shader().uniform_location("scale_to_radius"),
-                    scale_to_radius);
     }
 }
 
@@ -319,29 +321,18 @@ void FancyTerrainNode::invalidate_cache(sim::TerrainRect part)
 }
 
 void FancyTerrainNode::render(RenderContext &context,
-                              const FullTerrainNode &render_terrain)
+                              const FullTerrainNode &render_terrain,
+                              const FullTerrainNode::Slices &slices)
 {
-#ifdef TIMELOG_RENDER
-    const timelog_clock::time_point t0 = timelog_clock::now();
-    timelog_clock::time_point t_solid, t_overlay;
-#endif
-    /* glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); */
-    render_all(context, m_material, render_terrain.slices_to_render());
-    /* glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); */
-#ifdef TIMELOG_RENDER
-    t_solid = timelog_clock::now();
-#endif
-
-    /* m_normal_debug_material.shader().bind();
-    glUniform3fv(m_normal_debug_material.shader().uniform_location("lod_viewpoint"),
-                 1, context.scene().viewpoint().as_array);
-    render_all(context, *m_nd_vao, m_normal_debug_material); */
+    update_material(context, m_material);
+    render_all(context, m_material, slices);
 
     glDepthMask(GL_FALSE);
     for (auto &overlay: m_render_overlays)
     {
         Material &material = *overlay.material;
-        for (auto &slice: render_terrain.slices_to_render())
+        update_material(context, material);
+        for (auto &slice: slices)
         {
             const unsigned int x = slice.basex;
             const unsigned int y = slice.basey;
@@ -356,46 +347,22 @@ void FancyTerrainNode::render(RenderContext &context,
         }
     }
     glDepthMask(GL_TRUE);
-#ifdef TIMELOG_RENDER
-    t_overlay = timelog_clock::now();
-    logger.logf(io::LOG_DEBUG, "render: solid time: %.2f ms",
-                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(t_solid-t0).count());
-    logger.logf(io::LOG_DEBUG, "render: overlay time: %.2f ms",
-                std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(t_overlay-t_solid).count());
-#endif
 }
 
-void FancyTerrainNode::sync(RenderContext &context,
-                            const FullTerrainNode &render_terrain)
+void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)
 {
-    // FIXME: use SceneStorage here!
-
-#ifdef TIMELOG_SYNC
-    const timelog_clock::time_point t0 = timelog_clock::now();
-    timelog_clock::time_point t_overlays, t_setup, t_allocate, t_upload;
-#endif
-
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
-        sync_material(context,
-                      *item.first,
-                      render_terrain.scale_to_radius());
+        sync_material(*item.first,
+                      fullterrain.scale_to_radius());
         m_render_overlays.emplace_back(
                     RenderOverlay{item.first, item.second.clip_rect}
                     );
     }
 
-#ifdef TIMELOG_SYNC
-    t_overlays = timelog_clock::now();
-#endif
-
-    sync_material(context,
-                  m_material,
-                  render_terrain.scale_to_radius());
-    sync_material(context,
-                  m_normal_debug_material,
-                  render_terrain.scale_to_radius());
+    sync_material(m_material,
+                  fullterrain.scale_to_radius());
 
     m_heightmap.bind();
     if (m_linear_filter) {
@@ -414,14 +381,6 @@ void FancyTerrainNode::sync(RenderContext &context,
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
-
-#ifdef TIMELOG_SYNC
-    t_setup = timelog_clock::now();
-#endif
-
-#ifdef TIMELOG_SYNC
-    t_allocate = timelog_clock::now();
-#endif
 
     sim::TerrainRect updated;
     {
@@ -462,14 +421,12 @@ void FancyTerrainNode::sync(RenderContext &context,
         }
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     }
+}
 
-#ifdef TIMELOG_SYNC
-    t_upload = timelog_clock::now();
-    logger.logf(io::LOG_DEBUG, "sync: t_overlays = %.2f ms", ms_cast(t_overlays - t0).count());
-    logger.logf(io::LOG_DEBUG, "sync: t_setup    = %.2f ms", ms_cast(t_setup - t_overlays).count());
-    logger.logf(io::LOG_DEBUG, "sync: t_allocate = %.2f ms", ms_cast(t_allocate - t_setup).count());
-    logger.logf(io::LOG_DEBUG, "sync: t_upload   = %.2f ms", ms_cast(t_upload - t_allocate).count());
-#endif
+void FancyTerrainNode::prepare(RenderContext &context,
+                               const FullTerrainNode &render_terrain,
+                               const FullTerrainNode::Slices &slices)
+{
 }
 
 }

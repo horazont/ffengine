@@ -67,14 +67,13 @@ private:
     Material m_mat;
 
     std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
-    std::vector<FluidSlice*> m_render_slices;
+    std::unordered_map<RenderContext*, std::vector<FluidSlice*> > m_render_slices;
 
     std::vector<const sim::FluidBlock*> m_tmp_used_blocks;
     std::vector<Vector4f> m_tmp_fluid_data_cache;
     std::vector<unsigned int> m_tmp_index_mapping;
     std::vector<std::tuple<Vector3f, Vector4f> > m_tmp_vertex_data;
     std::vector<uint16_t> m_tmp_index_data;
-
 
 protected:
     void copy_into_vertex_cache(Vector4f *dest,
@@ -113,10 +112,13 @@ protected:
             const unsigned int oversample);
 
 public:
-    void sync(RenderContext &context,
-              const FullTerrainNode &fullterrain) override;
+    void prepare(RenderContext &context,
+                 const FullTerrainNode &fullterrain,
+                 const FullTerrainNode::Slices &slices) override;
     void render(RenderContext &context,
-                const FullTerrainNode &fullterrain) override;
+                const FullTerrainNode &fullterrain,
+                const FullTerrainNode::Slices &slices) override;
+    void sync(const FullTerrainNode &fullterrain) override;
 
 };
 

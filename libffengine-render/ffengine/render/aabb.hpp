@@ -53,8 +53,9 @@ private:
     IBOAllocation m_ibo_alloc;
 
 public:
+    void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
-    void sync(RenderContext &context) override;
+    void sync() override;
 
 };
 

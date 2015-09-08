@@ -79,6 +79,7 @@ FullTerrainNode::FullTerrainNode(const unsigned int terrain_size,
 }
 
 void FullTerrainNode::collect_slices_recurse(
+        Slices &dest,
         const unsigned int invdepth,
         const unsigned int relative_x,
         const unsigned int relative_y,
@@ -107,7 +108,7 @@ void FullTerrainNode::collect_slices_recurse(
             !isect_aabb_sphere(box, Sphere{viewpoint, next_range_radius}))
     {
         // next LOD not required, insert node
-        m_render_slices.emplace_back(absolute_x, absolute_y, size);
+        dest.emplace_back(absolute_x, absolute_y, size);
         return;
     }
 
@@ -116,6 +117,7 @@ void FullTerrainNode::collect_slices_recurse(
     for (unsigned int offsy = 0; offsy < 2; offsy++) {
         for (unsigned int offsx = 0; offsx < 2; offsx++) {
             collect_slices_recurse(
+                        dest,
                         invdepth-1,
                         relative_x*2+offsx,
                         relative_y*2+offsy,
@@ -135,23 +137,31 @@ void FullTerrainNode::set_detail_level(unsigned int level)
     m_lod_range_base = (m_grid_size << level) - 1;
 }
 
-void FullTerrainNode::render(RenderContext &context)
+void FullTerrainNode::prepare(RenderContext &context)
 {
-    for (auto &renderer: m_renderers) {
-        renderer->render(context, *this);
-    }
-}
-
-void FullTerrainNode::sync(RenderContext &context)
-{
-    m_render_slices.clear();
     collect_slices_recurse(
+                m_render_slices[&context],
                 m_max_depth, 0, 0,
                 context.viewpoint()/*fake_viewpoint*/,
                 context.frustum());
 
     for (auto &renderer: m_renderers) {
-        renderer->sync(context, *this);
+        renderer->prepare(context, *this, m_render_slices[&context]);
+    }
+}
+
+void FullTerrainNode::render(RenderContext &context)
+{
+    for (auto &renderer: m_renderers) {
+        renderer->render(context, *this, m_render_slices[&context]);
+    }
+}
+
+void FullTerrainNode::sync()
+{
+    m_render_slices.clear();
+    for (auto &renderer: m_renderers) {
+        renderer->sync(*this);
     }
 }
 

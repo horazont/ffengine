@@ -67,7 +67,7 @@ void GridNode::render(RenderContext &context)
     context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
-void GridNode::sync(RenderContext &)
+void GridNode::prepare(RenderContext &)
 {
 
 }

@@ -540,7 +540,7 @@ public:
     bool resort();
 
     void render();
-    void sync();
+    void prepare();
 
 };
 

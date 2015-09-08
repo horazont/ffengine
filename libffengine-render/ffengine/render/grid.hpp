@@ -58,7 +58,7 @@ private:
 
 public:
     void render(RenderContext &context) override;
-    void sync(RenderContext &context) override;
+    void prepare(RenderContext &context) override;
 
 };
 

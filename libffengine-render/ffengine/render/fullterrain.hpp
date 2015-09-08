@@ -131,7 +131,7 @@ private:
 
     std::vector<std::unique_ptr<FullTerrainRenderer> > m_renderers;
 
-    Slices m_render_slices;
+    std::unordered_map<RenderContext*, Slices> m_render_slices;
 
 private:
     /**
@@ -144,7 +144,7 @@ private:
      * @param viewpoint The viewpoint to use for LOD calculations.
      * @param frustum The frustum to use for exclusion calculations.
      */
-    void collect_slices_recurse(const unsigned int invdepth,
+    void collect_slices_recurse(Slices &dest, const unsigned int invdepth,
             const unsigned int relative_x,
             const unsigned int relative_y,
             const Vector3f &viewpoint,
@@ -217,12 +217,15 @@ public:
      */
     void set_detail_level(unsigned int level);
 
-    inline const Slices &slices_to_render() const
-    {
-        return m_render_slices;
-    }
-
 public:
+    /**
+     * Determine the set pieces of terrain which are visible and call prepare()
+     * on all FullTerrainRenderer instances.
+     *
+     * @param context The render context to use.
+     */
+    void prepare(RenderContext &context) override;
+
     /**
      * Render all FullTerrainRenderer instances registered with the
      * TerrainSlice which were deemed visible during sync().
@@ -232,12 +235,11 @@ public:
     void render(RenderContext &context) override;
 
     /**
-     * Determine the set pieces of terrain which are visible and call sync()
-     * on all FullTerrainRenderer instances.
+     * Call sync() on all FullTerrainRenderer instances.
      *
      * @param context The render context to use.
      */
-    void sync(RenderContext &context) override;
+    void sync() override;
 
 };
 
@@ -255,10 +257,13 @@ protected:
     const unsigned int m_grid_size;
 
 public:
-    virtual void sync(RenderContext &context,
-                      const FullTerrainNode &fullterrain) = 0;
+    virtual void prepare(RenderContext &context,
+                         const FullTerrainNode &fullterrain,
+                         const FullTerrainNode::Slices &slices) = 0;
     virtual void render(RenderContext &context,
-                        const FullTerrainNode &fullterrain) = 0;
+                        const FullTerrainNode &fullterrain,
+                        const FullTerrainNode::Slices &slices) = 0;
+    virtual void sync(const FullTerrainNode &fullterrain) = 0;
 
 };
 

@@ -29,27 +29,10 @@ the AUTHORS file.
 
 #include "ffengine/render/renderpass.hpp"
 
-// #define TIMELOG_SCENEGRAPH
-
-#ifdef TIMELOG_SCENEGRAPH
-#include <chrono>
-typedef std::chrono::steady_clock timelog_clock;
-#define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
-#endif
-
 
 namespace ffe {
 
 static io::Logger &logger = io::logging().get_logger("render.scenegraph");
-
-
-/* engine::RenderableOctreeObject */
-
-void RenderableOctreeObject::render(RenderContext &)
-{
-
-}
-
 
 namespace scenegraph {
 
@@ -127,22 +110,29 @@ void Group::advance(TimeInterval seconds)
     }
 }
 
-void Group::render(RenderContext &context)
-{
-    for (auto child: m_to_render)
-    {
-        child->render(context);
-    }
-}
-
-void Group::sync(RenderContext &context)
+void Group::sync()
 {
     m_to_render.clear();
     m_locked_children.clear();
     for (auto &child: m_children)
     {
         m_to_render.push_back(child.get());
-        child->sync(context);
+        child->sync();
+    }
+}
+
+void Group::render(RenderContext &context)
+{
+    for (Node *child: m_to_render)
+    {
+        child->render(context);
+    }
+}
+
+void Group::prepare(RenderContext &context)
+{
+    for (Node *child: m_to_render) {
+        child->prepare(context);
     }
 }
 
@@ -171,12 +161,17 @@ void InvisibleGroup::advance(TimeInterval seconds)
     }
 }
 
+void InvisibleGroup::prepare(RenderContext &)
+{
+
+}
+
 void InvisibleGroup::render(RenderContext &)
 {
 
 }
 
-void InvisibleGroup::sync(RenderContext &)
+void InvisibleGroup::sync()
 {
 
 }
@@ -229,12 +224,20 @@ void ParentNode::render(RenderContext &context)
     }
 }
 
-void ParentNode::sync(RenderContext &context)
+void ParentNode::sync()
 {
     m_locked_child = nullptr;
     m_child_to_render = m_child.get();
     if (m_child_to_render) {
-        m_child_to_render->sync(context);
+        m_child_to_render->sync();
+    }
+}
+
+void ParentNode::prepare(RenderContext &context)
+{
+    if (m_child_to_render)
+    {
+        m_child_to_render->prepare(context);
     }
 }
 
@@ -262,10 +265,10 @@ void Transformation::render(RenderContext &context)
     // FIXME: context.pop_transformation();
 }
 
-void Transformation::sync(RenderContext &context)
+void Transformation::sync()
 {
     m_render_transform = m_transform;
-    ParentNode::sync(context);
+    ParentNode::sync();
 }
 
 /* engine::scenegraph::OctContext */
@@ -321,7 +324,7 @@ void OctNode::advance(TimeInterval)
 
 }
 
-void OctNode::sync(RenderContext &, ffe::Octree &, OctContext &)
+void OctNode::sync(ffe::Octree &, OctContext &)
 {
 
 }
@@ -381,11 +384,11 @@ void OctGroup::advance(TimeInterval seconds)
     }
 }
 
-void OctGroup::sync(RenderContext &context, ffe::Octree &octree, OctContext &positioning)
+void OctGroup::sync(ffe::Octree &octree, OctContext &positioning)
 {
     m_locked_children.clear();
     for (auto &child: m_children) {
-        child->sync(context, octree, positioning);
+        child->sync(octree, positioning);
     }
 }
 
@@ -412,13 +415,12 @@ void OctParentNode::advance(TimeInterval seconds)
     }
 }
 
-void OctParentNode::sync(RenderContext &context,
-                         ffe::Octree &octree,
+void OctParentNode::sync(ffe::Octree &octree,
                          OctContext &positioning)
 {
     m_locked_child = nullptr;
     if (m_child) {
-        m_child->sync(context, octree, positioning);
+        m_child->sync(octree, positioning);
     }
 }
 
@@ -431,11 +433,11 @@ OctRotation::OctRotation(const Quaternionf &q):
 
 }
 
-void OctRotation::sync(RenderContext &context, ffe::Octree &octree,
+void OctRotation::sync(ffe::Octree &octree,
                        OctContext &positioning)
 {
     positioning.push_rotation(m_rotation);
-    OctParentNode::sync(context, octree, positioning);
+    OctParentNode::sync(octree, positioning);
     positioning.pop_transform();
 }
 
@@ -448,11 +450,11 @@ OctTranslation::OctTranslation(const Vector3f &d):
 
 }
 
-void OctTranslation::sync(RenderContext &context, ffe::Octree &octree,
+void OctTranslation::sync(ffe::Octree &octree,
                           OctContext &positioning)
 {
     positioning.push_translation(m_translation);
-    OctParentNode::sync(context, octree, positioning);
+    OctParentNode::sync(octree, positioning);
     positioning.pop_transform();
 }
 
@@ -463,29 +465,13 @@ void OctreeGroup::advance(TimeInterval seconds)
     m_root.advance(seconds);
 }
 
-void OctreeGroup::sync(RenderContext &context)
+void OctreeGroup::prepare(RenderContext &context)
 {
-#ifdef TIMELOG_SCENEGRAPH
-    timelog_clock::time_point t0 = timelog_clock::now();
-    timelog_clock::time_point t_sync, t_select, t_push;
-#endif
-
-    m_positioning.reset();
-    m_root.sync(context, m_octree, m_positioning);
-
     m_hitset.clear();
-
-#ifdef TIMELOG_SCENEGRAPH
-    t_sync = timelog_clock::now();
-#endif
-
     m_octree.select_nodes_by_frustum(context.frustum(), m_hitset);
 
-#ifdef TIMELOG_SCENEGRAPH
-    t_select = timelog_clock::now();
-#endif
-
-    m_to_render.clear();
+    std::vector<RenderableOctreeObject*> &to_render = m_to_render[&context];
+    to_render.clear();
     for (const ffe::OctreeNode *const node: m_hitset)
     {
         /*std::cout << "node " << node << " in frustum" << std::endl;*/
@@ -495,32 +481,33 @@ void OctreeGroup::sync(RenderContext &context)
         {
             ffe::OctreeObject *const obj = *iter;
             /* std::cout << "object " << obj << " in frustum" << std::endl; */
+            auto renderable =
 #ifdef NDEBUG
-            m_to_render.push_back(static_cast<RenderableOctreeObject*>(obj));
+            static_cast<RenderableOctreeObject*>(obj);
 #else
-            auto renderable = dynamic_cast<RenderableOctreeObject*>(obj);
+            dynamic_cast<RenderableOctreeObject*>(obj);
             assert(renderable);
-            m_to_render.push_back(renderable);
 #endif
+            to_render.push_back(renderable);
+            renderable->prepare(context);
         }
     }
-    m_selected_objects = m_to_render.size();
-
-#ifdef TIMELOG_SCENEGRAPH
-    t_push = timelog_clock::now();
-    logger.logf(io::LOG_DEBUG, "sync:");
-    logger.logf(io::LOG_DEBUG, "  t_sync   = %.2f ms", ms_cast(t_sync - t0).count());
-    logger.logf(io::LOG_DEBUG, "  t_select = %.2f ms", ms_cast(t_select - t_sync).count());
-    logger.logf(io::LOG_DEBUG, "  t_push   = %.2f ms", ms_cast(t_push - t_select).count());
-#endif
+    m_selected_objects = to_render.size();
 }
 
 void OctreeGroup::render(RenderContext &context)
 {
-    for (RenderableOctreeObject *renderable: m_to_render)
+    for (RenderableOctreeObject *renderable: m_to_render[&context])
     {
         renderable->render(context);
     }
+}
+
+void OctreeGroup::sync()
+{
+    m_to_render.clear();
+    m_positioning.reset();
+    m_root.sync(m_octree, m_positioning);
 }
 
 
@@ -533,14 +520,19 @@ SceneGraph::SceneGraph():
 
 }
 
+void SceneGraph::prepare(RenderContext &context)
+{
+    m_root.prepare(context);
+}
+
 void SceneGraph::render(RenderContext &context)
 {
     m_root.render(context);
 }
 
-void SceneGraph::sync(RenderContext &context)
+void SceneGraph::sync()
 {
-    m_root.sync(context);
+    m_root.sync();
 }
 
 

@@ -113,7 +113,7 @@ void PointerNode::render(RenderContext &context)
     context.render_all(AABB{}, GL_TRIANGLES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
-void PointerNode::sync(RenderContext &)
+void PointerNode::prepare(RenderContext &)
 {
 
 }

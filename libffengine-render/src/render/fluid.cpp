@@ -25,13 +25,6 @@ the AUTHORS file.
 
 #include <map>
 
-// #define TIMELOG_SYNC
-
-#if defined(TIMELOG_SYNC) || defined(TIMELOG_RENDER)
-#include <chrono>
-typedef std::chrono::steady_clock timelog_clock;
-#define ms_cast(x) std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1, 1000> > >(x)
-#endif
 
 namespace ffe {
 
@@ -489,13 +482,10 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
                                         world_size);
 }
 
-void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
+void CPUFluid::prepare(RenderContext &context,
+                       const FullTerrainNode &fullterrain,
+                       const FullTerrainNode::Slices &slices)
 {
-#ifdef TIMELOG_SYNC
-    const timelog_clock::time_point t0 = timelog_clock::now();
-    timelog_clock::time_point t_invalidate, t_geometry, t_upload;
-#endif
-
     const sim::FluidBlock *block = m_fluidsim.blocks().block(0, 0);
     for (unsigned int blocky = 0;
          blocky < m_fluidsim.blocks().blocks_per_axis();
@@ -513,12 +503,8 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
         }
     }
 
-#ifdef TIMELOG_SYNC
-    t_invalidate = timelog_clock::now();
-#endif
-
-    m_render_slices.clear();
-    for (const TerrainSlice &slice: fullterrain.slices_to_render()) {
+    std::vector<FluidSlice*> render_slices = m_render_slices[&context];
+    for (const TerrainSlice &slice: slices) {
         const unsigned int lod = slice.lod / m_block_size;
         const unsigned int loglod = log2_of_pot(lod);
         const unsigned int lodblocks = (1<<(m_lods - loglod - 1));
@@ -533,7 +519,7 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
             if (cache_entry.first) {
                 // if has geometry
                 if (cache_entry.second) {
-                    m_render_slices.push_back(cache_entry.second.get());
+                    render_slices.push_back(cache_entry.second.get());
                 }
                 continue;
             }
@@ -544,7 +530,7 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
                                                slice.lod,
                                                slice.lod / m_block_size);
         if (geometry_slice) {
-            m_render_slices.push_back(geometry_slice.get());
+            render_slices.push_back(geometry_slice.get());
         }
 
         m_slice_cache[loglod][lodblocky*lodblocks+lodblockx] = std::make_pair(
@@ -557,10 +543,6 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
         m_tmp_vertex_data.clear();
         m_tmp_used_blocks.clear();
     }
-
-#ifdef TIMELOG_SYNC
-    t_geometry = timelog_clock::now();
-#endif
 
     for (auto iter = m_mat.cbegin();
          iter != m_mat.cend();
@@ -575,21 +557,13 @@ void CPUFluid::sync(RenderContext &context, const FullTerrainNode &fullterrain)
     }
 
     m_mat.sync_buffers();
-
-#ifdef TIMELOG_SYNC
-    t_upload = timelog_clock::now();
-    logger.logf(io::LOG_DEBUG, "sync: vbo size     = %zu (glid=%d)", m_mat.vbo().vertices(), m_mat.vbo().glid());
-    logger.logf(io::LOG_DEBUG, "sync: ibo size     = %zu (glid=%d)", m_mat.ibo().vertices(), m_mat.ibo().glid());
-    logger.logf(io::LOG_DEBUG, "sync: t_invalidate = %.2f ms", ms_cast(t_invalidate - t0).count());
-    logger.logf(io::LOG_DEBUG, "sync: t_geometry   = %.2f ms", ms_cast(t_geometry - t_invalidate).count());
-    logger.logf(io::LOG_DEBUG, "sync: t_upload     = %.2f ms", ms_cast(t_upload - t_geometry).count());
-#endif
 }
 
-void CPUFluid::render(RenderContext &context, const FullTerrainNode &)
+void CPUFluid::render(RenderContext &context,
+                      const FullTerrainNode &,
+                      const FullTerrainNode::Slices &)
 {
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    for (FluidSlice *slice: m_render_slices) {
+    for (FluidSlice *slice: m_render_slices[&context]) {
         unsigned int world_size = slice->m_size;
         context.render_all(AABB{}, GL_TRIANGLES, m_mat,
                            slice->m_ibo_alloc,
@@ -601,7 +575,11 @@ void CPUFluid::render(RenderContext &context, const FullTerrainNode &)
                                            world_size / m_block_size);
                            });
     }
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void CPUFluid::sync(const FullTerrainNode &fullterrain)
+{
+    m_render_slices.clear();
 }
 
 }
