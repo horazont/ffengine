@@ -372,6 +372,16 @@ RenderPass::RenderPass(RenderTarget &target):
 
 }
 
+void RenderPass::set_blit_colour_src(RenderTarget *src)
+{
+    m_blit_colour_src = src;
+}
+
+void RenderPass::set_blit_depth_src(RenderTarget *src)
+{
+    m_blit_depth_src = src;
+}
+
 void RenderPass::set_clear_mask(GLbitfield mask)
 {
     m_clear_mask = mask;
