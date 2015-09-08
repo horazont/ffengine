@@ -486,6 +486,81 @@ void CPUFluid::prepare(RenderContext &context,
                        const FullTerrainNode &fullterrain,
                        const FullTerrainNode::Slices &slices)
 {
+    std::vector<FluidSlice*> &render_slices = m_render_slices[&context];
+    for (const TerrainSlice &slice: slices) {
+        const unsigned int lod = slice.lod / m_block_size;
+        const unsigned int loglod = log2_of_pot(lod);
+        const unsigned int lodblocks = (1<<(m_lods - loglod - 1));
+        const unsigned int blockx = slice.basex / m_block_size;
+        const unsigned int blocky = slice.basey / m_block_size;
+        const unsigned int lodblockx = blockx / lod;
+        const unsigned int lodblocky = blocky / lod;
+
+        auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
+        // if valid
+        if (cache_entry.first) {
+            // if has geometry
+            if (cache_entry.second) {
+                render_slices.push_back(cache_entry.second.get());
+            }
+            continue;
+        }
+
+        auto geometry_slice = produce_geometry(blockx,
+                                               blocky,
+                                               slice.lod,
+                                               slice.lod / m_block_size);
+        if (geometry_slice) {
+            render_slices.push_back(geometry_slice.get());
+        }
+
+        cache_entry = std::make_pair(
+                    true,
+                    std::move(geometry_slice));
+
+        m_tmp_index_data.clear();
+        m_tmp_fluid_data_cache.clear();
+        m_tmp_index_mapping.clear();
+        m_tmp_vertex_data.clear();
+        m_tmp_used_blocks.clear();
+    }
+
+    m_mat.sync_buffers();
+}
+
+void CPUFluid::render(RenderContext &context,
+                      const FullTerrainNode &,
+                      const FullTerrainNode::Slices &)
+{
+
+    for (auto iter = m_mat.cbegin();
+         iter != m_mat.cend();
+         ++iter)
+    {
+        ShaderProgram &shader = iter->second->shader();
+        shader.bind();
+        glUniform3fv(shader.uniform_location("lod_viewpoint"),
+                     1, context.viewpoint().as_array);
+    }
+
+    const std::vector<FluidSlice*> &slices = m_render_slices[&context];
+    for (FluidSlice *slice: slices) {
+        unsigned int world_size = slice->m_size;
+        context.render_all(AABB{}, GL_TRIANGLES, m_mat,
+                           slice->m_ibo_alloc,
+                           slice->m_vbo_alloc,
+                           [world_size, this](MaterialPass &pass){
+                               glUniform1f(pass.shader().uniform_location("chunk_size"),
+                                           world_size);
+                               glUniform1f(pass.shader().uniform_location("chunk_lod_scale"),
+                                           world_size / m_block_size);
+                           });
+    }
+}
+
+void CPUFluid::sync(const FullTerrainNode &fullterrain)
+{
+    m_render_slices.clear();
     const sim::FluidBlock *block = m_fluidsim.blocks().block(0, 0);
     for (unsigned int blocky = 0;
          blocky < m_fluidsim.blocks().blocks_per_axis();
@@ -503,83 +578,15 @@ void CPUFluid::prepare(RenderContext &context,
         }
     }
 
-    std::vector<FluidSlice*> render_slices = m_render_slices[&context];
-    for (const TerrainSlice &slice: slices) {
-        const unsigned int lod = slice.lod / m_block_size;
-        const unsigned int loglod = log2_of_pot(lod);
-        const unsigned int lodblocks = (1<<(m_lods - loglod - 1));
-        const unsigned int blockx = slice.basex / m_block_size;
-        const unsigned int blocky = slice.basey / m_block_size;
-        const unsigned int lodblockx = blockx / lod;
-        const unsigned int lodblocky = blocky / lod;
-
-        {
-            auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
-            // if valid
-            if (cache_entry.first) {
-                // if has geometry
-                if (cache_entry.second) {
-                    render_slices.push_back(cache_entry.second.get());
-                }
-                continue;
-            }
-        }
-
-        auto geometry_slice = produce_geometry(blockx,
-                                               blocky,
-                                               slice.lod,
-                                               slice.lod / m_block_size);
-        if (geometry_slice) {
-            render_slices.push_back(geometry_slice.get());
-        }
-
-        m_slice_cache[loglod][lodblocky*lodblocks+lodblockx] = std::make_pair(
-                    true,
-                    std::move(geometry_slice));
-
-        m_tmp_index_data.clear();
-        m_tmp_fluid_data_cache.clear();
-        m_tmp_index_mapping.clear();
-        m_tmp_vertex_data.clear();
-        m_tmp_used_blocks.clear();
-    }
-
     for (auto iter = m_mat.cbegin();
          iter != m_mat.cend();
          ++iter)
     {
         ShaderProgram &shader = iter->second->shader();
         shader.bind();
-        glUniform3fv(shader.uniform_location("lod_viewpoint"),
-                     1, context.viewpoint().as_array);
         glUniform1f(shader.uniform_location("scale_to_radius"),
                     fullterrain.scale_to_radius());
     }
-
-    m_mat.sync_buffers();
-}
-
-void CPUFluid::render(RenderContext &context,
-                      const FullTerrainNode &,
-                      const FullTerrainNode::Slices &)
-{
-    for (FluidSlice *slice: m_render_slices[&context]) {
-        unsigned int world_size = slice->m_size;
-        context.render_all(AABB{}, GL_TRIANGLES, m_mat,
-                           slice->m_ibo_alloc,
-                           slice->m_vbo_alloc,
-                           [world_size, this](MaterialPass &pass){
-                               glUniform1f(pass.shader().uniform_location("chunk_size"),
-                                           world_size);
-                               glUniform1f(pass.shader().uniform_location("chunk_lod_scale"),
-                                           world_size / m_block_size);
-                           });
-    }
-}
-
-void CPUFluid::sync(const FullTerrainNode &fullterrain)
-{
-    m_render_slices.clear();
 }
 
 }
