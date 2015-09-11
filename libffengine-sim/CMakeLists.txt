@@ -6,6 +6,7 @@ set(ENGINE_HEADERS
   ffengine/sim/fluid.hpp
   ffengine/sim/fluid_base.hpp
   ffengine/sim/fluid_native.hpp
+  ffengine/sim/networld.hpp
   ffengine/sim/objects.hpp
   ffengine/sim/terrain.hpp
   ffengine/sim/world.hpp
@@ -16,6 +17,7 @@ set(ENGINE_SRC
   src/sim/fluid.cpp
   src/sim/fluid_base.cpp
   src/sim/fluid_native.cpp
+  src/sim/networld.cpp
   src/sim/objects.cpp
   src/sim/terrain.cpp
   src/sim/world.cpp
@@ -25,6 +27,7 @@ set(ENGINE_SRC
 set(ENGINE_PROTOS
   proto/types.proto
   proto/world_command.proto
+  proto/netserver_control.proto
   )
 
 PROTOBUF_GENERATE_CPP(
@@ -34,7 +37,11 @@ PROTOBUF_GENERATE_CPP(
 
 add_library(ffengine-sim STATIC ${ENGINE_SRC} ${PROTO_SRCS})
 
-target_link_libraries(ffengine-sim ffengine-core sigc++)
+target_link_libraries(ffengine-sim
+  ffengine-core
+  ${PROTOBUF_LIBRARIES}
+  sigc++
+  Qt5::Network)
 target_link_libraries(ffengine-sim "atomic")
 target_include_directories(
   ffengine-sim

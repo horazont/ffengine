@@ -10,7 +10,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
 find_package(Qt5Core REQUIRED)
+find_package(Qt5Network REQUIRED)
 find_package(SIGC++ REQUIRED)
+find_package(Threads REQUIRED)
 
 # add_subdirectory(surface_mesh)
 add_subdirectory(shader-preprocessor)

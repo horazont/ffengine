@@ -1,0 +1,19 @@
+package sim.messages;
+
+import "types.proto";
+
+
+message NetWorldControl {
+    optional NetWorldPing ping = 128;
+    optional NetWorldPong pong = 129;
+};
+
+message NetWorldPing {
+    required uint64 token = 1;
+    optional uint64 payload = 2;
+};
+
+message NetWorldPong {
+    required uint64 token = 1;
+    optional uint64 payload = 2;
+};

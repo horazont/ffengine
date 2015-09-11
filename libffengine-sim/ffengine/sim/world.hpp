@@ -182,8 +182,45 @@ public:
 class IServerClientInterface
 {
 public:
+    /**
+     * Return a sigc signal which notifies the server out-of-band that the
+     * client has disconnected.
+     *
+     * The signal may be emitted from any thread.
+     *
+     * After disconnected() has been emitted, **no** calls to any method of the
+     * IServerClientInterface must be made anymore. It might already be deleted
+     * at this point.
+     */
+    virtual sigc::signal<void> &disconnected() = 0;
+
+    /**
+     * Request that any pending data to send is flushed.
+     *
+     * The implementation decides to which extent this request is honored. It
+     * is in general advisable to request a flush when the game frame has
+     * ended for a fun, low-latency game experience.
+     */
+    virtual void flush() = 0;
+
+    /**
+     * Send a message to the client.
+     *
+     * @param msg The message to send
+     */
     virtual void send_message(const google::protobuf::Message &msg) = 0;
-    virtual bool valid() const = 0;
+
+    /**
+     * Close the connection of a client.
+     *
+     * After terminate() has been called, no messages must be sent over the
+     * client interface and the client interface will not emit messages anymore,
+     * even if messages are received from the peer.
+     *
+     * Note that disconnected() will **not** be emitted for terminate()d
+     * connections.
+     */
+    virtual void terminate() = 0;
 
 };
 
