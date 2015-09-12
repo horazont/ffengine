@@ -73,6 +73,25 @@ protected:
     void update_bounds(Sphere new_bounds);
 
 public:
+    /**
+     * Intersect the object with the given ray.
+     *
+     * This intersection is supposed to be exact; for that purpose, objects
+     * deriving from OctreeObject should reimplement this method. The default
+     * implementation merely calls isect_ray_sphere with the bounding sphere
+     * and is thus inexact.
+     *
+     * Subclass implementations may use the default implementation to perform
+     * a preliminary hittest.
+     *
+     * @param ray The ray to intersect with
+     * @param tmin If the intersection passes, the tmin of the ray is written
+     * into this argument.
+     * @return true if the ray and the object intersect, false otherwise.
+     */
+    virtual bool isect_ray(const Ray &ray, float &tmin) const;
+
+public:
     inline const Sphere &bounds() const
     {
         return m_bounding_sphere;

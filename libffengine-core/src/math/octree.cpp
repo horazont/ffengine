@@ -61,6 +61,12 @@ void OctreeObject::update_bounds(Sphere new_bounds)
     }
 }
 
+bool OctreeObject::isect_ray(const Ray &ray, float &tmin) const
+{
+    float _;
+    return isect_ray_sphere(ray, bounds(), tmin, _);
+}
+
 const Octree *OctreeObject::octree() const
 {
     if (m_parent) {
