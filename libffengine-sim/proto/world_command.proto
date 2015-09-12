@@ -5,6 +5,12 @@ import "types.proto";
 message WorldCommand {
     optional uint32 token = 1;
 
+    /** servers send the role to tell the clients who originally sent that
+     * command. a client which tries to set a role is seen as a protocol
+     * violator and gets disconnected.
+     */
+    optional uint32 role = 2;
+
     optional TerraformRaise tf_raise = 128;
     optional TerraformLevel tf_level = 129;
 };

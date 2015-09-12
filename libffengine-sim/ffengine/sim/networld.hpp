@@ -31,8 +31,9 @@ the AUTHORS file.
 
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QThread>
 
-#include "ffengine/sim/world.hpp"
+#include "ffengine/sim/server.hpp"
 
 #include "netserver_control.pb.h"
 
@@ -40,7 +41,6 @@ namespace sim {
 
 
 typedef uint64_t NetConnectionID;
-typedef std::unique_ptr<google::protobuf::Message> AbstractMessagePtr;
 
 
 enum NetMessageClass: uint32_t {
@@ -58,55 +58,6 @@ enum NetMessageClass: uint32_t {
      * A world command maps directly to the corresponding protobuf.
      */
     MSGCLASS_WORLD_COMMAND
-};
-
-
-/**
- * The IMessageHandler interface is used to dispatch the different
- * NetMessageClass messages to different methods.
- *
- * Each method handles one NetMessageClass, although not all NetMessageClass
- * values are handled in the IMessageHandler (MSGCLASS_LINK_CONTROL is handled
- * separately).
- *
- * The handler methods return true if handling succeeded and false otherwise.
- * If a handler method returns false, the client is disconnected for violating
- * the protocol.
- */
-class IMessageHandler
-{
-protected:
-    /**
-     * Default message handler. This is called in all default implementations
-     * of the specific handlers and must be implemented in subclasses.
-     *
-     * This is to allow future expansion.
-     *
-     * @param msg The unhandled message.
-     * @return true if message processing shall continue and false if the
-     * connection should terminate.
-     */
-    virtual bool msg_unhandled(AbstractMessagePtr &&msg) = 0;
-
-public:
-    /**
-     * Handle a messages::WorldCommand message.
-     *
-     * @param cmd The command message.
-     */
-    virtual bool msg_world_command(std::unique_ptr<messages::WorldCommand> &&cmd);
-
-};
-
-
-/**
- * The RejectingMessageHandler class re-implements
- * IMessageHandler::msg_unhandled() to always return false.
- */
-class RejectingMessageHandler: public IMessageHandler
-{
-protected:
-    bool msg_unhandled(AbstractMessagePtr &&msg) override final;
 };
 
 
@@ -171,7 +122,7 @@ private:
 
     LinkControlCallback m_link_control_cb;
     ErrorCallback m_error_cb;
-    IMessageHandler *m_message_handler;
+    std::atomic<IMessageHandler*> m_message_handler;
     std::string m_recv_buffer;
     ReceptionState m_recv_state;
     uint64_t m_recv_barrier;
@@ -265,22 +216,22 @@ public:
 };
 
 
-class TCPServerClient: public QObject, public IServerClientInterface
+class NetServerClient: public ServerClientBase
 {
 public:
-    explicit TCPServerClient(qintptr descriptor, QObject *parent = 0);
-    TCPServerClient(const TCPServerClient &ref) = delete;
-    TCPServerClient &operator=(const TCPServerClient &ref) = delete;
-    TCPServerClient(TCPServerClient &&src) = delete;
-    TCPServerClient &operator=(TCPServerClient &&src) = delete;
-    ~TCPServerClient() override;
+    explicit NetServerClient(QTcpSocket &socket, QObject *parent = 0);
+    NetServerClient(const NetServerClient &ref) = delete;
+    NetServerClient &operator=(const NetServerClient &ref) = delete;
+    NetServerClient(NetServerClient &&src) = delete;
+    NetServerClient &operator=(NetServerClient &&src) = delete;
+    ~NetServerClient() override;
 
 private:
     static std::atomic<uint64_t> m_connection_id_ctr;
 
     const uint64_t m_connection_id;
     bool m_terminated;
-    QTcpSocket m_socket;
+    QTcpSocket &m_socket;
     std::string m_send_buffer;
     sigc::signal<void> m_sig_disconnected;
     NetMessageParser m_message_parser;
@@ -289,31 +240,48 @@ private:
     void fail();
     void link_control_received(std::unique_ptr<messages::NetWorldControl> &&msg);
 
+protected:
+    bool msg_unhandled(AbstractMessagePtr &&msg) override;
+
 protected slots:
     void on_data_received();
     void on_disconnected();
     void on_error(QAbstractSocket::SocketError err);
 
-public:
-    sigc::signal<void> &disconnected() override;
+public slots:
     void flush() override;
-    void send_message(const google::protobuf::Message &msg) override;
     void terminate() override;
+
+public:
+    void set_message_handler(IMessageHandler *handler) override;
 
 };
 
 
-class TCPServer: public QTcpServer
+class NetServer: public QThread
 {
 public:
-    explicit TCPServer(QObject *parent = 0);
+    NetServer();
 
 private:
-    std::vector<std::unique_ptr<TCPServerClient> > m_clients;
+    QTcpServer m_tcp_server;
+    std::vector<std::unique_ptr<NetServerClient> > m_clients;
 
 protected:
-    void incomingConnection(qintptr descriptor) override;
-    void closeAllClients();
+    void on_incoming_connection();
+    void run() override;
+
+public:
+    /**
+     * Return a pointer to the server socket if the server has not started yet.
+     *
+     * It can be used to configure the QTcpServer (like specifiyng addresses
+     * to bind to).
+     *
+     * @return A pointer to the QTcpServer used or nullptr if the server is
+     * running.
+     */
+    QTcpServer *tcp_server();
 
 };
 

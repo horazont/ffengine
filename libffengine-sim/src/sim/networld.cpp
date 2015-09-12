@@ -39,20 +39,6 @@ static io::Logger &logger = io::logging().get_logger("sim.networld");
 
 static RejectingMessageHandler default_message_handler;
 
-/* sim::IMessageHandler */
-
-bool IMessageHandler::msg_world_command(std::unique_ptr<messages::WorldCommand> &&cmd)
-{
-    return msg_unhandled(std::move(cmd));
-}
-
-/* sim::RejectingMessageHandler */
-
-bool RejectingMessageHandler::msg_unhandled(AbstractMessagePtr &&)
-{
-    return false;
-}
-
 /* sim::NetMessageParser */
 
 NetMessageParser::NetMessageParser(LinkControlCallback &&link_control_cb,
@@ -139,7 +125,7 @@ void NetMessageParser::received_payload()
             fail();
             return;
         }
-        pass = m_message_handler->msg_world_command(std::move(protobuf));
+        pass = (*m_message_handler).msg_world_command(std::move(protobuf));
         break;
     }
     }
@@ -211,35 +197,33 @@ void NetMessageParser::written(size_t bytes)
 
 /* sim::TCPServerClient */
 
-std::atomic<uint64_t> TCPServerClient::m_connection_id_ctr(0);
+std::atomic<uint64_t> NetServerClient::m_connection_id_ctr(0);
 
-TCPServerClient::TCPServerClient(qintptr descriptor, QObject *parent):
-    QObject(parent),
+NetServerClient::NetServerClient(QTcpSocket &socket, QObject *parent):
+    ServerClientBase(parent),
     m_connection_id(m_connection_id_ctr.fetch_add(1)),
     m_terminated(false),
-    m_socket(nullptr),
-    m_message_parser(std::bind(&TCPServerClient::link_control_received,
+    m_socket(socket),
+    m_message_parser(std::bind(&NetServerClient::link_control_received,
                                this,
                                std::placeholders::_1),
-                     std::bind(&TCPServerClient::fail,
+                     std::bind(&NetServerClient::fail,
                                this),
                      m_connection_id)
 {
     logger.log(io::LOG_INFO) << "new connection with id" << m_connection_id << io::submit;
-
-    m_socket.setSocketDescriptor(descriptor);
     connect(&m_socket, static_cast<void(QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QTcpSocket::error),
-            this, &TCPServerClient::on_error,
+            this, &NetServerClient::on_error,
             Qt::DirectConnection);
     connect(&m_socket, &QTcpSocket::disconnected,
-            this,&TCPServerClient::on_disconnected,
+            this,&NetServerClient::on_disconnected,
             Qt::DirectConnection);
     connect(&m_socket, &QTcpSocket::readyRead,
-            this, &TCPServerClient::on_data_received,
+            this, &NetServerClient::on_data_received,
             Qt::DirectConnection);
 }
 
-TCPServerClient::~TCPServerClient()
+NetServerClient::~NetServerClient()
 {
     if (m_socket.state() != QAbstractSocket::UnconnectedState) {
         if (m_socket.state() == QAbstractSocket::ConnectedState) {
@@ -267,19 +251,19 @@ TCPServerClient::~TCPServerClient()
                              << " destroyed" << io::submit;
 }
 
-void TCPServerClient::fail()
+void NetServerClient::fail()
 {
     terminate();
     // emit the signal as it won’t be emitted due to terminate()ion
     m_sig_disconnected.emit();
 }
 
-void TCPServerClient::link_control_received(std::unique_ptr<messages::NetWorldControl> &&msg)
+void NetServerClient::link_control_received(std::unique_ptr<messages::NetWorldControl> &&msg)
 {
 
 }
 
-void TCPServerClient::on_data_received()
+void NetServerClient::on_data_received()
 {
     char *dest;
     size_t size;
@@ -294,7 +278,7 @@ void TCPServerClient::on_data_received()
     }
 }
 
-void TCPServerClient::on_disconnected()
+void NetServerClient::on_disconnected()
 {
     logger.log(io::LOG_INFO) << "connection " << m_connection_id
                              << " disconnected" << io::submit;
@@ -303,7 +287,7 @@ void TCPServerClient::on_disconnected()
     }
 }
 
-void TCPServerClient::on_error(QAbstractSocket::SocketError err)
+void NetServerClient::on_error(QAbstractSocket::SocketError err)
 {
     logger.log(io::LOG_ERROR)
             << "connection " << m_connection_id
@@ -312,12 +296,7 @@ void TCPServerClient::on_error(QAbstractSocket::SocketError err)
             << io::submit;
 }
 
-sigc::signal<void> &TCPServerClient::disconnected()
-{
-    return m_sig_disconnected;
-}
-
-void TCPServerClient::flush()
+void NetServerClient::flush()
 {
     if (m_terminated) {
         logger.log(io::LOG_WARNING)
@@ -334,33 +313,12 @@ void TCPServerClient::flush()
     m_socket.flush();
 }
 
-void TCPServerClient::send_message(const google::protobuf::Message &msg)
+bool NetServerClient::msg_unhandled(AbstractMessagePtr &&msg)
 {
-    if (m_terminated) {
-        logger.log(io::LOG_WARNING)
-                << "attempt to send to terminated connection " << m_connection_id
-                << io::submit;
-        return;
-    }
-    if (m_socket.state() != QAbstractSocket::ConnectedState) {
-        logger.log(io::LOG_WARNING)
-                << "attempt to send to closed connection " << m_connection_id
-                << io::submit;
-        return;
-    }
-
-    m_send_buffer.clear();
-    {
-        google::protobuf::io::StringOutputStream outstream(&m_send_buffer);
-        msg.SerializeToZeroCopyStream(&outstream);
-    }
-    int64_t written = m_socket.write(m_send_buffer.data(), m_send_buffer.size());
-    if (written < 0) {
-        logger.logf(io::LOG_WARNING, "failed to write data to QTcpSocket");
-    }
+    return false;
 }
 
-void TCPServerClient::terminate()
+void NetServerClient::terminate()
 {
     if (m_terminated) {
         return;
@@ -373,23 +331,36 @@ void TCPServerClient::terminate()
     m_terminated = true;
 }
 
+void NetServerClient::set_message_handler(IMessageHandler *handler)
+{
+    m_message_parser.set_message_handler(handler);
+}
+
 /* sim::TCPServer */
 
-TCPServer::TCPServer(QObject *parent):
-    QTcpServer(parent)
+NetServer::NetServer():
+    QThread(),
+    m_tcp_server(nullptr)
 {
 
 }
 
-void TCPServer::incomingConnection(qintptr descriptor)
+void NetServer::on_incoming_connection()
 {
-    auto client = std::make_unique<TCPServerClient>(descriptor, nullptr);
-    m_clients.emplace_back(std::move(client));
+    m_clients.emplace_back(new NetServerClient(*m_tcp_server.nextPendingConnection()));
 }
 
-void TCPServer::closeAllClients()
+void NetServer::run()
 {
-    m_clients.clear();
+    m_tcp_server.moveToThread(this);
+}
+
+QTcpServer *NetServer::tcp_server()
+{
+    if (isRunning()) {
+        return nullptr;
+    }
+    return &m_tcp_server;
 }
 
 }
