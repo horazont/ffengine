@@ -28,6 +28,58 @@ the AUTHORS file.
 
 #include "ffengine/math/vector.hpp"
 #include "ffengine/math/shapes.hpp"
+#include "ffengine/math/algo.hpp"
+
+/**
+ * Epsilon to determine floating point equality in intersection algorithms.
+ */
+extern const float ISECT_EPSILON;
+
+template <typename float_t>
+static inline bool solve_linear(const float_t m, const float_t n,
+                                float_t &t1)
+{
+    if (std::fabs(m) <= ISECT_EPSILON) {
+        t1 = 0;
+        return std::fabs(n) <= ISECT_EPSILON;
+    }
+
+    t1 = -n/m;
+    return true;
+}
+
+template <typename float_t>
+static inline bool solve_quadratic(const float_t a, const float_t b, const float_t c,
+                                   float_t &t1, float_t &t2)
+{
+    if (std::fabs(a) <= ISECT_EPSILON) {
+        // degrade to linear equation
+        bool hit = solve_linear(b, c, t1);
+        t2 = t1;
+        return hit;
+    }
+
+    const float_t beta = b/float_t(2);
+    const float_t beta_sq = sqr(beta);
+
+    const float_t radicand = beta_sq - a*c;
+    if (radicand < 0) {
+        return false;
+    }
+
+    const float_t rooted = std::sqrt(radicand) / a;
+    if (std::fabs(rooted) <= ISECT_EPSILON) {
+        t1 = -beta / a;
+        t2 = t1;
+        return true;
+    }
+
+    const float_t minus_beta_over_a = -beta / a;
+
+    t1 = minus_beta_over_a - rooted;
+    t2 = minus_beta_over_a + rooted;
+    return true;
+}
 
 /**
  * Calculate the intersection point between a Ray and a triangle, the latter
@@ -103,9 +155,12 @@ bool isect_ray_sphere(
         float &t0,
         float &t1);
 
-/**
- * Epsilon to determine floating point equality in intersection algorithms.
- */
-extern const float ISECT_EPSILON;
+bool isect_cylinder_ray(
+        const Vector3f &start,
+        const Vector3f &direction,
+        const float radius,
+        const Ray &r,
+        float &t1,
+        float &t2);
 
 #endif

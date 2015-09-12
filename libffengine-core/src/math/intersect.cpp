@@ -28,13 +28,6 @@ the AUTHORS file.
 #include <tuple>
 
 
-template <typename Ta>
-Ta sqr(Ta v)
-{
-    return v*v;
-}
-
-
 const float ISECT_EPSILON = 0.00001;
 
 std::tuple<float, bool> isect_ray_triangle(
@@ -221,5 +214,97 @@ bool isect_ray_sphere(const Ray &r, const Sphere &sphere,
         t1 = projected_center_distance + dist_to_entry_point;
     }
 
+    return true;
+}
+
+
+bool isect_cylinder_ray(const Vector3f &start,
+                        const Vector3f &direction,
+                        const float radius,
+                        const Ray &r, float &t1, float &t2)
+{
+    const Vector3f &AB = direction;
+    const Vector3f AO = r.origin - start;
+    const Vector3f AOxAB = AO % AB;
+    const Vector3f VxAB = r.direction % AB;
+    const Vector3f n_direction = direction.normalized();
+    const float l_direction = direction.length();
+
+    const float ab2 = AB * AB;
+    const float a = VxAB * VxAB;
+    const float b = 2 * (VxAB * AOxAB);
+    const float c = (AOxAB * AOxAB) - (radius*radius * ab2);
+
+    bool hit;
+    float cylinder_t1, cylinder_t2;
+    Vector3f entrypoint, exitpoint;
+    if (std::fabs(a) <= ISECT_EPSILON &&
+            std::fabs(b) <= ISECT_EPSILON &&
+            std::fabs(c) > ISECT_EPSILON)
+    {
+        // we have to treat this case specially, it means we are not hitting
+        // the outer hull of the cylinder.
+
+        // if c < 0, the ray is inside the cylinder, otherwise, it is outside
+
+        if (c < 0) {
+            // order cylinder_t1 and cylinder_t2 correctly
+            if (n_direction * r.direction < 0) {
+                // we want clamping
+                cylinder_t1 = INFINITY;
+                cylinder_t2 = -INFINITY;
+            } else {
+                // we want clamping
+                cylinder_t1 = -INFINITY;
+                cylinder_t2 = INFINITY;
+            }
+            hit = true;
+        } else {
+            return false;
+        }
+    } else {
+        hit = solve_quadratic(a, b, c, t1, t2);
+        if (!hit) {
+            return false;
+        }
+
+        if (t2 < 0) {
+            return false;
+        }
+
+        // project entry and exit points on the cylinder axis
+        entrypoint = r.origin + r.direction*t1;
+        exitpoint = r.origin + r.direction*t2;
+
+        cylinder_t1 = (entrypoint - start) * n_direction;
+        cylinder_t2 = (exitpoint - start) * n_direction;
+
+        if (cylinder_t1 > l_direction && cylinder_t2 > l_direction) {
+            return false;
+        }
+
+        if (cylinder_t1 < 0 && cylinder_t2 < 0) {
+            return false;
+        }
+    }
+
+    if (cylinder_t1 > l_direction || cylinder_t1 < 0) {
+        // cylinder_t1 is from inifinite cylinder, we have to clamp
+        cylinder_t1 = clamp(cylinder_t1, 0.f, l_direction);
+        entrypoint = start + cylinder_t1 * n_direction;
+    }
+
+    if (cylinder_t2 > l_direction || cylinder_t2 < 0) {
+        // cylinder_t2 is from inifinite cylinder, we have to clamp
+        cylinder_t2 = clamp(cylinder_t2, 0.f, l_direction);
+        exitpoint = start + cylinder_t2 * n_direction;
+    }
+
+    t1 = (entrypoint - r.origin) * r.direction;
+    t2 = (exitpoint - r.origin) * r.direction;
+
+    if (t1 < 0) {
+        t1 = 0;
+    }
     return true;
 }

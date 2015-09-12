@@ -516,3 +516,215 @@ TEST_CASE("math/intersect/isect_ray_sphere/hit_the_edge")
     CHECK(t1 == 10);
 }
 
+TEST_CASE("math/intersect/solve_quadratic/no_solutions_bzero")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(1.f, 0.f, 1.f, t1, t2);
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/one_solution_bzero")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(1.f, 0.f, 0.f, t1, t2);
+    CHECK(hit);
+    CHECK(t1 == t2);
+    CHECK(t1 == 0);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/two_solutions_bzero")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(1.f, 0.f, -1.f, t1, t2);
+    CHECK(hit);
+    CHECK(t1 == -1);
+    CHECK(t2 == 1);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/no_solutions")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(230.f, 120.f, 20.f, t1, t2);
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/one_solution_negative_a")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(-1.f, 0.f, 0.f, t1, t2);
+    CHECK(hit);
+    CHECK(t1 == t2);
+    CHECK(t1 == 0);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/degraded_to_linear")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(0.f, 120.f, 20.f, t1, t2);
+    CHECK(hit);
+    CHECK(t1 == -20.f/120.f);
+    CHECK(t2 == t1);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/degraded_to_equality_fail")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(0.f, 0.f, 20.f, t1, t2);
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/solve_quadratic/degraded_to_equality_pass")
+{
+    float t1, t2;
+    bool hit = solve_quadratic<float>(0.f, 0.f, 0.f, t1, t2);
+    CHECK(hit);
+    CHECK(t1 == 0);
+    CHECK(t2 == 0);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/through_caps")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(-0.8, 0, 10), Vector3f(0.01, 0, -1).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK(hit);
+    // value is not exact, but that is okay
+    CHECK(std::round(t1) == 9);
+    CHECK(std::round(t2) == 11);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/through_caps_ortho")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(0, 0, 10), Vector3f(0, 0, -1).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK(hit);
+    CHECK(t1 == 9);
+    CHECK(t2 == 11);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/through_caps_ortho_outside")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(1, 1, 10), Vector3f(0, 0, -1).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/through_hull_only")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(0, 2, 0), Vector3f(0, -1, 0).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK(hit);
+    CHECK(t1 == 1);
+    CHECK(t2 == 3);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/hull_only_miss_above")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(0, 2, 3), Vector3f(0, -1, 0).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/hull_only_miss_sideways")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(2, 2, 0), Vector3f(0, -1, 0).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/hull_only_miss_below")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(0, 2, -3), Vector3f(0, -1, 0).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK_FALSE(hit);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/through_hull_only_from_inside")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(0, 0, 0), Vector3f(0, -1, 0).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK(hit);
+    CHECK(t1 == 0);
+    CHECK(t2 == 1);
+}
+
+TEST_CASE("math/intersect/isect_cylinder_ray/through_hull_only_behind")
+{
+    const Vector3f start(0, 0, -1);
+    const Vector3f direction(0, 0, 2);
+    const float radius(1);
+
+    const Ray r(Vector3f(0, -2, 0), Vector3f(0, -1, 0).normalized());
+
+    float t1, t2;
+
+    bool hit = isect_cylinder_ray(start, direction, radius, r, t1, t2);
+
+    CHECK_FALSE(hit);
+}
+
+
+
