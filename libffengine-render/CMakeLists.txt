@@ -23,6 +23,7 @@ set(ENGINE_HEADERS
   ffengine/render/fancyterrain.hpp
   ffengine/render/fancyterraindata.hpp
   ffengine/render/fluid.hpp
+  ffengine/render/fluidsource.hpp
   ffengine/render/fullterrain.hpp
   ffengine/render/grid.hpp
   ffengine/render/oct_sphere.hpp
@@ -50,6 +51,7 @@ set(ENGINE_SRC
   src/render/fancyterrain.cpp
   src/render/fancyterraindata.cpp
   src/render/fluid.cpp
+  src/render/fluidsource.cpp
   src/render/fullterrain.cpp
   src/render/grid.cpp
   src/render/oct_sphere.cpp
