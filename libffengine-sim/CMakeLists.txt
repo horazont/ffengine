@@ -11,6 +11,7 @@ set(ENGINE_HEADERS
   ffengine/sim/networld.hpp
   ffengine/sim/objects.hpp
   ffengine/sim/server.hpp
+  ffengine/sim/signals.hpp
   ffengine/sim/terrain.hpp
   ffengine/sim/world.hpp
   ffengine/sim/world_ops.hpp
@@ -23,6 +24,7 @@ set(ENGINE_SRC
   src/sim/networld.cpp
   src/sim/objects.cpp
   src/sim/server.cpp
+  src/sim/signals.cpp
   src/sim/terrain.cpp
   src/sim/world.cpp
   src/sim/world_ops.cpp
@@ -48,6 +50,7 @@ target_link_libraries(ffengine-sim
   ffengine-core
   ${PROTOBUF_LIBRARIES}
   sigc++
+  sig11
   Qt5::Network
   Qt5::Core)
 target_link_libraries(ffengine-sim "atomic")
