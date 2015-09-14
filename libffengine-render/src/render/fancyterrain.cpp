@@ -323,7 +323,7 @@ void FancyTerrainNode::invalidate_cache(sim::TerrainRect part)
 }
 
 void FancyTerrainNode::render(RenderContext &context,
-                              const FullTerrainNode &render_terrain,
+                              const FullTerrainNode &,
                               const FullTerrainNode::Slices &slices)
 {
     update_material(context, m_material);
@@ -423,10 +423,11 @@ void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)
     }
 }
 
-void FancyTerrainNode::prepare(RenderContext &context,
-                               const FullTerrainNode &render_terrain,
-                               const FullTerrainNode::Slices &slices)
+void FancyTerrainNode::prepare(RenderContext &,
+                               const FullTerrainNode &,
+                               const FullTerrainNode::Slices &)
 {
+
 }
 
 }

@@ -111,9 +111,7 @@ void CPUFluid::copy_into_vertex_cache(Vector4f *dest,
                                       const unsigned int width,
                                       const unsigned int height,
                                       const unsigned int row_stride,
-                                      const unsigned int step,
-                                      const float world_x0,
-                                      const float world_y0)
+                                      const unsigned int step)
 {
     for (unsigned int y = y0; y < y0 + height; y += step) {
         const sim::FluidCell *cell = src.local_cell_front(x0, y);
@@ -177,9 +175,7 @@ void CPUFluid::copy_multi_into_vertex_cache(Vector4f *dest,
                                    cellx, celly,
                                    copy_width, copy_height,
                                    row_stride,
-                                   oversample,
-                                   blockx*m_block_size,
-                                   blocky*m_block_size);
+                                   oversample);
 
             xbase += copy_width;
             if (copy_width % oversample != 0) {
@@ -459,7 +455,7 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
                 const float below_height = std::get<0>(m_tmp_vertex_data[below_index])[eZ];
                 const float below_left_height = std::get<0>(m_tmp_vertex_data[below_left_index])[eZ];
 
-                if (abs(this_height - below_left_height) > abs(left_height - below_height)) {
+                if (std::abs(this_height - below_left_height) > std::abs(left_height - below_height)) {
                     m_tmp_index_data.push_back(this_index);
                     m_tmp_index_data.push_back(left_index);
                     m_tmp_index_data.push_back(below_index);
@@ -527,7 +523,7 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
 }
 
 void CPUFluid::prepare(RenderContext &context,
-                       const FullTerrainNode &fullterrain,
+                       const FullTerrainNode &,
                        const FullTerrainNode::Slices &slices)
 {
     std::vector<FluidSlice*> &render_slices = m_render_slices[&context];

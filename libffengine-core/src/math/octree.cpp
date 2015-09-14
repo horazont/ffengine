@@ -388,7 +388,7 @@ bool OctreeNode::split()
     m_split_planes[2].plane = Plane(mean, Vector3f(0, 0, 1));
     m_split_planes[2].enabled = true;
 
-    std::array<unsigned int, 3> straddle_counters({0, 0, 0});
+    std::array<unsigned int, 3> straddle_counters({{0, 0, 0}});
     for (OctreeObject *object: m_objects)
     {
         for (unsigned int plane_idx = 0; plane_idx < 3; ++plane_idx)

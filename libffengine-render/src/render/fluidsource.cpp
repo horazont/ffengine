@@ -219,7 +219,7 @@ void FluidSource::sync(Octree &octree, scenegraph::OctContext &positioning)
     m_state = UI_STATE_INACTIVE;
 }
 
-void FluidSource::prepare(RenderContext &context)
+void FluidSource::prepare(RenderContext &)
 {
 
 }

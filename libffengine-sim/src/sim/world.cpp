@@ -27,10 +27,6 @@ the AUTHORS file.
 
 namespace sim {
 
-static io::Logger &logger = io::logging().get_logger("sim.world");
-
-
-
 /* sim::WorldState */
 
 WorldState::WorldState():

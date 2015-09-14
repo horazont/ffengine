@@ -36,7 +36,13 @@ struct QuadBezier
     typedef _vector_t vector_t;
     typedef typename vector_t::vector_float_t float_t;
 
-    QuadBezier() = default;
+    QuadBezier():
+        p1(),
+        p2(),
+        p3()
+    {
+
+    }
 
     template <typename p1_t, typename p2_t, typename p3_t>
     QuadBezier(p1_t &&p1, p2_t &&p2, p3_t &&p3):

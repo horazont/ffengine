@@ -33,8 +33,6 @@ the AUTHORS file.
 
 namespace sim {
 
-static io::Logger &logger = io::logging().get_logger("sim.fluid");
-
 /* sim::Fluid::Source */
 
 Fluid::Source::Source(Object::ID object_id,

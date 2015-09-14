@@ -96,9 +96,7 @@ protected:
                                 const unsigned int width,
                                 const unsigned int height,
                                 const unsigned int row_stride,
-                                const unsigned int step,
-                                const float world_x0,
-                                const float world_y0);
+                                const unsigned int step);
 
     void copy_multi_into_vertex_cache(Vector4f *dest,
                                       const unsigned int x0,

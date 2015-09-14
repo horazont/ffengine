@@ -313,7 +313,7 @@ void NetServerClient::flush()
     m_socket.flush();
 }
 
-bool NetServerClient::msg_unhandled(AbstractMessagePtr &&msg)
+bool NetServerClient::msg_unhandled(AbstractMessagePtr &&)
 {
     return false;
 }

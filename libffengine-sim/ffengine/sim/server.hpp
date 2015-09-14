@@ -21,7 +21,7 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#ifndef SSC_SIM_SERVER_H
+#ifndef SCC_SIM_SERVER_H
 #define SCC_SIM_SERVER_H
 
 #include <sigc++/sigc++.h>
