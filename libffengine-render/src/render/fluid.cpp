@@ -294,7 +294,7 @@ unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
         /*if (original[eX] < height) {
             return std::numeric_limits<unsigned int>::max();
         }*/
-        pos[eZ] = height;
+        pos[eZ] = std::min(height, original[eX] + original[eY]);
     }
 
     const unsigned int src_left_index = y*(m_block_size+3)+x-1;
