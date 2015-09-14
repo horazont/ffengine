@@ -578,7 +578,6 @@ void CPUFluid::render(RenderContext &context,
                       const FullTerrainNode &,
                       const FullTerrainNode::Slices &)
 {
-
     for (auto iter = m_mat.cbegin();
          iter != m_mat.cend();
          ++iter)

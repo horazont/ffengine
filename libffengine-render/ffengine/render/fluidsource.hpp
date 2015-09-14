@@ -73,6 +73,8 @@ public:
 private:
     FluidSourceMaterial &m_mat;
 
+    const sim::Fluid::Source *m_source;
+
     UIState m_state;
     Vector2f m_base;
     float m_radius;
@@ -84,12 +86,18 @@ private:
     Vector4f m_add_colour;
 
 public:
+    inline const sim::Fluid::Source *source() const
+    {
+        return m_source;
+    }
+
     void set_base(const Vector2f &base);
     void set_capacity(const float capacity);
     void set_height(const float height);
     void set_radius(const float radius);
+    void set_source(const sim::Fluid::Source *source);
     void set_ui_state(const UIState state);
-    void update_from_source(const sim::Fluid::Source &source);
+    void update_from_source();
 
 public: // OctNode interface
     void sync(Octree &octree, scenegraph::OctContext &positioning);

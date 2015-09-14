@@ -591,6 +591,11 @@ public:
         return std::get<0>(m_transformation_stack.back());
     }
 
+    inline Vector3f apply_to(const Vector3f &vec) const
+    {
+        return get_origin() + get_orientation().rotate(vec);
+    }
+
     void pop_transform();
 
     void reset();

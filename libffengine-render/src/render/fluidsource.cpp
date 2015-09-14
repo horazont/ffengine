@@ -112,6 +112,7 @@ FluidSourceMaterial::FluidSourceMaterial(unsigned int resolution):
 
 FluidSource::FluidSource(FluidSourceMaterial &mat):
     m_mat(mat),
+    m_source(nullptr),
     m_state(UI_STATE_INACTIVE),
     m_base(0, 0),
     m_radius(0),
@@ -150,22 +151,25 @@ void FluidSource::set_radius(const float radius)
     }
 }
 
+void FluidSource::set_source(const sim::Fluid::Source *source)
+{
+    m_source = source;
+}
+
 void FluidSource::set_ui_state(const UIState state)
 {
     m_state = state;
 }
 
-void FluidSource::update_from_source(const sim::Fluid::Source &source)
+void FluidSource::update_from_source()
 {
-    if (source.m_pos != m_base ||
-            source.m_absolute_height != m_height ||
-            source.m_radius != m_radius) {
-        m_base = source.m_pos;
-        m_height = source.m_absolute_height;
-        m_radius = source.m_radius;
-        m_metrics_changed = true;
+    if (!m_source) {
+        return;
     }
-    m_capacity = source.m_capacity;
+    set_base(m_source->m_pos);
+    set_height(m_source->m_absolute_height);
+    set_capacity(m_source->m_capacity);
+    set_radius(m_source->m_radius);
 }
 
 void FluidSource::sync(Octree &octree, scenegraph::OctContext &positioning)
@@ -208,7 +212,7 @@ void FluidSource::sync(Octree &octree, scenegraph::OctContext &positioning)
     }
     case UI_STATE_SELECTED:
     {
-        m_add_colour = Vector4f(0.1, 0.1, 0.1, 0);
+        m_add_colour = Vector4f(0.3, 0.3, 0.3, 0.2);
         break;
     }
     }
