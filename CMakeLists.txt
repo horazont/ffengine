@@ -1,18 +1,21 @@
 project(scc)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_COMPILER "g++")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O2")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Network REQUIRED)
 find_package(SIGC++ REQUIRED)
 find_package(Threads REQUIRED)
+
+function(setup_scc_target NAME)
+  set_property(TARGET ${NAME} PROPERTY CXX_STANDARD 14)
+  set_property(TARGET ${NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+  target_compile_options(${NAME} PRIVATE -Wall -Wextra)
+  target_compile_options(${NAME} PRIVATE $<$<CONFIG:DEBUG>:-ggdb -O2>)
+  target_compile_options(${NAME} PRIVATE $<$<CONFIG:RELEASE>:-O3 -NDEBUG>)
+endfunction(setup_scc_target)
+
 
 # add_subdirectory(surface_mesh)
 add_subdirectory(shader-preprocessor)

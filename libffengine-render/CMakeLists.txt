@@ -60,6 +60,7 @@ set(ENGINE_SRC
   )
 
 add_library(ffengine-render STATIC ${ENGINE_SRC})
+setup_scc_target(ffengine-render)
 
 target_link_libraries(
   ffengine-render

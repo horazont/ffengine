@@ -55,6 +55,7 @@ set(ENGINE_SRC
   )
 
 add_library(ffengine-core STATIC ${ENGINE_SRC} ${PROTO_SRCS})
+setup_scc_target(ffengine-core)
 
 target_link_libraries(
   ffengine-core

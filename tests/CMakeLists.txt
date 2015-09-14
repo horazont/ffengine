@@ -1,5 +1,3 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/catch/include)
-
 find_package(SIGC++ REQUIRED)
 
 set(TEST_SRC
@@ -20,6 +18,8 @@ set(TEST_SRC
   )
 
 add_executable(tests ${TEST_SRC})
+setup_scc_target(tests)
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch/include)
 target_link_libraries(tests ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(tests Qt5::Network Qt5::Core ffengine-render ffengine-sim ffengine-core)
 target_link_libraries(tests sigc++)
