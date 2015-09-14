@@ -8,3 +8,7 @@
 	path = shader-preprocessor
 	url = https://github.com/horazont/shader-preprocessor
 	branch = devel
+[submodule "sig11"]
+	path = sig11
+	url = https://github.com/horazont/sig11
+	branch = develop
