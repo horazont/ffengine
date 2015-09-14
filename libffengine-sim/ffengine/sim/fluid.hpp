@@ -24,6 +24,8 @@ the AUTHORS file.
 #ifndef SCC_SIM_FLUID_H
 #define SCC_SIM_FLUID_H
 
+#include <sig11/sig11.hpp>
+
 #include "ffengine/sim/terrain.hpp"
 
 #include "ffengine/common/utils.hpp"
@@ -98,6 +100,9 @@ private:
 
     /* owned by Fluid */
     sigc::connection m_terrain_update_conn;
+
+    mutable sig11::signal<void(Source*)> m_source_added;
+    mutable sig11::signal<void(Source*)> m_source_removed;
 
 protected:
     void map_source(Source *obj);
@@ -186,6 +191,21 @@ public:
      * @param obj Source to unmap.
      */
     void unmap_source(Source *obj);
+
+    inline const std::vector<Source*> sources() const
+    {
+        return m_sources;
+    }
+
+    sig11::signal<void(Source*)> &source_added() const
+    {
+        return m_source_added;
+    }
+
+    sig11::signal<void(Source*)> &source_removed() const
+    {
+        return m_source_removed;
+    }
 
     /**@}*/
 };

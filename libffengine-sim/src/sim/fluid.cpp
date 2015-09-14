@@ -175,6 +175,7 @@ void Fluid::add_source(Source *obj)
 {
     m_sources.emplace_back(obj);
     invalidate_sources();
+    m_source_added(obj);
 }
 
 void Fluid::invalidate_sources()
@@ -192,6 +193,7 @@ void Fluid::remove_source(Source *obj)
     unmap_source(obj);
     m_sources.erase(iter);
     invalidate_sources();
+    m_source_removed(obj);
 }
 
 void Fluid::unmap_source(Source *obj)
