@@ -504,6 +504,17 @@ WorldOperationResult FluidSourceCreate::execute(WorldState &state)
     return NO_ERROR;
 }
 
+WorldOperationResult FluidSourceDestroy::execute(WorldState &state)
+{
+    Fluid::Source *obj = state.objects().get_safe<Fluid::Source>(m_object_id);
+    if (!obj) {
+        return NO_SUCH_OBJECT;
+    }
+
+    state.fluid().remove_source(obj);
+    return NO_ERROR;
+}
+
 
 }
 }

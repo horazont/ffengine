@@ -51,8 +51,7 @@ protected:
 class ObjectWorldOperation: public WorldOperation
 {
 public:
-    ObjectWorldOperation(
-            const Object::ID object_id);
+    explicit ObjectWorldOperation(const Object::ID object_id);
 
 protected:
     const Object::ID m_object_id;
@@ -199,6 +198,17 @@ public:
 public:
     static std::unique_ptr<FluidSourceCreate> from_source(
             Fluid::Source *source);
+
+};
+
+
+class FluidSourceDestroy: public ObjectWorldOperation
+{
+public:
+    using ObjectWorldOperation::ObjectWorldOperation;
+
+public:
+    WorldOperationResult execute(WorldState &state) override;
 
 };
 
