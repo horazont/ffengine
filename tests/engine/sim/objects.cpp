@@ -61,6 +61,9 @@ public:
 };
 
 
+const sim::Object::ID NULL_OBJECT_ID = sim::Object::NULL_OBJECT_ID;
+
+
 TEST_CASE("sim/ObjectManager/allocate")
 {
     sim::ObjectManager om;
@@ -251,3 +254,153 @@ TEST_CASE("sim/ObjectManager/emplace/null_id_allocates_new_id")
     MyObject &obj2 = om.emplace<MyObject>(sim::Object::NULL_OBJECT_ID);
     CHECK(obj2.object_id() == 2);
 }
+
+TEST_CASE("sim/ObjectManager/share")
+{
+    sim::ObjectManager om;
+    MyObject &obj1 = om.allocate<MyObject>();
+    sim::Object::ID id = obj1.object_id();
+    auto ptr = om.share(obj1);
+    CHECK(ptr.get() == &obj1);
+    CHECK(ptr);
+    CHECK(ptr.object_id() == id);
+    CHECK(ptr.was_valid());
+    om.kill(obj1);
+    CHECK_FALSE(ptr);
+    CHECK(ptr.get() == nullptr);
+    CHECK(ptr.was_valid());
+    CHECK(ptr.object_id() == id);
+}
+
+
+TEST_CASE("sim/object_ptr/default_constructor")
+{
+    sim::object_ptr<MyObject> ptr;
+    CHECK_FALSE(ptr);
+    CHECK_FALSE(ptr.was_valid());
+    CHECK(ptr.get() == nullptr);
+    CHECK(ptr.object_id() == NULL_OBJECT_ID);
+}
+
+TEST_CASE("sim/object_ptr/nullptr_constructor")
+{
+    sim::object_ptr<MyObject> ptr(nullptr);
+    CHECK_FALSE(ptr);
+    CHECK_FALSE(ptr.was_valid());
+    CHECK(ptr.get() == nullptr);
+    CHECK(ptr.object_id() == NULL_OBJECT_ID);
+}
+
+TEST_CASE("sim/object_ptr/reference_constructor")
+{
+    MyObject obj(123);
+    sim::object_ptr<MyObject> ptr(obj);
+    CHECK(ptr);
+    CHECK(ptr.was_valid());
+    CHECK(ptr.get() == &obj);
+    CHECK(ptr.object_id() == obj.object_id());
+}
+
+TEST_CASE("sim/object_ptr/move_constructor")
+{
+    MyObject obj(123);
+    sim::object_ptr<MyObject> ptr2(obj);
+    sim::object_ptr<MyObject> ptr1(std::move(ptr2));
+    CHECK_FALSE(ptr2);
+    CHECK_FALSE(ptr2.was_valid());
+    CHECK(ptr1);
+    CHECK(ptr1.was_valid());
+    CHECK(ptr1.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/copy_constructor")
+{
+    MyObject obj(123);
+    sim::object_ptr<MyObject> ptr2(obj);
+    sim::object_ptr<MyObject> ptr1(ptr2);
+    CHECK(ptr1);
+    CHECK(ptr1.was_valid());
+    CHECK(ptr1.get() == &obj);
+    CHECK(ptr2);
+    CHECK(ptr2.was_valid());
+    CHECK(ptr2.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/move_assignment")
+{
+    MyObject obj(123);
+    sim::object_ptr<MyObject> ptr1(nullptr);
+    sim::object_ptr<MyObject> ptr2(obj);
+    ptr1 = std::move(ptr2);
+    CHECK_FALSE(ptr2);
+    CHECK_FALSE(ptr2.was_valid());
+    CHECK(ptr1);
+    CHECK(ptr1.was_valid());
+    CHECK(ptr1.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/copy_assignment")
+{
+    MyObject obj(123);
+    sim::object_ptr<MyObject> ptr1(nullptr);
+    sim::object_ptr<MyObject> ptr2(obj);
+    std::cout << "before assignment" << std::endl;
+    ptr1 = ptr2;
+    std::cout << "after assignment" << std::endl;
+    CHECK(ptr1);
+    CHECK(ptr1.was_valid());
+    CHECK(ptr1.get() == &obj);
+    CHECK(ptr2);
+    CHECK(ptr2.was_valid());
+    CHECK(ptr2.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/upcast")
+{
+    MyObject obj(123);
+    sim::object_ptr<sim::Object> ptr1(nullptr);
+    sim::object_ptr<MyObject> ptr2(obj);
+    ptr1 = std::move(ptr2);
+    CHECK_FALSE(ptr2);
+    CHECK_FALSE(ptr2.was_valid());
+    CHECK(ptr1);
+    CHECK(ptr1.was_valid());
+    CHECK(ptr1.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/static_downcast")
+{
+    MyObject obj(123);
+    sim::object_ptr<sim::Object> ptr1(obj);
+    sim::object_ptr<MyObject> ptr2(sim::static_object_cast<MyObject>(std::move(ptr1)));
+    CHECK_FALSE(ptr1);
+    CHECK_FALSE(ptr1.was_valid());
+    CHECK(ptr2);
+    CHECK(ptr2.was_valid());
+    CHECK(ptr2.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/static_downcast_success")
+{
+    MyObject obj(123);
+    sim::object_ptr<sim::Object> ptr1(obj);
+    sim::object_ptr<MyObject> ptr2(sim::dynamic_object_cast<MyObject>(std::move(ptr1)));
+    CHECK_FALSE(ptr1);
+    CHECK_FALSE(ptr1.was_valid());
+    CHECK(ptr2);
+    CHECK(ptr2.was_valid());
+    CHECK(ptr2.get() == &obj);
+}
+
+TEST_CASE("sim/object_ptr/dynamic_downcast_failure")
+{
+    MyObject obj(123);
+    sim::object_ptr<sim::Object> ptr1(obj);
+    sim::object_ptr<OtherObject> ptr2(sim::dynamic_object_cast<OtherObject>(std::move(ptr1)));
+    CHECK(ptr1);
+    CHECK(ptr1.was_valid());
+    CHECK(ptr1.get() == &obj);
+    CHECK_FALSE(ptr2);
+    CHECK_FALSE(ptr2.was_valid());
+}
+

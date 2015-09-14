@@ -44,7 +44,11 @@ Object::Object(const ID object_id):
 
 Object::~Object()
 {
-
+    for (auto &referee: m_referees)
+    {
+        referee->kill();
+    }
+    m_referees.clear();
 }
 
 

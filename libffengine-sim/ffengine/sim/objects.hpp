@@ -25,16 +25,24 @@ the AUTHORS file.
 #define SCC_SIM_OBJECTS_H
 
 #include <array>
+#include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <ostream>
+#include <unordered_set>
 #include <vector>
+
 
 namespace sim {
 
 class ObjectManager;
 
+class abstract_object_ptr;
+
+template <typename T>
+class object_ptr;
 
 /**
  * A network addressable object.
@@ -100,6 +108,7 @@ public:
 
 private:
     ID m_object_id;
+    std::unordered_set<abstract_object_ptr*> m_referees;
 
 public:
     /**
@@ -113,7 +122,324 @@ public:
         return m_object_id;
     }
 
+    template <typename T> friend class object_ptr;
 };
+
+
+/**
+ * Implementation detail
+ */
+class abstract_object_ptr
+{
+public:
+    explicit abstract_object_ptr(std::nullptr_t = nullptr):
+        m_object(nullptr)
+    {
+
+    }
+
+    explicit abstract_object_ptr(Object &obj):
+        m_object(&obj)
+    {
+
+    }
+
+    abstract_object_ptr(const abstract_object_ptr &ref) = default;
+    abstract_object_ptr& operator=(const abstract_object_ptr &ref) = default;
+
+    abstract_object_ptr(abstract_object_ptr &&src):
+        m_object(src.m_object)
+    {
+        src.m_object = nullptr;
+    }
+
+    abstract_object_ptr &operator=(abstract_object_ptr &&src)
+    {
+        m_object = src.m_object;
+        src.m_object = nullptr;
+        return *this;
+    }
+
+    abstract_object_ptr &operator=(std::nullptr_t)
+    {
+        m_object = nullptr;
+        return *this;
+    }
+
+protected:
+    Object *m_object;
+
+    void kill()
+    {
+        m_object = nullptr;
+    }
+
+    friend class Object;
+};
+
+
+/**
+ * The object_ptr is used to have a special type of weak pointer to an Object.
+ *
+ * The object_ptr copies the objects ID on construction and offers that as long
+ * as it is not assigned a nullptr. If the object gets destroyed, the pointer
+ * turns invalid (nullptr), but still carries the ID.
+ *
+ * The difference between a null pointer and a pointer which turned invalid
+ * later can be queried using was_valid().
+ */
+template <typename T>
+class object_ptr: private abstract_object_ptr
+{
+public:
+    object_ptr(std::nullptr_t = nullptr):
+        abstract_object_ptr(nullptr),
+        m_null(true),
+        m_object_id(Object::NULL_OBJECT_ID)
+    {
+
+    }
+
+    template <typename U>
+    explicit object_ptr(U &object):
+        abstract_object_ptr(object),
+        m_null(false),
+        m_object_id(object.object_id())
+    {
+        add(this);
+    }
+
+    object_ptr(const object_ptr &src):
+        abstract_object_ptr(src),
+        m_null(src.m_null),
+        m_object_id(src.m_object_id)
+    {
+        if (m_object) {
+            add(this);
+        }
+    }
+
+    template <typename U>
+    object_ptr(const object_ptr<U> &src):
+        abstract_object_ptr(src),
+        m_null(src.m_null),
+        m_object_id(src.m_object_id)
+    {
+        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
+        if (m_object) {
+            add(this);
+        }
+    }
+
+    object_ptr(object_ptr &&src):
+        abstract_object_ptr(std::move(src)),
+        m_null(src.m_null),
+        m_object_id(src.m_object_id)
+    {
+        if (m_object) {
+            remove(&src);
+            add(this);
+        }
+        src.m_null = true;
+    }
+
+    template <typename U>
+    object_ptr(object_ptr<U> &&src):
+        abstract_object_ptr(std::move(src)),
+        m_null(src.m_null),
+        m_object_id(src.m_object_id)
+    {
+        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
+        if (m_object) {
+            remove(&src);
+            add(this);
+        }
+        src.m_null = true;
+    }
+
+    object_ptr &operator=(const object_ptr &src)
+    {
+        if (m_object) {
+            remove(this);
+        }
+
+        abstract_object_ptr::operator=(src);
+        m_object_id = src.m_object_id;
+        m_null = src.m_null;
+
+        if (m_object) {
+            std::cout << "object is valid" << std::endl;
+            add(this);
+        }
+
+        return *this;
+    }
+
+    template <typename U>
+    object_ptr &operator=(const object_ptr<U> &src)
+    {
+        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
+        if (m_object) {
+            remove(this);
+        }
+
+        abstract_object_ptr::operator=(src);
+        m_object_id = src.m_object_id;
+        m_null = src.m_null;
+
+        if (m_object) {
+            add(this);
+        }
+
+        return *this;
+    }
+
+    object_ptr &operator=(object_ptr &&src)
+    {
+        if (m_object) {
+            remove(this);
+        }
+        if (src.m_object) {
+            src.remove(&src);
+        }
+        abstract_object_ptr::operator=(std::move(src));
+        m_object_id = src.m_object_id;
+        m_null = src.m_null;
+        src.m_null = true;
+
+        if (m_object) {
+            add(this);
+        }
+
+        return *this;
+    }
+
+    template <typename U>
+    object_ptr &operator=(object_ptr<U> &&src)
+    {
+        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
+        if (m_object) {
+            remove(this);
+        }
+        if (src.m_object) {
+            src.remove(&src);
+        }
+        abstract_object_ptr::operator=(std::move(src));
+        m_object_id = src.m_object_id;
+        m_null = src.m_null;
+        src.m_null = true;
+
+        if (m_object) {
+            add(this);
+        }
+
+        return *this;
+    }
+
+    object_ptr &operator=(std::nullptr_t)
+    {
+        if (m_object) {
+            remove(this);
+        }
+        abstract_object_ptr::operator=(nullptr);
+        m_null = true;
+        m_object_id = Object::NULL_OBJECT_ID;
+        return *this;
+    }
+
+    ~object_ptr()
+    {
+        if (m_object) {
+            remove(this);
+        }
+    }
+
+private:
+    bool m_null;
+    Object::ID m_object_id;
+
+    void add(abstract_object_ptr *ptr)
+    {
+        m_object->m_referees.emplace(ptr);
+    }
+
+    void remove(abstract_object_ptr *ptr)
+    {
+        auto iter = m_object->m_referees.find(ptr);
+        m_object->m_referees.erase(iter);
+    }
+
+public:
+    T *get()
+    {
+        return static_cast<T*>(m_object);
+    }
+
+    T *release()
+    {
+        T* result = get();
+        if (result) {
+            remove(this);
+            m_null = true;
+            m_object = nullptr;
+        }
+        return result;
+    }
+
+    T &operator*()
+    {
+        return *get();
+    }
+
+    T &operator->()
+    {
+        return *get();
+    }
+
+    operator bool() const
+    {
+        return bool(m_object);
+    }
+
+    /**
+     * Return true if the pointer was valid or is still valid.
+     *
+     * This is false for all pointers which have been assigned nullptr.
+     * Otherwise, this is true even after get() returns nullptr due to the
+     * object having been destructed.
+     */
+    bool was_valid() const
+    {
+        return !m_null;
+    }
+
+    inline Object::ID object_id() const
+    {
+        return m_object_id;
+    }
+
+    template <typename U> friend class object_ptr;
+};
+
+
+template <typename U, typename T>
+static inline object_ptr<U> static_object_cast(object_ptr<T> &&src)
+{
+    if (!src) {
+        return nullptr;
+    }
+    return object_ptr<U>(*static_cast<U*>(src.release()));
+}
+
+template <typename U, typename T>
+static inline object_ptr<U> dynamic_object_cast(object_ptr<T> &&src)
+{
+    U *data = dynamic_cast<U*>(src.get());
+    if (!data) {
+        return nullptr;
+    }
+    return static_object_cast<U>(std::move(src));
+}
 
 
 /**
@@ -138,8 +464,7 @@ private:
          *
          * This number is chosen arbitrarily. It should be a power of two, although
          * this is not a strict requirement. It is probably helpful if the size of
-         * ObjectChunk matches the page size (which it doesn’t, on AMD64,
-         * currently).
+         * Chunk matches the page size (which it doesn’t, on AMD64, currently).
          */
         static constexpr std::size_t CHUNK_SIZE = 4096;
 
@@ -427,6 +752,22 @@ public:
     inline void kill(Object &object)
     {
         kill(object.object_id());
+    }
+
+    /**@}*/
+
+    /**
+     * @name Sharing
+     * These functions are used to share safe weak references to objects.
+     */
+
+    /**@{*/
+
+    template <typename T>
+    object_ptr<T> share(T &object)
+    {
+        assert(get_safe<T>(object.object_id()) == &object);
+        return object_ptr<T>(object);
     }
 
     /**@}*/
