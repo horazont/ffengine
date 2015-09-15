@@ -344,9 +344,7 @@ TEST_CASE("sim/object_ptr/copy_assignment")
     MyObject obj(123);
     sim::object_ptr<MyObject> ptr1(nullptr);
     sim::object_ptr<MyObject> ptr2(obj);
-    std::cout << "before assignment" << std::endl;
     ptr1 = ptr2;
-    std::cout << "after assignment" << std::endl;
     CHECK(ptr1);
     CHECK(ptr1.was_valid());
     CHECK(ptr1.get() == &obj);

@@ -27,7 +27,6 @@ the AUTHORS file.
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <iostream>
 #include <list>
 #include <memory>
 #include <ostream>
@@ -181,17 +180,60 @@ protected:
 /**
  * The object_ptr is used to have a special type of weak pointer to an Object.
  *
- * The object_ptr copies the objects ID on construction and offers that as long
- * as it is not assigned a nullptr. If the object gets destroyed, the pointer
- * turns invalid (nullptr), but still carries the ID.
+ * Instances of object_ptr are best obtained through the ObjectManager::share
+ * method of the responsible ObjectManager instance. Any constructor which is
+ * not documented shall be considered an implementation detail and must not
+ * be used explicitly.
  *
- * The difference between a null pointer and a pointer which turned invalid
- * later can be queried using was_valid().
+ * An object_ptr has three states:
+ *
+ * * *null*, in which case it is boolean false and was_valid() returns false.
+ *   This is the case for instances created or assigned from nullptr.
+ * * *dead*, in which case it is boolean false, get() returns nullptr and
+ *   was_valid() returns true. This is the case if the object to which the
+ *   object_ptr pointed has been deleted. The object_id() is still valid in
+ *   that case.
+ * * *alive*, in which case it is boolean true, get() returns the pointer to the
+ *   object (and the ``*`` and ``->`` operators can be used normally) and
+ *   was_valid() returns true. The object_id() is obviously valid.
+ *
+ * object_ptr instances support copying and moving, both by construction and
+ * assignment, from other object_ptr instances as long as the types they
+ * represent are also assignable. For downcasting, static_object_cast and
+ * dynamic_object_cast are provided.
+ *
+ * Implicit construction and assignment from nullptr is also supported.
+ *
+ * The main use-case for object_ptr is for signals which cross over into
+ * different threads. While the object_ptr itself is not thread-safe (as it
+ * uses the underlying ObjectManager and Object, which are by itself not
+ * thread-safe), it is useful if the signal emission and reception happens
+ * synchronized.
+ *
+ * An example totally not related to this project is a simulation
+ * loop which uses sig11::signal to emit signals, which get pushed
+ * thread-safely into an event queue in a user-interface thread. The user
+ * interface then acquires a lock which synchronises it with the object usage of
+ * the simulation thread and only while it holds that lock it processes the
+ * event queue.
+ *
+ * The user interface thread might receive multiple events related to a single
+ * object, where the last event notes the deletion of the object. The object
+ * has at that point already been deleted, and processing the previous events
+ * without taking that into account would result in undefined behaviour. If the
+ * events use object_ptr to pass the information about which object is
+ * affected, the receiving thread can check whether the object is still alive
+ * and act accordingly.
+ *
+ * @see ObjectManager
  */
 template <typename T>
 class object_ptr: private abstract_object_ptr
 {
 public:
+    /**
+     * Initialize a *null* object_ptr (see object_ptr class documentation).
+     */
     object_ptr(std::nullptr_t = nullptr):
         abstract_object_ptr(nullptr),
         m_null(true),
@@ -200,15 +242,12 @@ public:
 
     }
 
-    template <typename U>
-    explicit object_ptr(U &object):
-        abstract_object_ptr(object),
-        m_null(false),
-        m_object_id(object.object_id())
-    {
-        add(this);
-    }
-
+    /**
+     * Initialize an object_ptr by copying an existing object_ptr of the same
+     * type.
+     *
+     * The new object_ptr will have the same state as the existing.
+     */
     object_ptr(const object_ptr &src):
         abstract_object_ptr(src),
         m_null(src.m_null),
@@ -219,18 +258,49 @@ public:
         }
     }
 
-    template <typename U>
+    /**
+     * Initialize an object_ptr from an existing object. While it is currently
+     * supported, the semantics for this may change in the future. It is
+     * **highly discouraged** to use this function. Use ObjectManager::share
+     * instead, with the correct object manager for the object.
+     */
+    template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
+    explicit object_ptr(U &object):
+        abstract_object_ptr(object),
+        m_null(false),
+        m_object_id(object.object_id())
+    {
+        add(this);
+    }
+
+    /**
+     * Initialize an object_ptr by copying an existing object_ptr of a
+     * compatible type.
+     *
+     * A type is compatible if the pointer types ``U*`` and ``T*`` can be
+     * assigned directly.
+     *
+     * The new object_ptr will have the same state as the original.
+     */
+    template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
     object_ptr(const object_ptr<U> &src):
         abstract_object_ptr(src),
         m_null(src.m_null),
         m_object_id(src.m_object_id)
     {
-        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
         if (m_object) {
             add(this);
         }
     }
 
+    /**
+     * Initialize an object_ptr by moving an existing object_ptr of the same
+     * type into the new instance.
+     *
+     * The new object_ptr will have the same state as the existing had at the
+     * time of construction; the existing object_ptr will be a *null* pointer
+     * afterwards.
+     */
     object_ptr(object_ptr &&src):
         abstract_object_ptr(std::move(src)),
         m_null(src.m_null),
@@ -243,13 +313,23 @@ public:
         src.m_null = true;
     }
 
-    template <typename U>
+    /**
+     * Initialize an object_ptr by moving an existing object_ptr of a
+     * compatible type into the new instance.
+     *
+     * A type is compatible if the pointer types ``U*`` and ``T*`` can be
+     * assigned directly.
+     *
+     * The new object_ptr will have the same state as the existing had at the
+     * time of construction; the existing object_ptr will be a *null* pointer
+     * afterwards.
+     */
+    template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
     object_ptr(object_ptr<U> &&src):
         abstract_object_ptr(std::move(src)),
         m_null(src.m_null),
         m_object_id(src.m_object_id)
     {
-        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
         if (m_object) {
             remove(&src);
             add(this);
@@ -257,6 +337,9 @@ public:
         src.m_null = true;
     }
 
+    /**
+     * Copy-assign an existing object_ptr of the same type to this instance.
+     */
     object_ptr &operator=(const object_ptr &src)
     {
         if (m_object) {
@@ -268,17 +351,22 @@ public:
         m_null = src.m_null;
 
         if (m_object) {
-            std::cout << "object is valid" << std::endl;
             add(this);
         }
 
         return *this;
     }
 
-    template <typename U>
+    /**
+     * Copy-assign an existing object_ptr of a compatible type to this
+     * instance.
+     *
+     * A type is compatible if the pointer types ``U*`` and ``T*`` can be
+     * assigned directly.
+     */
+    template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
     object_ptr &operator=(const object_ptr<U> &src)
     {
-        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
         if (m_object) {
             remove(this);
         }
@@ -294,6 +382,9 @@ public:
         return *this;
     }
 
+    /**
+     * Move-assign an existing object_ptr of the same type into this instance.
+     */
     object_ptr &operator=(object_ptr &&src)
     {
         if (m_object) {
@@ -314,10 +405,16 @@ public:
         return *this;
     }
 
-    template <typename U>
+    /**
+     * Move-assign an existing object_ptr of a compatible type into this
+     * instance.
+     *
+     * A type is compatible if the pointer types ``U*`` and ``T*`` can be
+     * assigned directly.
+     */
+    template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
     object_ptr &operator=(object_ptr<U> &&src)
     {
-        static_assert(std::is_convertible<U*, T*>::value, "U* must be convertible to T*");
         if (m_object) {
             remove(this);
         }
@@ -336,6 +433,9 @@ public:
         return *this;
     }
 
+    /**
+     * Set this pointer to null.
+     */
     object_ptr &operator=(std::nullptr_t)
     {
         if (m_object) {
@@ -370,11 +470,22 @@ private:
     }
 
 public:
+    /**
+     * Return the object this pointer points to.
+     *
+     * If the pointer is *null* or *dead*, this returns nullptr.
+     */
     T *get()
     {
         return static_cast<T*>(m_object);
     }
 
+    /**
+     * Release the object this pointer points to, setting the pointer to
+     * *null*.
+     *
+     * This returns the object currently held by the pointer.
+     */
     T *release()
     {
         T* result = get();
@@ -396,13 +507,16 @@ public:
         return *get();
     }
 
+    /**
+     * Return true if the pointer is *alive*.
+     */
     operator bool() const
     {
         return bool(m_object);
     }
 
     /**
-     * Return true if the pointer was valid or is still valid.
+     * Return true if the pointer is not *null*.
      *
      * This is false for all pointers which have been assigned nullptr.
      * Otherwise, this is true even after get() returns nullptr due to the
@@ -413,12 +527,19 @@ public:
         return !m_null;
     }
 
+    /**
+     * Return the Object::ID of the object this pointer is referring to.
+     *
+     * If the pointer is *null*, the result is unspecified. If the pointer is
+     * *dead*, the result is the original ID of the now-dead object.
+     */
     inline Object::ID object_id() const
     {
         return m_object_id;
     }
 
     template <typename U> friend class object_ptr;
+    friend class ObjectManager;
 };
 
 
