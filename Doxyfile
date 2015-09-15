@@ -758,7 +758,7 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = libffengine-core/src/ libffengine-core/ffengine/ libffengine-sim/src/ libffengine-sim/ffengine/ libffengine-render/src/ libffengine-render/ffengine/ game/
+INPUT                  = libffengine-core/src/ libffengine-core/ffengine/ libffengine-sim/src/ libffengine-sim/ffengine/ libffengine-render/src/ libffengine-render/ffengine/ game/ sig11/src sig11/include shader-preprocessor/spp shader-preprocessor/src
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
