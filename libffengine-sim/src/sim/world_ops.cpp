@@ -501,6 +501,7 @@ WorldOperationResult FluidSourceCreate::execute(WorldState &state)
                 m_height,
                 m_capacity);
     state.fluid().add_source(&obj);
+    state.fluid_source_added()(state.objects().share(obj));
     return NO_ERROR;
 }
 
@@ -511,7 +512,9 @@ WorldOperationResult FluidSourceDestroy::execute(WorldState &state)
         return NO_SUCH_OBJECT;
     }
 
+    state.fluid_source_removed()(state.objects().share(*obj));
     state.fluid().remove_source(obj);
+    state.objects().kill(*obj);
     return NO_ERROR;
 }
 

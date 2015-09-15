@@ -101,9 +101,6 @@ private:
     /* owned by Fluid */
     sigc::connection m_terrain_update_conn;
 
-    mutable sig11::signal<void(Source*)> m_source_added;
-    mutable sig11::signal<void(Source*)> m_source_removed;
-
 protected:
     void map_source(Source *obj);
     TerrainRect source_rect(Source *obj) const;
@@ -195,16 +192,6 @@ public:
     inline const std::vector<Source*> sources() const
     {
         return m_sources;
-    }
-
-    sig11::signal<void(Source*)> &source_added() const
-    {
-        return m_source_added;
-    }
-
-    sig11::signal<void(Source*)> &source_removed() const
-    {
-        return m_source_removed;
     }
 
     /**@}*/

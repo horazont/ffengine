@@ -59,12 +59,19 @@ typedef uint32_t WorldOperationToken;
 class WorldState
 {
 public:
+    using FluidSourceSignal = sig11::signal<void(object_ptr<Fluid::Source>)>;
+
+public:
     WorldState();
 
 protected:
     Terrain m_terrain;
     Fluid m_fluid;
     ObjectManager m_objects;
+
+    mutable FluidSourceSignal m_fluid_source_added;
+    mutable FluidSourceSignal m_fluid_source_changed;
+    mutable FluidSourceSignal m_fluid_source_removed;
 
 public:
     inline const Fluid &fluid() const
@@ -95,6 +102,22 @@ public:
     inline ObjectManager &objects()
     {
         return m_objects;
+    }
+
+public:
+    FluidSourceSignal &fluid_source_added() const
+    {
+        return m_fluid_source_added;
+    }
+
+    FluidSourceSignal &fluid_source_changed() const
+    {
+        return m_fluid_source_changed;
+    }
+
+    FluidSourceSignal &fluid_source_removed() const
+    {
+        return m_fluid_source_removed;
     }
 
 };
