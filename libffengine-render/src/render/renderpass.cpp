@@ -315,10 +315,8 @@ MaterialPass *Material::pass_material(RenderPass &pass)
 
 void Material::sync_buffers()
 {
-    if (m_buffers_owned) {
-        m_vbo->sync();
-        m_ibo->sync();
-    }
+    m_vbo->sync();
+    m_ibo->sync();
 }
 
 /* ffe::PassRenderInstruction */
