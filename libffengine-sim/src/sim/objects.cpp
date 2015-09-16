@@ -61,6 +61,26 @@ ObjectManager::ObjectManager()
                 );
 }
 
+inline const ObjectManager::Chunk *ObjectManager::get_object_chunk(
+        Object::ID object_id) const
+{
+    if (object_id == NULL_OBJECT_ID) {
+        return nullptr;
+    }
+
+    // offset by one, we don’t waste space here
+    --object_id;
+
+    const std::vector<Chunk>::size_type chunk_index =
+            object_id / Chunk::CHUNK_SIZE;
+
+    if (chunk_index >= m_chunks.size()) {
+        return nullptr;
+    }
+
+    return &m_chunks[chunk_index];
+}
+
 inline ObjectManager::Chunk *ObjectManager::get_object_chunk(
         Object::ID object_id)
 {
@@ -81,7 +101,16 @@ inline ObjectManager::Chunk *ObjectManager::get_object_chunk(
     return &m_chunks[chunk_index];
 }
 
-inline std::unique_ptr<Object> *ObjectManager::get_object_ptr(Object::ID object_id)
+inline const std::unique_ptr<Object> *ObjectManager::get_object_ptr(Object::ID object_id) const
+{
+    const Chunk *chunk = get_object_chunk(object_id);
+    if (!chunk) {
+        return nullptr;
+    }
+    return &(chunk->objects[(object_id-1) % Chunk::CHUNK_SIZE]);
+}
+
+std::unique_ptr<Object> *ObjectManager::get_object_ptr(Object::ID object_id)
 {
     Chunk *chunk = get_object_chunk(object_id);
     if (!chunk) {
@@ -196,9 +225,9 @@ void ObjectManager::emplace_object(std::unique_ptr<Object> &&obj)
     }
 }
 
-Object *ObjectManager::get_base(Object::ID object_id)
+Object *ObjectManager::get_base(Object::ID object_id) const
 {
-    std::unique_ptr<Object> *object_ptr = get_object_ptr(object_id);
+    const std::unique_ptr<Object> *object_ptr = get_object_ptr(object_id);
     if (!object_ptr) {
         return nullptr;
     }

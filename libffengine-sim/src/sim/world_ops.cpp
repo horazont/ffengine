@@ -505,6 +505,36 @@ WorldOperationResult FluidSourceCreate::execute(WorldState &state)
     return NO_ERROR;
 }
 
+
+/* sim::ops::FluidSourceMove */
+
+FluidSourceMove::FluidSourceMove(const Object::ID object_id,
+                                 const float new_x,
+                                 const float new_y):
+    ObjectWorldOperation(object_id),
+    m_new_x(new_x),
+    m_new_y(new_y)
+{
+
+}
+
+sim::WorldOperationResult sim::ops::FluidSourceMove::execute(
+        sim::WorldState &state)
+{
+    Fluid::Source *obj = state.objects().get_safe<Fluid::Source>(m_object_id);
+    if (!obj) {
+        return NO_SUCH_OBJECT;
+    }
+
+    obj->m_pos = Vector2f(m_new_x, m_new_y);
+    state.fluid().unmap_source(obj);
+    state.fluid_source_changed()(state.objects().share(*obj));
+    return NO_ERROR;
+}
+
+
+/* sim::ops::FluidSourceDestroy */
+
 WorldOperationResult FluidSourceDestroy::execute(WorldState &state)
 {
     Fluid::Source *obj = state.objects().get_safe<Fluid::Source>(m_object_id);

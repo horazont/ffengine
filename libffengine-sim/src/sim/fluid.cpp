@@ -212,6 +212,8 @@ void Fluid::unmap_source(Source *obj)
             m_blocks.block_for_cell(x, y)->set_active(true);
         }
     }
+
+    invalidate_sources();
 }
 
 

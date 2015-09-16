@@ -502,9 +502,9 @@ public:
         return *get();
     }
 
-    T &operator->()
+    T *operator->()
     {
-        return *get();
+        return get();
     }
 
     /**
@@ -633,6 +633,7 @@ private:
      * @param object_id Object::ID to look up
      * @return Pointer to the ObjectChunk or nullptr.
      */
+    const Chunk *get_object_chunk(Object::ID object_id) const;
     Chunk *get_object_chunk(Object::ID object_id);
 
     /**
@@ -647,6 +648,7 @@ private:
      * @param object_id Object::ID to look up
      * @return Pointer to an std::unique_ptr object for the object or nullptr.
      */
+    const std::unique_ptr<Object> *get_object_ptr(Object::ID object_id) const;
     std::unique_ptr<Object> *get_object_ptr(Object::ID object_id);
 
     /**
@@ -708,7 +710,7 @@ protected:
      * @return Pointer to the Object associated with \a object_id. If no such
      * object exists, return nullptr.
      */
-    Object *get_base(Object::ID object_id);
+    Object *get_base(Object::ID object_id) const;
 
     /**
      * Release a previously used Object::ID.
@@ -827,7 +829,7 @@ public:
      * exists or the object is of a different type.
      */
     template <typename T>
-    T *get_safe(Object::ID object_id)
+    T *get_safe(Object::ID object_id) const
     {
         return dynamic_cast<T*>(get_base(object_id));
     }
@@ -885,10 +887,20 @@ public:
     /**@{*/
 
     template <typename T>
-    object_ptr<T> share(T &object)
+    object_ptr<T> share(T &object) const
     {
         assert(get_safe<T>(object.object_id()) == &object);
         return object_ptr<T>(object);
+    }
+
+    template <typename T>
+    object_ptr<T> share(Object::ID object_id) const
+    {
+        T *obj = get_safe<T>(object_id);
+        if (!obj) {
+            return nullptr;
+        }
+        return object_ptr<T>(*obj);
     }
 
     /**@}*/

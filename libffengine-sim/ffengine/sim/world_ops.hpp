@@ -202,6 +202,24 @@ public:
 };
 
 
+class FluidSourceMove: public ObjectWorldOperation
+{
+public:
+    FluidSourceMove(
+            const Object::ID object_id,
+            const float new_x,
+            const float new_y);
+
+private:
+    const float m_new_x;
+    const float m_new_y;
+
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
+
 class FluidSourceDestroy: public ObjectWorldOperation
 {
 public:
