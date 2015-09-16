@@ -510,10 +510,12 @@ WorldOperationResult FluidSourceCreate::execute(WorldState &state)
 
 FluidSourceMove::FluidSourceMove(const Object::ID object_id,
                                  const float new_x,
-                                 const float new_y):
+                                 const float new_y,
+                                 const float new_absolute_height):
     ObjectWorldOperation(object_id),
     m_new_x(new_x),
-    m_new_y(new_y)
+    m_new_y(new_y),
+    m_new_absolute_height(new_absolute_height)
 {
 
 }
@@ -526,8 +528,9 @@ sim::WorldOperationResult sim::ops::FluidSourceMove::execute(
         return NO_SUCH_OBJECT;
     }
 
-    obj->m_pos = Vector2f(m_new_x, m_new_y);
     state.fluid().unmap_source(obj);
+    obj->m_pos = Vector2f(m_new_x, m_new_y);
+    obj->m_absolute_height = m_new_absolute_height;
     state.fluid_source_changed()(state.objects().share(*obj));
     return NO_ERROR;
 }
