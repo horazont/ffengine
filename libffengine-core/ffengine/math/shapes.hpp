@@ -237,6 +237,16 @@ struct Plane
         return side_of(Sphere{center, radius});
     }
 
+    Vector3f normal() const
+    {
+        return Vector3f(homogenous[eX], homogenous[eY], homogenous[eZ]);
+    }
+
+    Vector3f origin() const
+    {
+        return normal() * homogenous[eW];
+    }
+
     static Plane from_frustum_matrix(const Vector4f frustum_homogenous)
     {
         // we have to negate the W part, because given a test vector
