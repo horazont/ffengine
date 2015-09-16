@@ -460,8 +460,8 @@ void RenderPass::render(RenderContext &context)
     }
 
     if (m_blit_depth_src && m_blit_depth_src != m_blit_colour_src) {
-        m_blit_colour_src->bind(RenderTarget::Usage::READ);
-        glBlitFramebuffer(0, 0, m_blit_colour_src->width(), m_blit_colour_src->height(),
+        m_blit_depth_src->bind(RenderTarget::Usage::READ);
+        glBlitFramebuffer(0, 0, m_blit_depth_src->width(), m_blit_depth_src->height(),
                           0, 0, m_target.width(), m_target.height(),
                           GL_DEPTH_BUFFER_BIT,
                           GL_NEAREST);
