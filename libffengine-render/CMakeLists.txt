@@ -27,6 +27,7 @@ set(ENGINE_HEADERS
   ffengine/render/fullterrain.hpp
   ffengine/render/grid.hpp
   ffengine/render/oct_sphere.hpp
+  ffengine/render/plane.hpp
   ffengine/render/pointer.hpp
   ffengine/render/scenegraph.hpp
   )
@@ -55,6 +56,7 @@ set(ENGINE_SRC
   src/render/fullterrain.cpp
   src/render/grid.cpp
   src/render/oct_sphere.cpp
+  src/render/plane.cpp
   src/render/pointer.cpp
   src/render/scenegraph.cpp
   )

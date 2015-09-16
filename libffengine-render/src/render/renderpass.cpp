@@ -528,6 +528,7 @@ void RenderContext::setup(const Camera &camera,
     m_matrix_ubo.set<4>(scenegraph.sky_colour());
     m_matrix_ubo.set<5>(m_viewpoint);
     m_inv_matrix_ubo.set<1>(inv_render_view);
+    m_inv_matrix_ubo.set<2>(Vector2f(target.width(), target.height()));
     m_inv_matrix_ubo.bind();
     m_inv_matrix_ubo.update_bound();
 
@@ -558,7 +559,7 @@ void RenderContext::configure_shader(ShaderProgram &shader)
         shader.bind_uniform_block("MatrixBlock", MATRIX_BLOCK_UBO_SLOT);
     }
     if (shader.uniform_block_location("InvMatrixBlock") >= 0) {
-        shader.check_uniform_block<InvMatrixUBO>("InxMatrixBlock");
+        shader.check_uniform_block<InvMatrixUBO>("InvMatrixBlock");
         shader.bind_uniform_block("InvMatrixBlock", INV_MATRIX_BLOCK_UBO_SLOT);
     }
 }
