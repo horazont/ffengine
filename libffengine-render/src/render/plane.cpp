@@ -86,10 +86,26 @@ void PlaneNode::sync()
             normals[i] = normal;
         }
 
-        positions[0] = origin + Vector3f(-m_size, -m_size, 0);
-        positions[1] = origin + Vector3f(-m_size, m_size, 0);
-        positions[2] = origin + Vector3f(m_size, -m_size, 0);
-        positions[3] = origin + Vector3f(m_size, m_size, 0);
+        Vector3f u(-normal[eY],  normal[eX],          0);
+        Vector3f v(          0, -normal[eZ], normal[eY]);
+        u.normalize();
+        v.normalize();
+        /*std::cout << u << " " << v << std::endl;*/
+        if (u == Vector3f()) {
+            u = Vector3f(-normal[eZ], 0, normal[eX]);
+            u.normalize();
+        } else if (v == Vector3f()) {
+            v = Vector3f(-normal[eZ], 0, normal[eX]);
+            v.normalize();
+        } else if (std::fabs(u*v - 1.f) < 0.00001f) {
+            v = Vector3f(-normal[eZ], 0, normal[eX]);
+            v.normalize();
+        }
+
+        positions[0] = origin - u * m_size - v * m_size;
+        positions[1] = origin + u * m_size - v * m_size;
+        positions[2] = origin - u * m_size + v * m_size;
+        positions[3] = origin + u * m_size + v * m_size;
         m_vbo_alloc.mark_dirty();
         m_material.sync_buffers();
         m_plane_changed = false;
