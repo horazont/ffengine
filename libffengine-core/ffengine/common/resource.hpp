@@ -76,7 +76,7 @@ protected:
 
 public:
     template <typename T, typename... args_ts>
-    T &emplace(const std::string &name, args_ts... args)
+    T &emplace(const std::string &name, args_ts&&... args)
     {
         require_unused_name(name);
 
