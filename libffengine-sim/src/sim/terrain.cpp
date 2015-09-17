@@ -197,5 +197,23 @@ void copy_heightfield_rect(
     }
 }
 
+std::pair<bool, float> lookup_height(
+        const Terrain::HeightField &field,
+        const unsigned int terrain_size,
+        const float x,
+        const float y)
+{
+    const int terrainx = std::round(x);
+    const int terrainy = std::round(y);
+
+    if (terrainx < 0 || terrainx >= (int)terrain_size ||
+            terrainy < 0 || terrainy >= (int)terrain_size)
+    {
+        return std::make_pair(false, 0);
+    }
+
+    return std::make_pair(true, field[terrainy*terrain_size+terrainx]);
+}
+
 
 }

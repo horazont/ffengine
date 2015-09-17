@@ -159,6 +159,12 @@ void copy_heightfield_rect(const Terrain::HeightField &src,
                            const unsigned int dest_width,
                            const unsigned int dest_height);
 
+
+std::pair<bool, float> lookup_height(const Terrain::HeightField &field,
+                   const unsigned int terrain_size,
+                   const float x,
+                   const float y);
+
 }
 
 #endif

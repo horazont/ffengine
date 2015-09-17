@@ -475,7 +475,7 @@ public:
      *
      * If the pointer is *null* or *dead*, this returns nullptr.
      */
-    T *get()
+    T *get() const
     {
         return static_cast<T*>(m_object);
     }
@@ -497,12 +497,12 @@ public:
         return result;
     }
 
-    T &operator*()
+    T &operator*() const
     {
-        return *get();
+        return *get;
     }
 
-    T *operator->()
+    T *operator->() const
     {
         return get();
     }

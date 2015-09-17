@@ -208,13 +208,43 @@ public:
     FluidSourceMove(
             const Object::ID object_id,
             const float new_x,
-            const float new_y,
-            const float new_absolute_height);
+            const float new_y);
 
 private:
     const float m_new_x;
     const float m_new_y;
+
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
+
+class FluidSourceSetHeight: public ObjectWorldOperation
+{
+public:
+    FluidSourceSetHeight(
+            const Object::ID object_id,
+            const float new_absolute_height);
+
+private:
     const float m_new_absolute_height;
+
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
+
+class FluidSourceSetCapacity: public ObjectWorldOperation
+{
+public:
+    FluidSourceSetCapacity(
+            const Object::ID object_id,
+            const float new_capacity);
+
+private:
+    const float m_new_capacity;
 
 public:
     WorldOperationResult execute(WorldState &state) override;

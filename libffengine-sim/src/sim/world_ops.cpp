@@ -510,12 +510,10 @@ WorldOperationResult FluidSourceCreate::execute(WorldState &state)
 
 FluidSourceMove::FluidSourceMove(const Object::ID object_id,
                                  const float new_x,
-                                 const float new_y,
-                                 const float new_absolute_height):
+                                 const float new_y):
     ObjectWorldOperation(object_id),
     m_new_x(new_x),
-    m_new_y(new_y),
-    m_new_absolute_height(new_absolute_height)
+    m_new_y(new_y)
 {
 
 }
@@ -528,9 +526,79 @@ sim::WorldOperationResult sim::ops::FluidSourceMove::execute(
         return NO_SUCH_OBJECT;
     }
 
+    float old_terrain_height;
+    float new_terrain_height;
+    {
+        const sim::Terrain::HeightField *field;
+        auto lock = state.terrain().readonly_field(field);
+        bool valid;
+        std::tie(valid, old_terrain_height) = lookup_height(*field, state.terrain().size(), obj->m_pos[eX], obj->m_pos[eY]);
+        std::tie(valid, new_terrain_height) = lookup_height(*field, state.terrain().size(), m_new_x, m_new_y);
+        if (!valid) {
+            return INVALID_ARGUMENT;
+        }
+    }
+
     state.fluid().unmap_source(obj);
     obj->m_pos = Vector2f(m_new_x, m_new_y);
+    obj->m_absolute_height = obj->m_absolute_height - old_terrain_height + new_terrain_height;
+    state.fluid_source_changed()(state.objects().share(*obj));
+    return NO_ERROR;
+}
+
+
+/* sim::ops::FluidSourceSetHeight */
+
+FluidSourceSetHeight::FluidSourceSetHeight(
+        const Object::ID object_id,
+        const float new_absolute_height):
+    ObjectWorldOperation(object_id),
+    m_new_absolute_height(new_absolute_height)
+{
+
+}
+
+WorldOperationResult FluidSourceSetHeight::execute(WorldState &state)
+{
+    if (m_new_absolute_height < 0 || m_new_absolute_height > sim::Terrain::max_height) {
+        return INVALID_ARGUMENT;
+    }
+
+    Fluid::Source *obj = state.objects().get_safe<Fluid::Source>(m_object_id);
+    if (!obj) {
+        return NO_SUCH_OBJECT;
+    }
+
     obj->m_absolute_height = m_new_absolute_height;
+    state.fluid().invalidate_sources();
+    state.fluid_source_changed()(state.objects().share(*obj));
+    return NO_ERROR;
+}
+
+
+/* sim::ops::FluidSourceSetCapacity */
+
+FluidSourceSetCapacity::FluidSourceSetCapacity(const Object::ID object_id,
+                                               const float new_capacity):
+    ObjectWorldOperation(object_id),
+    m_new_capacity(new_capacity)
+{
+
+}
+
+WorldOperationResult FluidSourceSetCapacity::execute(WorldState &state)
+{
+    if (m_new_capacity < 0 || m_new_capacity > 1) {
+        return INVALID_ARGUMENT;
+    }
+
+    Fluid::Source *obj = state.objects().get_safe<Fluid::Source>(m_object_id);
+    if (!obj) {
+        return NO_SUCH_OBJECT;
+    }
+
+    obj->m_capacity = m_new_capacity;
+    state.fluid().invalidate_sources();
     state.fluid_source_changed()(state.objects().share(*obj));
     return NO_ERROR;
 }
