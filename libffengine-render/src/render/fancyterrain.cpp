@@ -50,10 +50,10 @@ FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
                            sigc::mem_fun(*this,
                                          &FancyTerrainNode::invalidate_cache))),
     m_linear_filter(true),
-    m_heightmap(GL_R32F,
+    m_heightmap(GL_RGB32F,
                 m_terrain.size(),
                 m_terrain.size(),
-                GL_RED,
+                GL_RGB,
                 GL_FLOAT),
     m_normalt(GL_RGBA32F,
                 m_terrain.size(),
@@ -393,7 +393,7 @@ void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)
         glPixelStorei(GL_UNPACK_ROW_LENGTH, m_terrain.size());
         m_heightmap.bind();
         {
-            const sim::Terrain::HeightField *heightfield = nullptr;
+            const sim::Terrain::Field *heightfield = nullptr;
             auto hf_lock = m_terrain.readonly_field(heightfield);
 
             glTexSubImage2D(GL_TEXTURE_2D, 0,
@@ -401,8 +401,8 @@ void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)
                             updated.y0(),
                             updated.x1() - updated.x0(),
                             updated.y1() - updated.y0(),
-                            GL_RED, GL_FLOAT,
-                            &heightfield->data()[updated.y0()*m_terrain.size()+updated.x0()]);
+                            GL_RGB, GL_FLOAT,
+                            &heightfield->data()[updated.y0()*m_terrain.size()+updated.x0()].as_array);
 
         }
 

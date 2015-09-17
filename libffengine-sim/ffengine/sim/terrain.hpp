@@ -56,8 +56,9 @@ public:
     static const height_t default_height;
     static const height_t max_height;
     static const height_t min_height;
-    typedef std::vector<height_t> HeightField;
-    typedef std::vector<std::vector<height_t> > HeightFieldLODs;
+    typedef std::vector<Vector3f> Field;
+
+    static const vector_component_x_t HEIGHT_ATTR;
 
 public:
     Terrain(const unsigned int size);
@@ -67,54 +68,29 @@ private:
     const unsigned int m_size;
 
     // guarded by m_heightmap_mutex
-    mutable std::shared_timed_mutex m_heightmap_mutex;
-    HeightField m_heightmap;
+    mutable std::shared_timed_mutex m_field_mutex;
+    Field m_field;
 
-    mutable sigc::signal<void, TerrainRect> m_terrain_updated;
+    mutable sigc::signal<void, TerrainRect> m_heightmap_updated;
 
 public:
-    inline height_t get(unsigned int x, unsigned int y) const
-    {
-        std::shared_lock<std::shared_timed_mutex> lock(m_heightmap_mutex);
-        return m_heightmap[y*m_size+x];
-    }
-
-    inline void set(unsigned int x, unsigned int y, height_t v)
-    {
-        {
-            std::unique_lock<std::shared_timed_mutex> lock(m_heightmap_mutex);
-            m_heightmap[y*m_size+x] = v;
-        }
-        notify_heightmap_changed();
-    }
-
-    inline unsigned int width() const
-    {
-        return m_size;
-    }
-
-    inline unsigned int height() const
-    {
-        return m_size;
-    }
-
     inline unsigned int size() const
     {
         return m_size;
     }
 
-    inline sigc::signal<void, TerrainRect> &terrain_updated() const
+    inline sigc::signal<void, TerrainRect> &heightmap_updated() const
     {
-        return m_terrain_updated;
+        return m_heightmap_updated;
     }
 
 public:
     void notify_heightmap_changed() const;
     void notify_heightmap_changed(TerrainRect at) const;
     std::shared_lock<std::shared_timed_mutex> readonly_field(
-            const HeightField *&heightmap) const;
+            const Field *&heightmap) const;
     std::unique_lock<std::shared_timed_mutex> writable_field(
-            HeightField *&heightmap);
+            Field *&heightmap);
 
 public:
     void from_perlin(const PerlinNoiseGenerator &gen);
@@ -151,16 +127,7 @@ public:
 };
 
 
-void copy_heightfield_rect(const Terrain::HeightField &src,
-                           const unsigned int x0,
-                           const unsigned int y0,
-                           const unsigned int src_width,
-                           Terrain::HeightField &dest,
-                           const unsigned int dest_width,
-                           const unsigned int dest_height);
-
-
-std::pair<bool, float> lookup_height(const Terrain::HeightField &field,
+std::pair<bool, float> lookup_height(const Terrain::Field &field,
                    const unsigned int terrain_size,
                    const float x,
                    const float y);

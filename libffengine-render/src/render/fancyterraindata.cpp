@@ -84,10 +84,10 @@ void NTMapGenerator::worker_impl(const sim::TerrainRect &updated)
             + (to_update.y1() == source_size ? 0 : 1);
 
 
-    sim::Terrain::HeightField source_latch(src_width*src_height);
+    sim::Terrain::Field source_latch(src_width*src_height);
     // this worker really takes a long time, we will copy the source
     {
-        const sim::Terrain::HeightField *heightmap = nullptr;
+        const sim::Terrain::Field *heightmap = nullptr;
         auto source_lock = m_source.readonly_field(heightmap);
         for (unsigned int ysrc = src_y0, ylatch = 0;
              ylatch < src_height;
@@ -95,7 +95,7 @@ void NTMapGenerator::worker_impl(const sim::TerrainRect &updated)
         {
             memcpy(&source_latch[ylatch*src_width],
                     &(*heightmap)[ysrc*source_size+src_x0],
-                    sizeof(sim::Terrain::height_t)*src_width);
+                    sizeof(sim::Terrain::Field::value_type)*src_width);
         }
 
     }
@@ -118,7 +118,7 @@ void NTMapGenerator::worker_impl(const sim::TerrainRect &updated)
             float tangent_eZ = 0;
 
 
-            const sim::Terrain::height_t y0x0 = source_latch[(y+src_yoffset)*src_width+x+src_xoffset];
+            const sim::Terrain::height_t y0x0 = source_latch[(y+src_yoffset)*src_width+x+src_xoffset][sim::Terrain::HEIGHT_ATTR];
             sim::Terrain::height_t ymx0;
             sim::Terrain::height_t ypx0;
             sim::Terrain::height_t y0xm;
@@ -132,24 +132,24 @@ void NTMapGenerator::worker_impl(const sim::TerrainRect &updated)
 
             if (has_ym)
             {
-                ymx0 = source_latch[(y+src_yoffset-1)*src_width+x+src_xoffset];
+                ymx0 = source_latch[(y+src_yoffset-1)*src_width+x+src_xoffset][sim::Terrain::HEIGHT_ATTR];
                 tangent_y1 = Vector3f(0, 1, y0x0 - ymx0);
             }
             if (has_yp)
             {
-                ypx0 = source_latch[(y+src_yoffset+1)*src_width+x+src_xoffset];
+                ypx0 = source_latch[(y+src_yoffset+1)*src_width+x+src_xoffset][sim::Terrain::HEIGHT_ATTR];
                 tangent_y2 = Vector3f(0, 1, ypx0 - y0x0);
             }
             if (has_xm)
             {
-                y0xm = source_latch[(y+src_yoffset)*src_width+x+src_xoffset-1];
+                y0xm = source_latch[(y+src_yoffset)*src_width+x+src_xoffset-1][sim::Terrain::HEIGHT_ATTR];
                 const float z = y0x0 - y0xm;
                 tangent_x1 = Vector3f(1, 0, z);
                 tangent_eZ += z;
             }
             if (has_xp)
             {
-                y0xp = source_latch[(y+src_yoffset)*src_width+x+src_xoffset+1];
+                y0xp = source_latch[(y+src_yoffset)*src_width+x+src_xoffset+1][sim::Terrain::HEIGHT_ATTR];
                 const float z = y0xp - y0x0;
                 tangent_x2 = Vector3f(1, 0, z);
                 tangent_eZ += z;
@@ -233,7 +233,7 @@ FancyTerrainInterface::FancyTerrainInterface(const sim::Terrain &terrain,
     m_grid_size(grid_size),
     m_terrain(terrain),
     m_terrain_nt(terrain),
-    m_terrain_nt_conn(terrain.terrain_updated().connect(
+    m_terrain_nt_conn(terrain.heightmap_updated().connect(
                           sigc::mem_fun(m_terrain_nt,
                                         &NTMapGenerator::notify_update)
                           ))
@@ -243,7 +243,7 @@ FancyTerrainInterface::FancyTerrainInterface(const sim::Terrain &terrain,
                     sigc::mem_fun(*this,
                                   &FancyTerrainInterface::any_updated)));
     m_any_updated_conns.emplace_back(
-                m_terrain.terrain_updated().connect(
+                m_terrain.heightmap_updated().connect(
                     sigc::mem_fun(*this,
                                   &FancyTerrainInterface::any_updated)));
 
@@ -288,7 +288,7 @@ std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
     std::tuple<Vector3f, bool> result;
 #endif
     {
-        const sim::Terrain::HeightField *heightfield = nullptr;
+        const sim::Terrain::Field *heightfield = nullptr;
         auto height_lock = m_terrain.readonly_field(heightfield);
 #ifdef TIMELOG_HITTEST
         t_lock = timelog_clock::now();
@@ -312,7 +312,7 @@ std::tuple<Vector3f, bool> FancyTerrainInterface::hittest(const Ray &ray)
 std::tuple<Vector3f, bool> isect_terrain_ray(
         const Ray &ray,
         const unsigned int size,
-        const sim::Terrain::HeightField &field)
+        const sim::Terrain::Field &field)
 {
 #ifdef TIMELOG_HITTEST
     timelog_clock::time_point t0;
@@ -364,10 +364,10 @@ std::tuple<Vector3f, bool> isect_terrain_ray(
             continue;
         }
 
-        const Vector3f p0(x, y, field[y*size+x]);
-        const Vector3f p1(x, y+1, field[(y+1)*size+x]);
-        const Vector3f p2(x+1, y+1, field[(y+1)*size+x+1]);
-        const Vector3f p3(x+1, y, field[y*size+x+1]);
+        const Vector3f p0(x, y, field[y*size+x][sim::Terrain::HEIGHT_ATTR]);
+        const Vector3f p1(x, y+1, field[(y+1)*size+x][sim::Terrain::HEIGHT_ATTR]);
+        const Vector3f p2(x+1, y+1, field[(y+1)*size+x+1][sim::Terrain::HEIGHT_ATTR]);
+        const Vector3f p3(x+1, y, field[y*size+x+1][sim::Terrain::HEIGHT_ATTR]);
 
         float t;
         std::tie(t, hit) = isect_ray_triangle(ray, p0, p1, p2);

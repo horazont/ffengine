@@ -228,16 +228,16 @@ void NativeFluidSim::sync_terrain(TerrainRect rect)
     }
 
     const unsigned int terrain_size = m_terrain.size();
-    const Terrain::HeightField *field = nullptr;
+    const Terrain::Field *field = nullptr;
     auto lock = m_terrain.readonly_field(field);
     for (unsigned int y = rect.y0(); y < rect.y1(); y++) {
         for (unsigned int x = rect.x0(); x < rect.x1(); x++) {
             FluidCellMeta *meta_ptr = m_blocks.cell_meta(x, y);
             const Terrain::height_t hsum =
-                    (*field)[y*terrain_size+x]+
-                    (*field)[y*terrain_size+x+1]+
-                    (*field)[(y+1)*terrain_size+x]+
-                    (*field)[(y+1)*terrain_size+x+1];
+                    (*field)[y*terrain_size+x][Terrain::HEIGHT_ATTR]+
+                    (*field)[y*terrain_size+x+1][Terrain::HEIGHT_ATTR]+
+                    (*field)[(y+1)*terrain_size+x][Terrain::HEIGHT_ATTR]+
+                    (*field)[(y+1)*terrain_size+x+1][Terrain::HEIGHT_ATTR];
             meta_ptr->terrain_height = hsum / 4.f;
             m_blocks.block_for_cell(x, y)->set_active(true);
         }

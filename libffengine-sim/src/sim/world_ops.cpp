@@ -46,7 +46,7 @@ namespace ops {
  * @see flatten_tool, raise_tool
  */
 template <typename impl_t>
-void apply_brush_masked_tool(sim::Terrain::HeightField &field,
+void apply_brush_masked_tool(sim::Terrain::Field &field,
                              const unsigned int brush_size,
                              const std::vector<float> &sampled,
                              const float brush_strength,
@@ -77,7 +77,7 @@ void apply_brush_masked_tool(sim::Terrain::HeightField &field,
                 break;
             }
 
-            sim::Terrain::height_t &h = field[yterrain*terrain_size+xterrain];
+            sim::Terrain::height_t &h = field[yterrain*terrain_size+xterrain][Terrain::HEIGHT_ATTR];
             h = std::max(sim::Terrain::min_height,
                          std::min(sim::Terrain::max_height,
                                   impl.paint(
@@ -279,7 +279,7 @@ ObjectWorldOperation::ObjectWorldOperation(const Object::ID object_id):
 WorldOperationResult TerraformRaise::execute(WorldState &state)
 {
     {
-        sim::Terrain::HeightField *field = nullptr;
+        sim::Terrain::Field *field = nullptr;
         auto lock = state.terrain().writable_field(field);
         apply_brush_masked_tool(*field,
                                 m_brush_size, m_density_map, m_brush_strength,
@@ -309,7 +309,7 @@ TerraformLevel::TerraformLevel(
 WorldOperationResult TerraformLevel::execute(WorldState &state)
 {
     {
-        sim::Terrain::HeightField *field = nullptr;
+        sim::Terrain::Field *field = nullptr;
         auto lock = state.terrain().writable_field(field);
         apply_brush_masked_tool(*field,
                                 m_brush_size, m_density_map, m_brush_strength,
@@ -325,7 +325,7 @@ WorldOperationResult TerraformLevel::execute(WorldState &state)
 /* sim::ops::TerraformSmooth */
 
 Terrain::height_t TerraformSmooth::sample_parzen_rect(
-        const Terrain::HeightField &field,
+        const Terrain::Field &field,
         const unsigned int terrain_size,
         const unsigned int xc, const unsigned int yc,
         const unsigned int size)
@@ -358,7 +358,7 @@ Terrain::height_t TerraformSmooth::sample_parzen_rect(
                         sqr((float)x-(float)xc)+sqr((float)y-(float)yc)) / size;
             const float weight = parzen(d);
             total_weight += weight;
-            Terrain::height_t height = field[y*terrain_size+x];
+            Terrain::height_t height = field[y*terrain_size+x][Terrain::HEIGHT_ATTR];
             total_weighted_height += height*weight;
         }
     }
@@ -373,7 +373,7 @@ Terrain::height_t TerraformSmooth::sample_parzen_rect(
 WorldOperationResult TerraformSmooth::execute(WorldState &state)
 {
     {
-        sim::Terrain::HeightField *field = nullptr;
+        sim::Terrain::Field *field = nullptr;
         auto lock = state.terrain().writable_field(field);
 
         // we cannot use apply_brush_masked_tool here, because we need
@@ -401,7 +401,7 @@ WorldOperationResult TerraformSmooth::execute(WorldState &state)
                     break;
                 }
 
-                Terrain::height_t &h = (*field)[yterrain*terrain_size+xterrain];
+                Terrain::height_t &h = (*field)[yterrain*terrain_size+xterrain][Terrain::HEIGHT_ATTR];
 
                 Terrain::height_t new_h = sample_parzen_rect(
                             *field, terrain_size, xterrain, yterrain, 3);
@@ -449,7 +449,7 @@ WorldOperationResult TerraformRamp::execute(WorldState &state)
         return INVALID_ARGUMENT;
     }
     {
-        sim::Terrain::HeightField *field = nullptr;
+        sim::Terrain::Field *field = nullptr;
         auto lock = state.terrain().writable_field(field);
         apply_brush_masked_tool(*field,
                                 m_brush_size, m_density_map, m_brush_strength,
@@ -529,7 +529,7 @@ sim::WorldOperationResult sim::ops::FluidSourceMove::execute(
     float old_terrain_height;
     float new_terrain_height;
     {
-        const sim::Terrain::HeightField *field;
+        const sim::Terrain::Field *field;
         auto lock = state.terrain().readonly_field(field);
         bool valid;
         std::tie(valid, old_terrain_height) = lookup_height(*field, state.terrain().size(), obj->m_pos[eX], obj->m_pos[eY]);

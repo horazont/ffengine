@@ -129,7 +129,7 @@ public:
 
 protected:
     Terrain::height_t sample_parzen_rect(
-            const Terrain::HeightField &field,
+            const Terrain::Field &field,
             const unsigned int terrain_size,
             const unsigned int xc, const unsigned int yc,
             const unsigned int size);

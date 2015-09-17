@@ -137,7 +137,7 @@ public:
 std::tuple<Vector3f, bool> isect_terrain_ray(
         const Ray &ray,
         const unsigned int size,
-        const sim::Terrain::HeightField &field);
+        const sim::Terrain::Field &field);
 
 }
 

@@ -65,7 +65,7 @@ Fluid::Fluid(const Terrain &terrain):
     m_blocks((terrain.size()-1) / IFluidSim::block_size),
     m_impl(new NativeFluidSim(m_blocks, terrain)),
     m_sources_invalidated(false),
-    m_terrain_update_conn(terrain.terrain_updated().connect(
+    m_terrain_update_conn(terrain.heightmap_updated().connect(
                               sigc::mem_fun(*this, &Fluid::terrain_updated)))
 {
     const unsigned int block_count = (terrain.size()-1) / IFluidSim::block_size;

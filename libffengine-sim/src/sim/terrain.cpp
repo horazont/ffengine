@@ -41,9 +41,11 @@ const Terrain::height_t Terrain::default_height = 20.f;
 const Terrain::height_t Terrain::min_height = 0.f;
 const Terrain::height_t Terrain::max_height = 500.f;
 
+const vector_component_x_t Terrain::HEIGHT_ATTR = eX;
+
 Terrain::Terrain(const unsigned int size):
     m_size(size),
-    m_heightmap(m_size*m_size, default_height)
+    m_field(m_size*m_size, Vector3f(default_height, 0, 0))
 {
 
 }
@@ -55,34 +57,34 @@ Terrain::~Terrain()
 
 void Terrain::notify_heightmap_changed() const
 {
-    m_terrain_updated.emit(TerrainRect(0, 0, m_size, m_size));
+    m_heightmap_updated.emit(TerrainRect(0, 0, m_size, m_size));
 }
 
 void Terrain::notify_heightmap_changed(TerrainRect at) const
 {
-    m_terrain_updated.emit(at);
+    m_heightmap_updated.emit(at);
 }
 
 std::shared_lock<std::shared_timed_mutex> Terrain::readonly_field(
-        const Terrain::HeightField *&heightmap) const
+        const Terrain::Field *&heightmap) const
 {
-    heightmap = &m_heightmap;
-    return std::shared_lock<std::shared_timed_mutex>(m_heightmap_mutex);
+    heightmap = &m_field;
+    return std::shared_lock<std::shared_timed_mutex>(m_field_mutex);
 }
 
 std::unique_lock<std::shared_timed_mutex> Terrain::writable_field(
-        Terrain::HeightField *&heightmap)
+        Terrain::Field *&heightmap)
 {
-    heightmap = &m_heightmap;
-    return std::unique_lock<std::shared_timed_mutex>(m_heightmap_mutex);
+    heightmap = &m_field;
+    return std::unique_lock<std::shared_timed_mutex>(m_field_mutex);
 }
 
 void Terrain::from_perlin(const PerlinNoiseGenerator &gen)
 {
-    std::unique_lock<std::shared_timed_mutex> lock(m_heightmap_mutex);
+    std::unique_lock<std::shared_timed_mutex> lock(m_field_mutex);
     for (unsigned int y = 0; y < m_size; y++) {
         for (unsigned int x = 0; x < m_size; x++) {
-            m_heightmap[y*m_size+x] = gen.get(Vector2(x, y));
+            m_field[y*m_size+x][HEIGHT_ATTR] = gen.get(Vector2(x, y));
         }
     }
     lock.unlock();
@@ -92,10 +94,10 @@ void Terrain::from_perlin(const PerlinNoiseGenerator &gen)
 void Terrain::from_sincos(const Vector3f scale)
 {
     const float offset = scale[eZ];
-    std::unique_lock<std::shared_timed_mutex> lock(m_heightmap_mutex);
+    std::unique_lock<std::shared_timed_mutex> lock(m_field_mutex);
     for (unsigned int y = 0; y < m_size; y++) {
         for (unsigned int x = 0; x < m_size; x++) {
-            m_heightmap[y*m_size+x] = (sin(x*scale[eX]) + cos(y*scale[eY])) * scale[eZ] + offset;
+            m_field[y*m_size+x][HEIGHT_ATTR] = (sin(x*scale[eX]) + cos(y*scale[eY])) * scale[eZ] + offset;
         }
     }
     lock.unlock();
@@ -181,24 +183,8 @@ void TerrainWorker::notify_update(const TerrainRect &at)
 }
 
 
-void copy_heightfield_rect(
-        const Terrain::HeightField &src,
-        const unsigned int x0,
-        const unsigned int y0,
-        const unsigned int src_width,
-        Terrain::HeightField &dest,
-        const unsigned int dest_width,
-        const unsigned int dest_height)
-{
-    for (unsigned int y = 0, src_y = y0; y < dest_height; y++, src_y++) {
-        Terrain::height_t *const dest_ptr = &(&dest.front())[y*dest_width];
-        const Terrain::height_t *const src_ptr = &src.data()[src_y*src_width+x0];
-        memcpy(dest_ptr, src_ptr, sizeof(Terrain::height_t)*dest_width);
-    }
-}
-
 std::pair<bool, float> lookup_height(
-        const Terrain::HeightField &field,
+        const Terrain::Field &field,
         const unsigned int terrain_size,
         const float x,
         const float y)
@@ -212,7 +198,7 @@ std::pair<bool, float> lookup_height(
         return std::make_pair(false, 0);
     }
 
-    return std::make_pair(true, field[terrainy*terrain_size+terrainx]);
+    return std::make_pair(true, field[terrainy*terrain_size+terrainx][Terrain::HEIGHT_ATTR]);
 }
 
 
