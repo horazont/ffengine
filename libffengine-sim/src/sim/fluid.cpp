@@ -83,6 +83,33 @@ Fluid::~Fluid()
     m_terrain_update_conn.disconnect();
 }
 
+void Fluid::copy_from_block(Vector4f *dest,
+                            const FluidBlock &src,
+                            const unsigned int x0,
+                            const unsigned int y0,
+                            const unsigned int width,
+                            const unsigned int height,
+                            const unsigned int row_stride,
+                            const unsigned int step) const
+{
+    for (unsigned int y = y0; y < y0 + height; y += step) {
+        const sim::FluidCell *cell = src.local_cell_front(x0, y);
+        const sim::FluidCellMeta *meta = src.local_cell_meta(x0, y);
+
+        for (unsigned int x = x0; x < x0 + width; x += step) {
+            *dest++ = Vector4f(
+                        meta->terrain_height,
+                        cell->fluid_height,
+                        cell->fluid_flow[0],
+                        cell->fluid_flow[1]);
+            cell += step;
+            meta += step;
+        }
+
+        dest += row_stride;
+    }
+}
+
 void Fluid::map_source(Source *obj)
 {
     const Vector2f origin = obj->m_pos;
@@ -226,6 +253,144 @@ void Fluid::reset()
 {
     m_blocks.reset(m_ocean_level);
 }
+
+void Fluid::copy_block(Vector4f *dest,
+                       const unsigned int x0,
+                       const unsigned int y0,
+                       const unsigned int width,
+                       const unsigned int height,
+                       const unsigned int oversample,
+                       const unsigned int dest_width) const
+{
+    const unsigned int oversampled_width = width * oversample;
+    const unsigned int oversampled_height = height * oversample;
+
+    unsigned int ybase = y0;
+    unsigned int ydest = 0;
+
+    while (ybase < y0 + oversampled_height) {
+        const unsigned int blocky = ybase / IFluidSim::block_size;
+        const unsigned int celly = ybase % IFluidSim::block_size;
+
+        const unsigned int copy_height = std::min(IFluidSim::block_size - celly, (height - ydest)*oversample);
+
+        unsigned int xbase = x0;
+        unsigned int xdest = 0;
+
+        while (xbase < x0 + oversampled_width) {
+            const unsigned int blockx = xbase / IFluidSim::block_size;
+            const unsigned int cellx = xbase % IFluidSim::block_size;
+
+            const unsigned int copy_width = std::min(IFluidSim::block_size - cellx, (width - xdest)*oversample);
+
+            const unsigned int row_stride = dest_width - (copy_width+oversample-1)/oversample;
+
+            /*std::cout << "xbase: " << xbase << "; "
+                      << "ybase: " << ybase << "; "
+                      << "cellx: " << cellx << "; "
+                      << "celly: " << celly << "; "
+                      << "copy_width: " << copy_width << "; "
+                      << "copy_height: " << copy_height << "; "
+                      << std::endl;*/
+
+            copy_from_block(&dest[ydest*dest_width+xdest],
+                            *m_blocks.block(blockx, blocky),
+                            cellx, celly,
+                            copy_width, copy_height,
+                            row_stride,
+                            oversample);
+
+            xbase += copy_width;
+            if (copy_width % oversample != 0) {
+                xbase += (oversample - (copy_width % oversample));
+            }
+
+            xdest += (copy_width+oversample-1) / oversample;
+        }
+
+        ybase += copy_height;
+        if (copy_height % oversample != 0) {
+            ybase += (oversample - (copy_height % oversample));
+        }
+
+        ydest += (copy_height+oversample-1) / oversample;
+    }
+}
+
+/*void Fluid::copy_block_edge(Vector4f *dest,
+                            int x0,
+                            int y0,
+                            unsigned int width,
+                            unsigned int height,
+                            const unsigned int oversample,
+                            const unsigned int dest_width) const
+{
+    unsigned int xn_edge = 0;
+    unsigned int xp_edge = 0;
+    unsigned int yn_edge = 0;
+    unsigned int yp_edge = 0;
+
+    if (x0 < 0) {
+        xn_edge = std::abs(x0);
+        x0 += xn_edge * oversample;
+        width -= xn_edge;
+    }
+    if (x0 + width >= m_blocks.cells_per_axis()) {
+        xp_edge = std::abs(m_blocks.cells_per_axis() - (x0 + width));
+        width -= xp_edge;
+    }
+
+    if (y0 < 0) {
+        xn_edge = std::abs(y0);
+        x0 += yn_edge * oversample;
+        height -= yn_edge;
+    }
+    if (y0 + height >= m_blocks.cells_per_axis()) {
+        yp_edge = std::abs(m_blocks.cells_per_axis() - (y0 + width));
+        height -= yp_edge;
+    }
+
+    // copy what we have
+    copy_block(&dest[yn_edge*dest_width+xn_edge], x0, y0, width, height, oversample, dest_width);
+
+    // now fill the edges
+    if (xn_edge) {
+        for (unsigned int y = 0; y < height; y++) {
+            Vector4f value = dest[(y+yn_edge)*dest_width+xn_edge];
+            Vector4f *local_dest = &dest[(y+yn_edge)*dest_width];
+            for (unsigned int x = 0; x < xn_edge; ++x) {
+                *local_dest++ = value;
+            }
+        }
+    }
+
+    if (xp_edge) {
+        for (unsigned int y = 0; y < height; y++) {
+            Vector4f value = dest[(y+yn_edge)*dest_width+dest_width-xp_edge];
+            Vector4f *local_dest = &dest[(y+yn_edge)*dest_width+dest_width-xp_edge+1];
+            for (unsigned int x = 0; x < xp_edge; ++x) {
+                *local_dest++ = value;
+            }
+        }
+    }
+
+    if (yn_edge) {
+        for (unsigned int y = 0; y < height; y++) {
+            memcpy(&dest[y*dest_width+xn_edge],
+                   &dest[(y+yn_edge)*dest_width+xn_edge],
+                   sizeof(Vector4f)*(dest_width-xn_edge-xp_edge));
+        }
+    }
+
+    if (yp_edge) {
+        for (unsigned int y = 0; y < height; y++) {
+            memcpy(&dest[(y+height+yn_edge)*dest_width+xn_edge],
+                   &dest[(y+height+yn_edge-1)*dest_width+xn_edge],
+                   sizeof(Vector4f)*(dest_width-xn_edge-xp_edge));
+        }
+    }
+
+}*/
 
 
 }

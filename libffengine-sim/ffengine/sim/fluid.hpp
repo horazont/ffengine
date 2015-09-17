@@ -102,6 +102,16 @@ private:
     /* owned by Fluid */
     sigc::connection m_terrain_update_conn;
 
+private:
+    void copy_from_block(Vector4f *dest,
+                         const sim::FluidBlock &src,
+                         const unsigned int x0,
+                         const unsigned int y0,
+                         const unsigned int width,
+                         const unsigned int height,
+                         const unsigned int row_stride,
+                         const unsigned int step) const;
+
 protected:
     void map_source(Source *obj);
     TerrainRect source_rect(Source *obj) const;
@@ -228,7 +238,74 @@ public:
      * simulation is running or concurrently with start().
      */
     void reset();
+
+public:
+    /**
+     * @name Extracting data rects
+     */
+
+    /**@{*/
+
+    /**
+     * Copy a block of render fluid data into the given buffer.
+     *
+     * The data is formatted as four-dimensional vectors, with the components
+     * being, from x to w: terrain height, fluid height, flow x, flow y.
+     *
+     * This function must not be called concurrently with start(), but it is
+     * safe to use after start has returned.
+     *
+     * @param dest Pointer to the first element to write.
+     * @param x0 The start x coordinate
+     * @param y0 The start y coordinate
+     * @param width The width of the block in the x direction, in world space.
+     * @param height The height of the block in the y direction, in world space.
+     * @param oversample How many cells to skip in each direction on each step.
+     * This is useful to create a NEAREST-type LOD map. With width and height
+     * staying the same, this does not affect the number of cells copied, but
+     * the size of the rect covered.
+     * @param dest_width The width of the destination buffer. This is used to
+     * calculate the stride between two consecutive rows when incrementing
+     * \a dest.
+     */
+    void copy_block(Vector4f *dest,
+                    const unsigned int x0,
+                    const unsigned int y0,
+                    const unsigned int width,
+                    const unsigned int height,
+                    const unsigned int oversample,
+                    const unsigned int dest_width) const;
+
+    /**
+     * Copy a block of render fluid data into the given buffer. If the rect
+     * selected for copying is larger than the fluid space, the edge data is
+     * repeated. Corners are created by interpolating between the edge data.
+     *
+     * @param dest Pointer to the first element to write.
+     * @param x0 The start x coordinate; may be negative
+     * @param y0 The start y coordinate; may be negative
+     * @param width The number of cells copied in the x direction
+     * @param height The number of cells copied in the y direction
+     * @param oversample How many cells to skip in each direction on each step.
+     * This is useful to create a NEAREST-type LOD map. With width and height
+     * staying the same, this does not affect the number of cells copied, but
+     * the size of the rect covered.
+     * @param dest_width The width of the destination buffer. This is used to
+     * calculate the stride between two consecutive rows when incrementing
+     * \a dest.
+     */
+    /*void copy_block_edge(Vector4f *dest,
+                         int x0,
+                         int y0,
+                         unsigned int width,
+                         unsigned int height,
+                         const unsigned int oversample,
+                         const unsigned int dest_width) const;*/
+
+    /**@}*/
+
 };
+
 
 }
 

@@ -104,96 +104,6 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     }
 }
 
-void CPUFluid::copy_into_vertex_cache(Vector4f *dest,
-                                      const sim::FluidBlock &src,
-                                      const unsigned int x0,
-                                      const unsigned int y0,
-                                      const unsigned int width,
-                                      const unsigned int height,
-                                      const unsigned int row_stride,
-                                      const unsigned int step)
-{
-    for (unsigned int y = y0; y < y0 + height; y += step) {
-        const sim::FluidCell *cell = src.local_cell_front(x0, y);
-        const sim::FluidCellMeta *meta = src.local_cell_meta(x0, y);
-
-        for (unsigned int x = x0; x < x0 + width; x += step) {
-            *dest++ = Vector4f(
-                        meta->terrain_height,
-                        cell->fluid_height,
-                        cell->fluid_flow[0],
-                        cell->fluid_flow[1]);
-            cell += step;
-            meta += step;
-        }
-
-        dest += row_stride;
-    }
-}
-
-void CPUFluid::copy_multi_into_vertex_cache(Vector4f *dest,
-                                            const unsigned int x0,
-                                            const unsigned int y0,
-                                            const unsigned int width,
-                                            const unsigned int height,
-                                            const unsigned int oversample,
-                                            const unsigned int dest_width)
-{
-    const unsigned int oversampled_width = width * oversample;
-    const unsigned int oversampled_height = height * oversample;
-
-    unsigned int ybase = y0;
-    unsigned int ydest = 0;
-
-    while (ybase < y0 + oversampled_height) {
-        const unsigned int blocky = ybase / m_block_size;
-        const unsigned int celly = ybase % m_block_size;
-
-        const unsigned int copy_height = std::min(m_block_size - celly, (height - ydest)*oversample);
-
-        unsigned int xbase = x0;
-        unsigned int xdest = 0;
-
-        while (xbase < x0 + oversampled_width) {
-            const unsigned int blockx = xbase / m_block_size;
-            const unsigned int cellx = xbase % m_block_size;
-
-            const unsigned int copy_width = std::min(m_block_size - cellx, (width - xdest)*oversample);
-
-            const unsigned int row_stride = dest_width - (copy_width+oversample-1)/oversample;
-
-            /*std::cout << "xbase: " << xbase << "; "
-                      << "ybase: " << ybase << "; "
-                      << "cellx: " << cellx << "; "
-                      << "celly: " << celly << "; "
-                      << "copy_width: " << copy_width << "; "
-                      << "copy_height: " << copy_height << "; "
-                      << std::endl;*/
-
-            copy_into_vertex_cache(&dest[ydest*dest_width+xdest],
-                                   *m_fluidsim.blocks().block(blockx, blocky),
-                                   cellx, celly,
-                                   copy_width, copy_height,
-                                   row_stride,
-                                   oversample);
-
-            xbase += copy_width;
-            if (copy_width % oversample != 0) {
-                xbase += (oversample - (copy_width % oversample));
-            }
-
-            xdest += (copy_width+oversample-1) / oversample;
-        }
-
-        ybase += copy_height;
-        if (copy_height % oversample != 0) {
-            ybase += (oversample - (copy_height % oversample));
-        }
-
-        ydest += (copy_height+oversample-1) / oversample;
-    }
-}
-
 void CPUFluid::invalidate_caches(const unsigned int blockx,
                                  const unsigned int blocky)
 {
@@ -387,7 +297,7 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
     }
 
     /* std::cout << oversample << std::endl; */
-    copy_multi_into_vertex_cache(dest, x0, y0, width, height, oversample, fcache_size);
+    m_fluidsim.copy_block(dest, x0, y0, width, height, oversample, fcache_size);
 
     if (north_edge) {
         for (unsigned int x = 0; x < m_block_size; ++x) {

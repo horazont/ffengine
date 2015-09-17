@@ -89,23 +89,6 @@ private:
     std::vector<CacheTuple> m_tmp_slices;
 
 protected:
-    void copy_into_vertex_cache(Vector4f *dest,
-                                const sim::FluidBlock &src,
-                                const unsigned int x0,
-                                const unsigned int y0,
-                                const unsigned int width,
-                                const unsigned int height,
-                                const unsigned int row_stride,
-                                const unsigned int step);
-
-    void copy_multi_into_vertex_cache(Vector4f *dest,
-                                      const unsigned int x0,
-                                      const unsigned int y0,
-                                      const unsigned int width,
-                                      const unsigned int height,
-                                      const unsigned int oversample,
-                                      const unsigned int dest_width);
-
     void invalidate_caches(const unsigned int blockx,
                            const unsigned int blocky);
 
