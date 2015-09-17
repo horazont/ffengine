@@ -118,6 +118,11 @@ public:
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
 
+    Texture2D &heightmap()
+    {
+        return m_heightmap;
+    }
+
     /**
      * Mark the GPU side texture cache as invalid.
      *

@@ -60,6 +60,12 @@ PlaneNode::PlaneNode(const Plane &plane, Material &material, const float size):
     m_ibo_alloc.mark_dirty();
 }
 
+void PlaneNode::set_plane(const Plane &plane)
+{
+    m_plane = plane;
+    m_plane_changed = true;
+}
+
 void PlaneNode::prepare(RenderContext &)
 {
 

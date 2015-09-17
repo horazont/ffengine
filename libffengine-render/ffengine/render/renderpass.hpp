@@ -177,6 +177,7 @@ private:
 
     GLenum m_polygon_mode;
     bool m_depth_mask;
+    bool m_depth_test;
 
     ArrayDeclaration m_vertex_attrs;
 
@@ -252,6 +253,11 @@ public:
         return m_depth_mask;
     }
 
+    inline bool depth_test() const
+    {
+        return m_depth_test;
+    }
+
     inline GLenum polygon_mode() const
     {
         return m_polygon_mode;
@@ -260,6 +266,11 @@ public:
     inline void set_depth_mask(const bool mask)
     {
         m_depth_mask = mask;
+    }
+
+    inline void set_depth_test(const bool enabled)
+    {
+        m_depth_test = enabled;
     }
 
     inline void set_polygon_mode(const GLenum mode)

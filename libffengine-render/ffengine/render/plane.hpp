@@ -51,6 +51,9 @@ private:
     VBOAllocation m_vbo_alloc;
 
 public:
+    void set_plane(const Plane &plane);
+
+public:
     void prepare(RenderContext &context);
     void render(RenderContext &context);
     void sync();
