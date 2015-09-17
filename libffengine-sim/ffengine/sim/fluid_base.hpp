@@ -55,6 +55,12 @@ public:
      */
     static const FluidFloat visualization_threshold;
 
+    /**
+     * This value is applied as a factor to the source capacity when
+     * calculating the flow into/out of the source.
+     */
+    static const FluidFloat source_capacity_scale;
+
     static const unsigned int block_size;
 
 public:

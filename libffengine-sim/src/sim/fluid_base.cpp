@@ -29,6 +29,7 @@ const FluidFloat IFluidSim::flow_damping = 0.995;
 /* const FluidFloat Fluid::flow_damping = 0.1; */
 const FluidFloat IFluidSim::flow_friction = 0.6;
 const FluidFloat IFluidSim::visualization_threshold = 1e-6;
+const FluidFloat IFluidSim::source_capacity_scale = 0.5;
 const unsigned int IFluidSim::block_size = 60;
 
 /* sim::IFluidSim */
