@@ -639,5 +639,14 @@ WorldOperationResult FluidOceanLevelSetHeight::execute(WorldState &state)
 }
 
 
+/* sim::ops::FluidReset */
+
+WorldOperationResult FluidReset::execute(WorldState &state)
+{
+    state.fluid().reset();
+    return NO_ERROR;
+}
+
+
 }
 }

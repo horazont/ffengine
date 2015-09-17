@@ -213,14 +213,21 @@ public:
     /**
      * Set the ocean level to the given level.
      *
-     * This method is not thread-safe and must not be called while the
-     * simulation is running or concurrently with start().
-     *
      * @param level New ocean level in absolute height units.
      */
     void set_ocean_level(const float level);
 
     /**@}*/
+
+    /**
+     * Reset the whole simulation.
+     *
+     * This also initialises the cells with the ocean level.
+     *
+     * This method is not thread-safe and must not be called while the
+     * simulation is running or concurrently with start().
+     */
+    void reset();
 };
 
 }

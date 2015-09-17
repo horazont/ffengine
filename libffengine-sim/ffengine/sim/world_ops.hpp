@@ -277,6 +277,14 @@ public:
 };
 
 
+class FluidReset: public WorldOperation
+{
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
+
 }
 }
 

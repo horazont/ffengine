@@ -88,6 +88,27 @@ FluidBlock::FluidBlock(const unsigned int x,
 
 }
 
+void FluidBlock::reset(const float ocean_level)
+{
+    m_front_meta = std::make_unique<FluidBlockMeta>();
+    m_front_meta->flat_absolute_height = ocean_level;
+    m_back_meta = std::make_unique<FluidBlockMeta>();
+    m_back_meta->flat_absolute_height = ocean_level;
+    m_front_cells = std::vector<FluidCell>(m_meta_cells.size());
+    m_back_cells = std::vector<FluidCell>(m_meta_cells.size());
+
+    for (unsigned int i = 0; i < m_meta_cells.size(); ++i)
+    {
+        const FluidCellMeta &meta = m_meta_cells[i];
+        FluidCell &front = m_front_cells[i];
+        FluidCell &back = m_back_cells[i];
+        front.fluid_flow[0] = 0;
+        front.fluid_flow[1] = 0;
+        front.fluid_height = std::max(0.f, ocean_level - meta.terrain_height);
+        back = front;
+    }
+}
+
 /* sim::FluidBlocks */
 
 FluidBlocks::FluidBlocks(const unsigned int block_count_per_axis):
@@ -102,6 +123,14 @@ FluidBlocks::FluidBlocks(const unsigned int block_count_per_axis):
         {
             m_blocks.emplace_back(x, y);
         }
+    }
+}
+
+void FluidBlocks::reset(const float ocean_level)
+{
+    for (FluidBlock &block: m_blocks)
+    {
+        block.reset(ocean_level);
     }
 }
 

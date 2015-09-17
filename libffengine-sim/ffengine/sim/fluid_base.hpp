@@ -309,6 +309,7 @@ public:
         *m_front_meta = *m_back_meta;
     }
 
+    void reset(const float ocean_level);
 };
 
 
@@ -500,6 +501,8 @@ public:
     {
         return std::shared_lock<std::shared_timed_mutex>(m_frontbuffer_mutex);
     }
+
+    void reset(const float ocean_level);
 };
 
 

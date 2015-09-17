@@ -222,5 +222,10 @@ void Fluid::set_ocean_level(const float level)
     m_impl->set_ocean_level(level);
 }
 
+void Fluid::reset()
+{
+    m_blocks.reset(m_ocean_level);
+}
+
 
 }
