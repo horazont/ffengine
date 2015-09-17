@@ -95,6 +95,7 @@ private:
     FluidBlocks m_blocks;
     std::vector<Source*> m_sources;
     std::unique_ptr<IFluidSim> m_impl;
+    float m_ocean_level;
 
     bool m_sources_invalidated;
 
@@ -193,6 +194,31 @@ public:
     {
         return m_sources;
     }
+
+    /**@}*/
+
+    /**
+      * @name Ocean level
+      */
+    /**@{*/
+
+    /**
+     * Return the current ocean level in absolute height units.
+     */
+    inline float ocean_level() const
+    {
+        return m_ocean_level;
+    }
+
+    /**
+     * Set the ocean level to the given level.
+     *
+     * This method is not thread-safe and must not be called while the
+     * simulation is running or concurrently with start().
+     *
+     * @param level New ocean level in absolute height units.
+     */
+    void set_ocean_level(const float level);
 
     /**@}*/
 };

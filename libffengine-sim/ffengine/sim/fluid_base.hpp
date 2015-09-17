@@ -291,7 +291,7 @@ public:
     {
         if (new_active != m_front_meta->active && new_active)
         {
-            m_back_meta->active = CHANGE_BACKLOG_THRESHOLD * 3.f;
+            m_back_meta->change = CHANGE_BACKLOG_THRESHOLD * 3.f;
         }
         m_back_meta->active = new_active;
     }

@@ -620,5 +620,24 @@ WorldOperationResult FluidSourceDestroy::execute(WorldState &state)
 }
 
 
+/* sim::ops::FluidOceanLevelSetHeight */
+
+FluidOceanLevelSetHeight::FluidOceanLevelSetHeight(const float new_height):
+    m_new_height(new_height)
+{
+
+}
+
+WorldOperationResult FluidOceanLevelSetHeight::execute(WorldState &state)
+{
+    if (m_new_height < (sim::Terrain::min_height - 1) || m_new_height > sim::Terrain::max_height) {
+        return INVALID_ARGUMENT;
+    }
+
+    state.fluid().set_ocean_level(m_new_height);
+    return NO_ERROR;
+}
+
+
 }
 }

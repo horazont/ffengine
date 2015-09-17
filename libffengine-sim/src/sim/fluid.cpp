@@ -75,7 +75,7 @@ Fluid::Fluid(const Terrain &terrain):
                                  std::to_string(IFluidSim::block_size));
     }
 
-    m_impl->set_ocean_level(0.f);
+    set_ocean_level(0.f);
 }
 
 Fluid::~Fluid()
@@ -214,6 +214,12 @@ void Fluid::unmap_source(Source *obj)
     }
 
     invalidate_sources();
+}
+
+void Fluid::set_ocean_level(const float level)
+{
+    m_ocean_level = level;
+    m_impl->set_ocean_level(level);
 }
 
 

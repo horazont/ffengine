@@ -153,6 +153,7 @@ void NativeFluidSim::coordinator_impl()
             if (m_ocean_level_update_set) {
                 m_ocean_level = m_ocean_level_update;
                 m_ocean_level_update_set = false;
+                m_ocean_level_changed = true;
             }
         }
 
@@ -167,6 +168,8 @@ void NativeFluidSim::coordinator_impl()
             m_done = true;
         }
         m_done_wakeup.notify_all();
+
+        m_ocean_level_changed = false;
 
 #ifdef TIMELOG_FLUIDSIM
         t_sim = timelog_clock::now();
@@ -651,7 +654,10 @@ void NativeFluidSim::worker_impl()
             FluidBlock &block = *m_blocks.block(x, y);
             /*logger.logf(io::LOG_DEBUG, "fluid: %p got %u %u, active = %d",
                         this, x, y, block.front_meta().active);*/
-            if (block.front_meta().active) {
+            if (m_ocean_level_changed) {
+                block.set_active(true);
+            }
+            if (block.front_meta().active || m_ocean_level_changed) {
                 update_active_block(block);
             } else {
                 update_inactive_block(block);

@@ -82,6 +82,7 @@ private:
     /* owned by m_coordinator_thread */
     std::vector<std::thread> m_worker_threads;
     FluidFloat m_ocean_level;
+    bool m_ocean_level_changed;
 
 protected:
     void coordinator_impl();

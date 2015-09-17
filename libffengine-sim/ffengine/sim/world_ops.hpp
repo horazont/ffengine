@@ -263,6 +263,20 @@ public:
 };
 
 
+class FluidOceanLevelSetHeight: public WorldOperation
+{
+public:
+    FluidOceanLevelSetHeight(const float new_height);
+
+private:
+    const float m_new_height;
+
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
+
 }
 }
 
