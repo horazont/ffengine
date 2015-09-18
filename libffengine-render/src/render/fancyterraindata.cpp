@@ -246,6 +246,10 @@ FancyTerrainInterface::FancyTerrainInterface(const sim::Terrain &terrain,
                 m_terrain.heightmap_updated().connect(
                     sigc::mem_fun(*this,
                                   &FancyTerrainInterface::any_updated)));
+    m_any_updated_conns.emplace_back(
+                m_terrain.attributes_updated().connect(
+                    sigc::mem_fun(*this,
+                                  &FancyTerrainInterface::any_updated)));
 
     const unsigned int tiles = ((terrain.size()-1) / (m_grid_size-1));
 

@@ -65,6 +65,11 @@ void Terrain::notify_heightmap_changed(TerrainRect at) const
     m_heightmap_updated.emit(at);
 }
 
+void Terrain::notify_attributes_changed(TerrainRect at) const
+{
+    m_attributes_updated.emit(at);
+}
+
 std::shared_lock<std::shared_timed_mutex> Terrain::readonly_field(
         const Terrain::Field *&heightmap) const
 {

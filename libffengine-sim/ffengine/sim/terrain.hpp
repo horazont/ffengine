@@ -59,6 +59,7 @@ public:
     typedef std::vector<Vector3f> Field;
 
     static const vector_component_x_t HEIGHT_ATTR;
+    static const vector_component_y_t SAND_ATTR;
 
 public:
     Terrain(const unsigned int size);
@@ -72,6 +73,7 @@ private:
     Field m_field;
 
     mutable sigc::signal<void, TerrainRect> m_heightmap_updated;
+    mutable sigc::signal<void, TerrainRect> m_attributes_updated;
 
 public:
     inline unsigned int size() const
@@ -84,9 +86,15 @@ public:
         return m_heightmap_updated;
     }
 
+    inline sigc::signal<void, TerrainRect> &attributes_updated() const
+    {
+        return m_attributes_updated;
+    }
+
 public:
     void notify_heightmap_changed() const;
     void notify_heightmap_changed(TerrainRect at) const;
+    void notify_attributes_changed(TerrainRect at) const;
     std::shared_lock<std::shared_timed_mutex> readonly_field(
             const Field *&heightmap) const;
     std::unique_lock<std::shared_timed_mutex> writable_field(
