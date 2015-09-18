@@ -135,6 +135,31 @@ public:
 };
 
 
+class Fluid;
+
+class Sandifier
+{
+public:
+    Sandifier(Terrain &terrain,
+              const Fluid &fluid);
+
+private:
+    Terrain &m_terrain;
+    const Fluid &m_fluid;
+
+    unsigned int m_curr_blockx;
+    unsigned int m_curr_blocky;
+
+private:
+    float blurred(const int xc, const int yc);
+    void step();
+
+public:
+    void run_steps();
+
+};
+
+
 std::pair<bool, float> lookup_height(const Terrain::Field &field,
                    const unsigned int terrain_size,
                    const float x,

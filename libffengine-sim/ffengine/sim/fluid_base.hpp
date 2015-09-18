@@ -393,6 +393,20 @@ public:
         return block(blockx, blocky)->local_cell_front(localx, localy);
     }
 
+    inline const FluidCell *clamped_cell_front(const int x,
+                                               const int y) const
+    {
+        unsigned int clamped_x = 0;
+        unsigned int clamped_y = 0;
+        if (x >= 0) {
+            clamped_x = std::min((unsigned int)x, m_cells_per_axis-1);
+        }
+        if (y >= 0) {
+            clamped_y = std::min((unsigned int)y, m_cells_per_axis-1);
+        }
+        return cell_front(clamped_x, clamped_y);
+    }
+
     inline FluidCellMeta *cell_meta(const unsigned int x, const unsigned int y)
     {
         const unsigned int blockx = x / IFluidSim::block_size;

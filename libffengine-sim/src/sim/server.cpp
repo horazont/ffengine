@@ -63,7 +63,8 @@ ServerClientBase::~ServerClientBase()
 Server::Server():
     m_state(),
     m_terminated(false),
-    m_game_thread(std::bind(&Server::game_thread, this))
+    m_game_thread(std::bind(&Server::game_thread, this)),
+    m_sandifier(m_state.terrain(), m_state.fluid())
 {
 
 }
@@ -90,6 +91,8 @@ void Server::game_frame()
     {
         op->execute(m_state);
     }
+
+    m_sandifier.run_steps();
 
     m_op_buffer.clear();
 ;

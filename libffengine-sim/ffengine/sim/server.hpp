@@ -182,6 +182,7 @@ private:
 
     /* owned by m_game_thread */
     std::vector<std::unique_ptr<WorldOperation> > m_op_buffer;
+    Sandifier m_sandifier;
 
     /**
      * This mutex is used to put the Server into a state which is safe for

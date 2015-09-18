@@ -28,13 +28,19 @@ the AUTHORS file.
 #include <iostream>
 
 #include "ffengine/common/utils.hpp"
+
 #include "ffengine/io/log.hpp"
+
+#include "ffengine/math/algo.hpp"
+
+#include "ffengine/sim/fluid.hpp"
 
 
 namespace sim {
 
 io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
 static io::Logger &tw_logger = io::logging().get_logger("sim.terrain.worker");
+static io::Logger &sandifier_logger = io::logging().get_logger("sim.terrain.sandifier");
 
 
 const Terrain::height_t Terrain::default_height = 20.f;
@@ -204,6 +210,91 @@ std::pair<bool, float> lookup_height(
     }
 
     return std::make_pair(true, field[terrainy*terrain_size+terrainx][Terrain::HEIGHT_ATTR]);
+}
+
+Sandifier::Sandifier(Terrain &terrain, const Fluid &fluid):
+    m_terrain(terrain),
+    m_fluid(fluid),
+    m_curr_blockx(0),
+    m_curr_blocky(0)
+{
+
+}
+
+float Sandifier::blurred(const int xc, const int yc)
+{
+    float sum = 0;
+    float weight_sum = 0;
+    for (int y = yc - 2; y <= yc + 2; ++y) {
+        for (int x = xc - 2; x <= xc + 2; ++x) {
+            const sim::FluidCell *cell = m_fluid.blocks().clamped_cell_front(x, y);
+            /*const float d = std::sqrt(
+                        sqr((float)x-(float)xc)+sqr((float)y-(float)yc)) / 2.5f;
+            const float weight = parzen(d);*/
+            const float weight = 1.f;
+            weight_sum += weight;
+            if (cell->fluid_height > 1e-5) {
+                sum += weight;
+            }
+        }
+    }
+    return sum / weight_sum;
+}
+
+void Sandifier::step()
+{
+    const unsigned int x0 = m_curr_blockx * IFluidSim::block_size;
+    const unsigned int y0 = m_curr_blocky * IFluidSim::block_size;
+
+    bool changed = false;
+    {
+        Terrain::Field *field;
+        auto lock = m_terrain.writable_field(field);
+        for (unsigned int y = y0; y < y0+IFluidSim::block_size; ++y)
+        {
+            Vector3f *dest = &(*field)[y*m_terrain.size()+x0];
+            for (unsigned int x = x0; x < x0+IFluidSim::block_size; ++x)
+            {
+                float waterness = blurred(x, y);
+                float &s = (*dest)[Terrain::SAND_ATTR];
+                if (s > 0 && waterness == 0) {
+                    s = 0; //std::max(0.f, s - 0.2f);
+                    changed = true;
+                } else if (s < waterness){
+                    s = waterness; // std::min(waterness, std::max(s, 0.05f)*1.1f);
+                    changed = true;
+                }
+
+                dest++;
+            }
+        }
+    }
+
+    if (changed) {
+        m_terrain.notify_attributes_changed(
+                    TerrainRect(
+                        x0,
+                        y0,
+                        x0+IFluidSim::block_size,
+                        y0+IFluidSim::block_size));
+    }
+
+    m_curr_blockx += 1;
+    if (m_curr_blockx >= m_fluid.blocks().blocks_per_axis()) {
+        m_curr_blockx = 0;
+        m_curr_blocky += 1;
+    }
+    if (m_curr_blocky >= m_fluid.blocks().blocks_per_axis()) {
+        m_curr_blocky = 0;
+    }
+}
+
+void Sandifier::run_steps()
+{
+    sandifier_logger.logf(io::LOG_DEBUG, "sandifying at %d %d", m_curr_blockx, m_curr_blocky);
+    for (unsigned int i = 0; i < 4; ++i) {
+        step();
+    }
 }
 
 
