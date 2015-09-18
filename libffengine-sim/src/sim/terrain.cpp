@@ -40,7 +40,6 @@ namespace sim {
 
 io::Logger &lod_logger = io::logging().get_logger("sim.terrain.lod");
 static io::Logger &tw_logger = io::logging().get_logger("sim.terrain.worker");
-static io::Logger &sandifier_logger = io::logging().get_logger("sim.terrain.sandifier");
 
 
 const Terrain::height_t Terrain::default_height = 20.f;
@@ -374,7 +373,6 @@ void Sandifier::run_steps()
 {
     unsigned int start_y = m_curr_y;
     unsigned int min_changed_x = m_terrain.size(), max_changed_x = 0;
-    sandifier_logger.logf(io::LOG_DEBUG, "sandifying at %d", m_curr_y);
 
     const unsigned int rows = (start_y == m_terrain.size()-5 ? 5 : 4);
 
