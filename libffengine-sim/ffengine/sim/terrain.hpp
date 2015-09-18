@@ -136,9 +136,14 @@ public:
 
 
 class Fluid;
+struct FluidCell;
 
 class Sandifier
 {
+public:
+    static const float SAND_FILTER_CONSTANT;
+    static const float SAND_FILTER_CUTOFF;
+
 public:
     Sandifier(Terrain &terrain,
               const Fluid &fluid);
@@ -147,12 +152,19 @@ private:
     Terrain &m_terrain;
     const Fluid &m_fluid;
 
-    unsigned int m_curr_blockx;
-    unsigned int m_curr_blocky;
+    unsigned int m_curr_y;
+
+    std::array<std::vector<Vector3f>, 3> m_rows;
+
+    std::vector<float> m_dest_row;
 
 private:
-    float blurred(const int xc, const int yc);
-    void step();
+    void fetch_fluid_info(const unsigned int x,
+                          std::array<const FluidCell*, 9> &dest);
+    void fetch_row(const unsigned int y,
+                   const Terrain::Field &src,
+                   std::vector<Vector3f> &height_dest);
+    std::tuple<unsigned int, unsigned int> step();
 
 public:
     void run_steps();

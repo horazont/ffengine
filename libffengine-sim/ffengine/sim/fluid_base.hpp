@@ -166,6 +166,12 @@ struct FluidCell
      * The flow is in units of Length Unit / Time Unit.
      */
     FluidFloat fluid_flow[2];
+
+    inline bool wet() const
+    {
+        return fluid_height > 1e-5;
+    }
+
 };
 
 

@@ -258,6 +258,11 @@ void FancyTerrainNode::attach_rock_texture(Texture2D *tex)
     m_material.attach_texture("rock", tex);
 }
 
+void FancyTerrainNode::attach_sand_texture(Texture2D *tex)
+{
+    m_material.attach_texture("sand", tex);
+}
+
 void FancyTerrainNode::configure_overlay(
         Material &mat,
         const sim::TerrainRect &clip_rect)

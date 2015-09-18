@@ -117,6 +117,7 @@ public:
     void attach_blend_texture(Texture2D *tex);
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
+    void attach_sand_texture(Texture2D *tex);
 
     Texture2D &heightmap()
     {
