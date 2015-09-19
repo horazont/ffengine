@@ -29,19 +29,59 @@ the AUTHORS file.
 
 namespace sim {
 
-template <typename callable_t, typename... arg_ts>
-static inline sig11::connection_guard<void(arg_ts...)> connect_queued_locked [[gnu::warn_unused_result]] (
-        sig11::signal<void(arg_ts...)> &signal,
-        callable_t &&receiver,
-        std::vector<std::function<void()> > &destination,
-        std::mutex &destination_mutex)
+/**
+ * Thread-safely queue signals emitted from sig11 signals and allow later
+ * replay.
+ *
+ * The SignalQueue offers handy methods to capture signals emitted from any
+ * thread and store the calls (not the results!) internally for later
+ * evaluation.
+ *
+ * The replay() method then actually executes the calls stored internally and
+ * clears the queue.
+ */
+class SignalQueue
 {
-    std::function<void(arg_ts...)> receiver_func(receiver);
-    return connect(signal, [receiver_func, &destination, &destination_mutex](arg_ts... args){
-        std::lock_guard<std::mutex> guard(destination_mutex);
-        destination.emplace_back(std::bind(receiver_func, args...));
-    });
-}
+private:
+    std::mutex m_queue_mutex;
+    std::vector<std::function<void()> > m_queue;
+
+    std::vector<std::function<void()> > m_tmp_queue;
+
+public:
+    /**
+     * Replay the currently queued calls in the current thread.
+     *
+     * This method by itself is thread-safe. However, the functions it calls
+     * may not be -- depending on what is connected using this queue. This
+     * function possibly calls all receivers connected using connect_queued().
+     */
+    void replay();
+
+    /**
+     * Connect a receiver to a signal using this queue.
+     *
+     * Whenever the signal emits, the arguments it sent are captured by this
+     * object and stored internally. The call is not immediately forwarded to
+     * the given receiver. Instead, the calls are forwarded to their respective
+     * receivers when replay() is called.
+     */
+    template <typename callable_t, typename... arg_ts>
+    inline sig11::connection_guard<void(arg_ts...)> connect_queued [[gnu::warn_unused_result]] (
+            sig11::signal<void(arg_ts...)> &signal,
+            callable_t &&receiver)
+    {
+        // make a copy of the receiver
+        std::function<void(arg_ts...)> receiver_func(receiver);
+        // take arguments by copy
+        return connect(signal, [receiver_func, this](arg_ts... args){
+            std::lock_guard<std::mutex> guard(m_queue_mutex);
+            m_queue.emplace_back(std::bind(receiver_func, args...));
+        });
+    }
+
+};
+
 
 }
 

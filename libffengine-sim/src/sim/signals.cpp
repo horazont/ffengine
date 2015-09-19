@@ -22,3 +22,25 @@ For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
 #include "ffengine/sim/signals.hpp"
+
+
+namespace sim {
+
+/* sim::SignalQueue */
+
+void SignalQueue::replay()
+{
+    m_tmp_queue.clear();
+    {
+        std::lock_guard<std::mutex> lock(m_queue_mutex);
+        m_tmp_queue.swap(m_queue);
+    }
+
+    for (std::function<void()> &callable: m_tmp_queue) {
+        callable();
+    }
+}
+
+
+
+}
