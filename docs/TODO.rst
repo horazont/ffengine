@@ -1,6 +1,11 @@
 TODO
 ====
 
+Compatibility
+-------------
+
+* Ensure that FBO format and window format match.
+
 Simulation
 ----------
 
