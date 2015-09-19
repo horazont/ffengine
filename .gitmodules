@@ -1,9 +1,6 @@
 [submodule "tests/catch"]
 	path = tests/catch
 	url = https://github.com/philsquared/Catch/
-[submodule "surface_mesh"]
-	path = surface_mesh
-	url = ssh://git.sotecware.net/surface_mesh
 [submodule "shader-preprocessor"]
 	path = shader-preprocessor
 	url = https://github.com/horazont/shader-preprocessor
