@@ -378,7 +378,7 @@ void NativeFluidSim::update_active_block(FluidBlock &block)
                 if (meta->terrain_height < m_ocean_level) {
                     // ocean is really just a very strong source/sink
                     source_height = m_ocean_level;
-                    source_capacity = 1.f;
+                    source_capacity = 0.1f;
                 } else {
                     source_height = meta->source_height;
                     source_capacity = meta->source_capacity;
