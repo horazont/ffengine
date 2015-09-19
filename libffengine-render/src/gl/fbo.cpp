@@ -362,6 +362,11 @@ Renderbuffer *FBO::make_depth_buffer(const GLenum internal_format)
     return make_renderbuffer(GL_DEPTH_ATTACHMENT, internal_format);
 }
 
+Renderbuffer *FBO::make_stencil_buffer(const GLenum internal_format)
+{
+    return make_renderbuffer(GL_STENCIL_ATTACHMENT, internal_format);
+}
+
 void FBO::resize(GLsizei width, GLsizei height)
 {
     std::cout << "FBO::resize(" << width << ", " << height << ")" << std::endl;

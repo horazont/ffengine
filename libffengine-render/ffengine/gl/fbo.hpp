@@ -201,7 +201,9 @@ public:
             const unsigned int color_attachment,
             const GLenum internal_format);
     Renderbuffer *make_depth_buffer(
-            const GLenum internal_format = GL_DEPTH_COMPONENT32);
+            const GLenum internal_format = GL_DEPTH_COMPONENT24);
+    Renderbuffer *make_stencil_buffer(
+            const GLenum internal_format = GL_STENCIL_INDEX8);
 
     void resize(GLsizei width, GLsizei height);
 
