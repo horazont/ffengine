@@ -13,6 +13,7 @@ set(TEST_SRC
   engine/math/vector.cpp
   engine/render/fancyterraindata.cpp
   engine/sim/objects.cpp
+  engine/sim/network.cpp
   engine/sim/networld.cpp
   main.cpp
   )

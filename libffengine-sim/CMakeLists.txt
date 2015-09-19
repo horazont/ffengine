@@ -8,6 +8,7 @@ set(ENGINE_HEADERS
   ffengine/sim/fluid.hpp
   ffengine/sim/fluid_base.hpp
   ffengine/sim/fluid_native.hpp
+  ffengine/sim/network.hpp
   ffengine/sim/networld.hpp
   ffengine/sim/objects.hpp
   ffengine/sim/server.hpp
@@ -21,6 +22,7 @@ set(ENGINE_SRC
   src/sim/fluid.cpp
   src/sim/fluid_base.cpp
   src/sim/fluid_native.cpp
+  src/sim/network.cpp
   src/sim/networld.cpp
   src/sim/objects.cpp
   src/sim/server.cpp
