@@ -300,7 +300,7 @@ std::tuple<unsigned int, unsigned int> Sandifier::step()
 
         float new_value = 0.f;
 
-        if (center_cell.wet()) {
+        if (center_cell.fluid_height >= 0.01) {
             // clamp wet cells to 1
             new_value = 1.f;
         } else {
