@@ -644,6 +644,7 @@ WorldOperationResult FluidOceanLevelSetHeight::execute(WorldState &state)
 WorldOperationResult FluidReset::execute(WorldState &state)
 {
     state.fluid().reset();
+    state.fluid_resetted()();
     return NO_ERROR;
 }
 

@@ -32,6 +32,14 @@ the AUTHORS file.
 #include "ffengine/render/renderpass.hpp"
 
 
+namespace sim {
+
+class WorldState;
+class SignalQueue;
+
+}
+
+
 namespace ffe {
 
 struct FluidSlice
@@ -60,7 +68,8 @@ public:
     CPUFluid(const unsigned int terrain_size,
              const unsigned int grid_size,
              GLResourceManager &resources,
-             const sim::Fluid &fluidsim,
+             const sim::WorldState &state,
+             sim::SignalQueue &signal_queue,
              RenderPass &transparent_pass,
              RenderPass &water_pass);
 
@@ -71,6 +80,8 @@ private:
     const sim::Fluid &m_fluidsim;
     const unsigned int m_block_size;
     const unsigned int m_lods;
+
+    sig11::connection_guard<void()> m_fluid_resetted_guard;
 
     unsigned int m_max_slices;
 
@@ -87,6 +98,10 @@ private:
 
     typedef std::tuple<unsigned int, unsigned int, unsigned int> CacheTuple;
     std::vector<CacheTuple> m_tmp_slices;
+
+private:
+    void fluid_resetted();
+    void reinitialise_cache();
 
 protected:
     void invalidate_caches(const unsigned int blockx,

@@ -60,6 +60,7 @@ class WorldState
 {
 public:
     using FluidSourceSignal = sig11::signal<void(object_ptr<Fluid::Source>)>;
+    using NotifySignal = sig11::signal<void()>;
 
 public:
     WorldState();
@@ -72,6 +73,7 @@ protected:
     mutable FluidSourceSignal m_fluid_source_added;
     mutable FluidSourceSignal m_fluid_source_changed;
     mutable FluidSourceSignal m_fluid_source_removed;
+    mutable NotifySignal m_fluid_resetted;
 
 public:
     inline const Fluid &fluid() const
@@ -118,6 +120,11 @@ public:
     FluidSourceSignal &fluid_source_removed() const
     {
         return m_fluid_source_removed;
+    }
+
+    NotifySignal &fluid_resetted() const
+    {
+        return m_fluid_resetted;
     }
 
 };

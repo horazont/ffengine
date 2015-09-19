@@ -108,6 +108,9 @@ void FluidBlock::reset(const float ocean_level)
         front.fluid_height = std::max(0.f, ocean_level - meta.terrain_height);
         back = front;
     }
+
+    // after reset, no activity can take place
+    set_active(false);
 }
 
 /* sim::FluidBlocks */

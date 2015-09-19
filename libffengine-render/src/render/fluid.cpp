@@ -25,6 +25,9 @@ the AUTHORS file.
 
 #include <map>
 
+#include "ffengine/sim/signals.hpp"
+#include "ffengine/sim/world.hpp"
+
 
 namespace ffe {
 
@@ -47,16 +50,22 @@ FluidSlice::FluidSlice(IBOAllocation &&ibo_alloc,
 CPUFluid::CPUFluid(const unsigned int terrain_size,
                    const unsigned int grid_size,
                    GLResourceManager &resources,
-                   const sim::Fluid &fluidsim,
+                   const sim::WorldState &state,
+                   sim::SignalQueue &signal_queue,
                    RenderPass &transparent_pass,
                    RenderPass &water_pass):
     FullTerrainRenderer(terrain_size, grid_size),
     m_transparent_pass(transparent_pass),
     m_water_pass(water_pass),
     m_resources(resources),
-    m_fluidsim(fluidsim),
+    m_fluidsim(state.fluid()),
     m_block_size(sim::IFluidSim::block_size),
     m_lods(log2_of_pot((terrain_size-1)/(grid_size-1))+1),
+    m_fluid_resetted_guard(signal_queue.connect_queued(
+                               state.fluid_resetted(),
+                               std::bind(&CPUFluid::fluid_resetted,
+                                         this)
+                               )),
     m_max_slices(2*(terrain_size-1)/(grid_size-1)), // this is usually much more than needed
     m_mat(VBOFormat({
                         VBOAttribute(3),  // position
@@ -68,15 +77,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
         throw std::logic_error("terrain grid_size does not match fluidsim block_size");
     }
 
-    m_slice_cache.resize(m_lods);
-    for (unsigned int i = 0; i < m_lods; ++i) {
-        const unsigned int logblocks = m_lods - i - 1;
-        std::cout << i << " " << logblocks << " " << ((1<<logblocks)*(1<<logblocks)) << std::endl;
-        m_slice_cache[i].resize((1<<logblocks)*(1<<logblocks));
-        for (unsigned int j = 0; j < m_slice_cache[i].size(); ++j) {
-            m_slice_cache[i][j] = std::make_pair(false, nullptr);
-        }
-    }
+    reinitialise_cache();
 
     spp::EvaluationContext context(m_resources.shader_library());
 
@@ -101,6 +102,23 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     success = success && m_mat.link();
     if (!success) {
         throw std::runtime_error("material failed to compile or link");
+    }
+}
+
+void CPUFluid::fluid_resetted()
+{
+    reinitialise_cache();
+}
+
+void CPUFluid::reinitialise_cache()
+{
+    m_slice_cache.resize(m_lods);
+    for (unsigned int i = 0; i < m_lods; ++i) {
+        const unsigned int logblocks = m_lods - i - 1;
+        m_slice_cache[i].resize((1<<logblocks)*(1<<logblocks));
+        for (unsigned int j = 0; j < m_slice_cache[i].size(); ++j) {
+            m_slice_cache[i][j] = std::make_pair(false, nullptr);
+        }
     }
 }
 

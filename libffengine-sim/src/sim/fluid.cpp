@@ -252,6 +252,7 @@ void Fluid::set_ocean_level(const float level)
 void Fluid::reset()
 {
     m_blocks.reset(m_ocean_level);
+    invalidate_sources();
 }
 
 void Fluid::copy_block(Vector4f *dest,
