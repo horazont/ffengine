@@ -82,7 +82,9 @@ void offset_segments(const std::vector<PhysicalEdgeSegment> &segments,
 
         prev_end = end;
 
-        dest.emplace_back(s, start, (end - start));
+        const Vector3f direction(end - start);
+        dest.emplace_back(s, start, direction);
+        s += direction.length();
     }
 }
 

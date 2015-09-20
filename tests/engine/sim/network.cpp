@@ -66,7 +66,7 @@ TEST_CASE("sim/network/offset_segments/concave_corner")
 
     std::vector<PhysicalEdgeSegment> expected;
     expected.emplace_back(0, Vector3f(0.5, 0, 0), Vector3f(0, 0.5, 0));
-    expected.emplace_back(0, Vector3f(0.5, 0.5, 0), Vector3f(0.5, 0, 0));
+    expected.emplace_back(0.5, Vector3f(0.5, 0.5, 0), Vector3f(0.5, 0, 0));
 
     CHECK(expected == result);
 }
@@ -83,7 +83,7 @@ TEST_CASE("sim/network/offset_segments/convex_corner")
 
     std::vector<PhysicalEdgeSegment> expected;
     expected.emplace_back(0, Vector3f(-0.5, 0, 0), Vector3f(0, 1.5, 0));
-    expected.emplace_back(0, Vector3f(-0.5, 1.5, 0), Vector3f(1.5, 0, 0));
+    expected.emplace_back(1.5, Vector3f(-0.5, 1.5, 0), Vector3f(1.5, 0, 0));
 
     CHECK(expected == result);
 }
@@ -101,8 +101,8 @@ TEST_CASE("sim/network/offset_segments/both_corner_types")
 
     std::vector<PhysicalEdgeSegment> expected;
     expected.emplace_back(0, Vector3f(0.5, 0, 0), Vector3f(0, 0.5, 0));
-    expected.emplace_back(0, Vector3f(0.5, 0.5, 0), Vector3f(1, 0, 0));
-    expected.emplace_back(0, Vector3f(1.5, 0.5, 0), Vector3f(0, 1.5, 0));
+    expected.emplace_back(0.5, Vector3f(0.5, 0.5, 0), Vector3f(1, 0, 0));
+    expected.emplace_back(1.5, Vector3f(1.5, 0.5, 0), Vector3f(0, 1.5, 0));
 
     CHECK(expected == result);
 }
