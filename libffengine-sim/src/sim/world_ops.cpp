@@ -662,7 +662,7 @@ WorldOperationResult ConstructNewCurve::execute(WorldState &state)
 {
     PhysicalNode &start = state.graph().create_node(EDGE_CLASS_ROAD, m_curve.p_start);
     PhysicalNode &end = state.graph().create_node(EDGE_CLASS_ROAD, m_curve.p_end);
-    state.graph().construct_curve(start, m_curve.p_control, end, EDGE_TYPE_BIDIRECTIONAL_ONE_LANE);
+    state.graph().construct_curve(start, m_curve.p_control, end, EDGE_TYPE_BIDIRECTIONAL_THREE_LANES);
     return NO_ERROR;
 }
 

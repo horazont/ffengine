@@ -32,6 +32,9 @@ const EdgeClass EDGE_CLASS_ROAD;
 const EdgeType EDGE_TYPE_BIDIRECTIONAL_ONE_LANE(
         EDGE_CLASS_ROAD,
         1, 0, 1, true);
+const EdgeType EDGE_TYPE_BIDIRECTIONAL_THREE_LANES(
+        EDGE_CLASS_ROAD,
+        3, 0.5, 1, true);
 
 
 /* sim::EdgeType */

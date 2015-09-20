@@ -359,6 +359,7 @@ void segmentize_curve(const QuadBezier3f &curve,
 extern const EdgeClass EDGE_CLASS_ROAD;
 
 extern const EdgeType EDGE_TYPE_BIDIRECTIONAL_ONE_LANE;
+extern const EdgeType EDGE_TYPE_BIDIRECTIONAL_THREE_LANES;
 
 }
 
