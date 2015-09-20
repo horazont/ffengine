@@ -31,6 +31,7 @@ the AUTHORS file.
 #include "ffengine/sim/terrain.hpp"
 #include "ffengine/sim/fluid.hpp"
 #include "ffengine/sim/objects.hpp"
+#include "ffengine/sim/network.hpp"
 
 #include "types.pb.h"
 
@@ -69,6 +70,7 @@ protected:
     Terrain m_terrain;
     Fluid m_fluid;
     ObjectManager m_objects;
+    PhysicalGraph m_graph;
 
     mutable FluidSourceSignal m_fluid_source_added;
     mutable FluidSourceSignal m_fluid_source_changed;
@@ -104,6 +106,16 @@ public:
     inline ObjectManager &objects()
     {
         return m_objects;
+    }
+
+    inline const PhysicalGraph &graph() const
+    {
+        return m_graph;
+    }
+
+    inline PhysicalGraph &graph()
+    {
+        return m_graph;
     }
 
 public:

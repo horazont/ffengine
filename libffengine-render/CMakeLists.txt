@@ -26,6 +26,7 @@ set(ENGINE_HEADERS
   ffengine/render/fluidsource.hpp
   ffengine/render/fullterrain.hpp
   ffengine/render/grid.hpp
+  ffengine/render/network_debug.hpp
   ffengine/render/oct_sphere.hpp
   ffengine/render/plane.hpp
   ffengine/render/pointer.hpp
@@ -55,6 +56,7 @@ set(ENGINE_SRC
   src/render/fluidsource.cpp
   src/render/fullterrain.cpp
   src/render/grid.cpp
+  src/render/network_debug.cpp
   src/render/oct_sphere.cpp
   src/render/plane.cpp
   src/render/pointer.cpp

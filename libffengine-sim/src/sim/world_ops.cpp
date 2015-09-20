@@ -648,6 +648,24 @@ WorldOperationResult FluidReset::execute(WorldState &state)
     return NO_ERROR;
 }
 
+/* sim::ops::ConstructNewCurve */
+
+ConstructNewCurve::ConstructNewCurve(const QuadBezier3f &curve,
+                                     Object::ID new_object_id):
+    ObjectWorldOperation(new_object_id),
+    m_curve(curve)
+{
+
+}
+
+WorldOperationResult ConstructNewCurve::execute(WorldState &state)
+{
+    PhysicalNode &start = state.graph().create_node(EDGE_CLASS_ROAD, m_curve.p_start);
+    PhysicalNode &end = state.graph().create_node(EDGE_CLASS_ROAD, m_curve.p_end);
+    state.graph().construct_curve(start, m_curve.p_control, end, EDGE_TYPE_BIDIRECTIONAL_ONE_LANE);
+    return NO_ERROR;
+}
+
 
 }
 }

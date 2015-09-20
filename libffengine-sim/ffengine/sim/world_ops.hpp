@@ -24,7 +24,10 @@ the AUTHORS file.
 #ifndef SCC_SIM_WORLD_OPS_H
 #define SCC_SIM_WORLD_OPS_H
 
+#include "ffengine/math/curve.hpp"
+
 #include "ffengine/sim/world.hpp"
+
 
 namespace sim {
 namespace ops {
@@ -279,6 +282,21 @@ public:
 
 class FluidReset: public WorldOperation
 {
+public:
+    WorldOperationResult execute(WorldState &state) override;
+
+};
+
+
+class ConstructNewCurve: public ObjectWorldOperation
+{
+public:
+    ConstructNewCurve(const QuadBezier3f &curve,
+                      Object::ID new_object_id = Object::NULL_OBJECT_ID);
+
+private:
+    const QuadBezier3f m_curve;
+
 public:
     WorldOperationResult execute(WorldState &state) override;
 
