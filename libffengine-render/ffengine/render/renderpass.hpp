@@ -178,6 +178,7 @@ private:
     GLenum m_polygon_mode;
     bool m_depth_mask;
     bool m_depth_test;
+    float m_point_size;
 
     ArrayDeclaration m_vertex_attrs;
 
@@ -263,6 +264,11 @@ public:
         return m_polygon_mode;
     }
 
+    inline float point_size() const
+    {
+        return m_point_size;
+    }
+
     inline void set_depth_mask(const bool mask)
     {
         m_depth_mask = mask;
@@ -276,6 +282,11 @@ public:
     inline void set_polygon_mode(const GLenum mode)
     {
         m_polygon_mode = mode;
+    }
+
+    inline void set_point_size(const float size)
+    {
+        m_point_size = size;
     }
 
 public:

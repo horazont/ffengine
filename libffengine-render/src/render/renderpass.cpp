@@ -163,7 +163,8 @@ Material::Material():
     m_linked(false),
     m_polygon_mode(GL_FILL),
     m_depth_mask(true),
-    m_depth_test(true)
+    m_depth_test(true),
+    m_point_size(0.f)
 {
 
 }
@@ -175,7 +176,8 @@ Material::Material(const VBOFormat &format):
     m_linked(false),
     m_polygon_mode(GL_FILL),
     m_depth_mask(true),
-    m_depth_test(true)
+    m_depth_test(true),
+    m_point_size(0.f)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -187,7 +189,8 @@ Material::Material(VBO &vbo, IBO &ibo):
     m_linked(false),
     m_polygon_mode(GL_FILL),
     m_depth_mask(true),
-    m_depth_test(true)
+    m_depth_test(true),
+    m_point_size(0.f)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -200,6 +203,7 @@ Material::Material(Material &&src):
     m_polygon_mode(src.m_polygon_mode),
     m_depth_mask(src.m_depth_mask),
     m_depth_test(src.m_depth_test),
+    m_point_size(src.m_point_size),
     m_vertex_attrs(std::move(src.m_vertex_attrs)),
     m_passes(std::move(src.m_passes))
 {
@@ -224,6 +228,7 @@ Material &Material::operator=(Material &&src)
     m_polygon_mode = src.m_polygon_mode;
     m_depth_mask = src.m_depth_mask;
     m_depth_test = src.m_depth_test;
+    m_point_size = src.m_point_size;
     m_vertex_attrs = std::move(src.m_vertex_attrs);
     m_passes = std::move(src.m_passes);
     return *this;
@@ -247,6 +252,9 @@ void Material::setup()
     }
     if (!m_depth_test) {
         glDisable(GL_DEPTH_TEST);
+    }
+    if (m_point_size != 0.f) {
+        glPointSize(m_point_size);
     }
 }
 
