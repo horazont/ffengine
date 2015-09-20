@@ -1,10 +1,13 @@
 TODO
 ====
 
-Compatibility
--------------
+Reliability
+-----------
 
 * Ensure that FBO format and window format match.
+* Find a solution for the Object-ID + Network Latency issue. What happens if a
+  client refers to an Object-ID the server has deleted in the meantime (due to
+  network latency)?
 
 Simulation
 ----------
