@@ -143,15 +143,16 @@ public:
 
 };
 
-template <typename internal_iterator, typename for_class>
+template <typename internal_iterator, typename for_class,
+          typename value_type_base = typename internal_iterator::value_type::element_type>
 class DereferencingIterator
 {
 public:
     typedef std::bidirectional_iterator_tag iterator_category;
     typedef typename internal_iterator::difference_type difference_type;
-    typedef typename internal_iterator::value_type::element_type &value_type;
+    typedef value_type_base &value_type;
     typedef value_type reference;
-    typedef typename internal_iterator::value_type::element_type *&pointer;
+    typedef value_type_base *&pointer;
 
 public:
     DereferencingIterator(internal_iterator curr):
