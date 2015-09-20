@@ -59,10 +59,10 @@ void QuadBezier3fDebug::sync(ffe::Octree &octree,
                              scenegraph::OctContext &positioning)
 {
     if (m_curve_changed || !this->octree()) {
-        Vector3f center((m_curve.p1 + m_curve.p2 + m_curve.p3)/3.f);
-        float radius = std::max((center - m_curve.p1).length(),
-                                std::max((center - m_curve.p2).length(),
-                                         (center - m_curve.p3).length()));
+        Vector3f center((m_curve.p_start + m_curve.p_control + m_curve.p_end)/3.f);
+        float radius = std::max((center - m_curve.p_start).length(),
+                                std::max((center - m_curve.p_control).length(),
+                                         (center - m_curve.p_end).length()));
 
         update_bounds(Sphere{center, radius});
         if (!this->octree()) {
@@ -80,7 +80,7 @@ void QuadBezier3fDebug::sync(ffe::Octree &octree,
                         positioning.get_origin() + positioning.get_orientation().rotate(p),
                         t);
         }
-        slice[m_steps+1] = Vector4f(m_curve.p2, 0.5);
+        slice[m_steps+1] = Vector4f(m_curve.p_control, 0.5);
         m_vbo_alloc.mark_dirty();
         m_mat.sync_buffers();
     }
@@ -111,10 +111,10 @@ void QuadBezier3fRoadTest::sync(ffe::Octree &octree,
                                 scenegraph::OctContext &positioning)
 {
     if (m_curve_changed || !this->octree()) {
-        Vector3f center((m_curve.p1 + m_curve.p2 + m_curve.p3)/3.f);
-        float radius = std::max((center - m_curve.p1).length(),
-                                std::max((center - m_curve.p2).length(),
-                                         (center - m_curve.p3).length()));
+        Vector3f center((m_curve.p_start + m_curve.p_control + m_curve.p_end)/3.f);
+        float radius = std::max((center - m_curve.p_start).length(),
+                                std::max((center - m_curve.p_control).length(),
+                                         (center - m_curve.p_end).length()));
 
         update_bounds(Sphere{center, radius});
         if (!this->octree()) {

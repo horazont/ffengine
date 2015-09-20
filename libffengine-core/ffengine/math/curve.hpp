@@ -37,30 +37,30 @@ struct QuadBezier
     typedef typename vector_t::vector_float_t float_t;
 
     QuadBezier():
-        p1(),
-        p2(),
-        p3()
+        p_start(),
+        p_control(),
+        p_end()
     {
 
     }
 
     template <typename p1_t, typename p2_t, typename p3_t>
     QuadBezier(p1_t &&p1, p2_t &&p2, p3_t &&p3):
-        p1(p1),
-        p2(p2),
-        p3(p3)
+        p_start(p1),
+        p_control(p2),
+        p_end(p3)
     {
 
     }
 
-    vector_t p1, p2, p3;
+    vector_t p_start, p_control, p_end;
 
     // printing
 
     template <typename other_vector_t>
     inline bool operator==(const QuadBezier<other_vector_t> &other) const
     {
-        return (p1 == other.p1) && (p2 == other.p2) && (p3 == other.p3);
+        return (p_start == other.p_start) && (p_control == other.p_control) && (p_end == other.p_end);
     }
 
     template <typename other_vector_t>
@@ -74,11 +74,11 @@ struct QuadBezier
     inline QuadBezier split_inplace(const float_t t)
     {
         const vector_t p2_1 = (*this)[t];
-        const vector_t p2_2 = p2 + t*(p3 - p2);
-        const vector_t p2_3 = p3;
+        const vector_t p2_2 = p_control + t*(p_end - p_control);
+        const vector_t p2_3 = p_end;
 
-        p2 = p1 + t*(p2 - p1);
-        p3 = p2_1;
+        p_control = p_start + t*(p_control - p_start);
+        p_end = p2_1;
 
         return QuadBezier(p2_1, p2_2, p2_3);
     }
@@ -115,14 +115,14 @@ struct QuadBezier
     template <typename float_t>
     inline Vector<float_t, vector_t::dimension> operator[](float_t t) const
     {
-        return sqr(1-t)*p1 + 2*(1-t)*t*p2 + sqr(t)*p3;
+        return sqr(1-t)*p_start + 2*(1-t)*t*p_control + sqr(t)*p_end;
     }
 
 
     template <typename float_t>
     inline Vector<float_t, vector_t::dimension> diff(float_t t) const
     {
-        return 2*(1-t)*(p2 - p1) + 2*t*(p3 - p2);
+        return 2*(1-t)*(p_control - p_start) + 2*t*(p_end - p_control);
     }
 
 };
@@ -296,9 +296,9 @@ template <typename vector_t>
 ostream &operator<<(ostream &stream, const QuadBezier<vector_t> &bezier)
 {
     return stream << "bezier("
-                  << bezier.p1 << ", "
-                  << bezier.p2 << ", "
-                  << bezier.p3 << ")";
+                  << bezier.p_start << ", "
+                  << bezier.p_control << ", "
+                  << bezier.p_end << ")";
 }
 
 }
