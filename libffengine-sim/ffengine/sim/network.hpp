@@ -65,6 +65,10 @@ void offset_segments(const std::vector<PhysicalEdgeSegment> &segments,
 
 std::ostream &operator<<(std::ostream &dest, const PhysicalEdgeSegment &segment);
 
+
+void segmentize_curve(const QuadBezier3f &curve,
+                      std::vector<QuadBezier3f> &segments);
+
 }
 
 #endif

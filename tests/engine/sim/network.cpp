@@ -122,3 +122,36 @@ TEST_CASE("sim/network/offset_segments/non_right_angle")
     CHECK_APPROX_EQUAL(result[1].start, Vector3f(1.20711, 0.5, 0));
     CHECK_APPROX_EQUAL(result[1].direction, Vector3f(0.792893, 0, 0));
 }
+
+
+TEST_CASE("sim/network/segmentize_curve/straight")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(10, 0, 0),
+                             Vector3f(20, 0, 0));
+
+    std::vector<QuadBezier3f> result;
+    segmentize_curve(curve, result);
+
+    std::vector<QuadBezier3f> expected({
+                                           QuadBezier3f(Vector3f(0, 0, 0), Vector3f(5, 0, 0), Vector3f(10, 0, 0)),
+                                           QuadBezier3f(Vector3f(10, 0, 0), Vector3f(15, 0, 0), Vector3f(20, 0, 0)),
+                                       });
+    CHECK(expected == result);
+}
+
+
+TEST_CASE("sim/network/segmentize_curve/cut_short_segments")
+{
+    const QuadBezier3f curve(Vector3f(0, 0, 0),
+                             Vector3f(6, 0, 0),
+                             Vector3f(12, 0, 0));
+
+    std::vector<QuadBezier3f> result;
+    segmentize_curve(curve, result);
+
+    std::vector<QuadBezier3f> expected({
+                                           QuadBezier3f(Vector3f(0, 0, 0), Vector3f(6, 0, 0), Vector3f(12, 0, 0)),
+                                       });
+    CHECK(expected == result);
+}
