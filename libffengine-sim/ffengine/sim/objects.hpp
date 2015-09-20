@@ -499,7 +499,7 @@ public:
 
     T &operator*() const
     {
-        return *get;
+        return *get();
     }
 
     T *operator->() const
