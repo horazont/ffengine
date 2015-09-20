@@ -62,7 +62,7 @@ TEST_CASE("sim/network/offset_segments/concave_corner")
     segments.emplace_back(1, Vector3f(0, 1, 0), Vector3f(1, 0, 0));
 
     std::vector<PhysicalEdgeSegment> result;
-    offset_segments(segments, 0.5, Vector3f(1, 0, 0), result);
+    offset_segments(segments, 0.5, Vector3f(0, 1, 0), Vector3f(1, 0, 0), result);
 
     std::vector<PhysicalEdgeSegment> expected;
     expected.emplace_back(0, Vector3f(0.5, 0, 0), Vector3f(0, 0.5, 0));
@@ -79,7 +79,7 @@ TEST_CASE("sim/network/offset_segments/convex_corner")
     segments.emplace_back(1, Vector3f(0, 1, 0), Vector3f(1, 0, 0));
 
     std::vector<PhysicalEdgeSegment> result;
-    offset_segments(segments, -0.5, Vector3f(1, 0, 0), result);
+    offset_segments(segments, -0.5, Vector3f(0, 1, 0), Vector3f(1, 0, 0), result);
 
     std::vector<PhysicalEdgeSegment> expected;
     expected.emplace_back(0, Vector3f(-0.5, 0, 0), Vector3f(0, 1.5, 0));
@@ -97,7 +97,7 @@ TEST_CASE("sim/network/offset_segments/both_corner_types")
     segments.emplace_back(2, Vector3f(1, 1, 0), Vector3f(0, 1, 0));
 
     std::vector<PhysicalEdgeSegment> result;
-    offset_segments(segments, 0.5, Vector3f(0, 1, 0), result);
+    offset_segments(segments, 0.5, Vector3f(0, 1, 0), Vector3f(0, 1, 0), result);
 
     std::vector<PhysicalEdgeSegment> expected;
     expected.emplace_back(0, Vector3f(0.5, 0, 0), Vector3f(0, 0.5, 0));
@@ -115,12 +115,31 @@ TEST_CASE("sim/network/offset_segments/non_right_angle")
     segments.emplace_back(1, Vector3f(1, 1, 0), Vector3f(1, 0, 0));
 
     std::vector<PhysicalEdgeSegment> result;
-    offset_segments(segments, 0.5, Vector3f(1, 0, 0), result);
+    offset_segments(segments, 0.5, Vector3f(1, 1, 0), Vector3f(1, 0, 0), result);
 
     CHECK_APPROX_EQUAL(result[0].start, Vector3f(0.353553, -0.353553, 0));
     CHECK_APPROX_EQUAL(result[0].direction, Vector3f(0.853553, 0.853553, 0));
     CHECK_APPROX_EQUAL(result[1].start, Vector3f(1.20711, 0.5, 0));
     CHECK_APPROX_EQUAL(result[1].direction, Vector3f(0.792893, 0, 0));
+}
+
+
+TEST_CASE("sim/network/offset_segments/entry_and_exit")
+{
+    std::vector<PhysicalEdgeSegment> segments;
+    segments.emplace_back(0, Vector3f(0, 0, 0), Vector3f(0, 1, 0));
+    segments.emplace_back(1, Vector3f(0, 1, 0), Vector3f(1, 0, 0));
+    segments.emplace_back(2, Vector3f(1, 1, 0), Vector3f(0, 1, 0));
+
+    std::vector<PhysicalEdgeSegment> result;
+    offset_segments(segments, 0.5, Vector3f(1, 0, 0), Vector3f(1, 0, 0), result);
+
+    std::vector<PhysicalEdgeSegment> expected;
+    expected.emplace_back(0, Vector3f(0.5, -0.5, 0), Vector3f(0, 1, 0));
+    expected.emplace_back(1, Vector3f(0.5, 0.5, 0), Vector3f(1, 0, 0));
+    expected.emplace_back(2, Vector3f(1.5, 0.5, 0), Vector3f(0, 1, 0));
+
+    CHECK(expected == result);
 }
 
 

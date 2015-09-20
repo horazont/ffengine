@@ -344,6 +344,7 @@ public:
 
 void offset_segments(const std::vector<PhysicalEdgeSegment> &segments,
                      const float offset,
+                     const Vector3f &entry_direction,
                      const Vector3f &exit_direction,
                      std::vector<PhysicalEdgeSegment> &dest);
 

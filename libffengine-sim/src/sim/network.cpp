@@ -163,7 +163,8 @@ void PhysicalEdgeBundle::add_edge(const float offset,
 
     std::vector<PhysicalEdgeSegment> segments;
     offset_segments(m_segments, adapted_offset,
-                    (m_end_node->position() - m_control_point),
+                    (m_control_point - m_start_node->position()).normalized(),
+                    (m_end_node->position() - m_control_point).normalized(),
                     segments);
     if (direction == EdgeDirection::REVERSE) {
         m_edges.emplace_back(std::make_unique<PhysicalEdge>(
@@ -281,6 +282,7 @@ PhysicalNode &PhysicalGraph::create_node(const EdgeClass &class_,
 
 void offset_segments(const std::vector<PhysicalEdgeSegment> &segments,
                      const float offset,
+                     const Vector3f &entry_direction,
                      const Vector3f &exit_direction,
                      std::vector<PhysicalEdgeSegment> &dest)
 {
@@ -290,14 +292,26 @@ void offset_segments(const std::vector<PhysicalEdgeSegment> &segments,
 
     const Vector3f up(0, 0, 1);
     float s = segments[0].s0;
-    Vector3f prev_end(segments[0].start + (segments[0].direction.normalized() % up) * offset);
+    Vector3f prev_end(segments[0].start);
+    {
+        Vector3f bitangent(segments[0].direction.normalized() % up);
+        bitangent.normalize();
+
+        Vector3f entry_bitangent((entry_direction % up).normalized());
+        entry_bitangent += bitangent;
+        entry_bitangent.normalize();
+
+        entry_bitangent = entry_bitangent / (entry_bitangent*bitangent) * offset;
+
+        prev_end += entry_bitangent;
+    }
 
     for (unsigned int i = 0; i < segments.size(); ++i)
     {
         const PhysicalEdgeSegment &segment = segments[i];
 
         const Vector3f start(prev_end);
-        const Vector3f bitangent(segment.direction.normalized() % up);
+        const Vector3f bitangent((segment.direction.normalized() % up).normalized());
 
         Vector3f curr_bitangent(bitangent);
         if (i == segments.size() - 1) {
