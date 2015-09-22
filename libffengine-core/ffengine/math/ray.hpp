@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: shapes.hpp
+File name: ray.hpp
 This file is part of: SCC (working title)
 
 LICENSE
@@ -21,8 +21,30 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "aabb.hpp"
-#include "line.hpp"
-#include "plane.hpp"
-#include "ray.hpp"
-#include "sphere.hpp"
+#ifndef SCC_ENGINE_MATH_RAY_H
+#define SCC_ENGINE_MATH_RAY_H
+
+#include "ffengine/math/vector.hpp"
+
+
+/**
+ * A ray (half-line originating at a specific point).
+ */
+struct Ray
+{
+    Ray();
+    Ray(const Vector3f &origin, const Vector3f &direction);
+
+    /**
+     * The origin of the ray.
+     */
+    Vector3f origin;
+
+    /**
+     * The direction into which the ray points.
+     */
+    Vector3f direction;
+};
+
+
+#endif

@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: shapes.hpp
+File name: ray.cpp
 This file is part of: SCC (working title)
 
 LICENSE
@@ -21,8 +21,19 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "aabb.hpp"
-#include "line.hpp"
-#include "plane.hpp"
-#include "ray.hpp"
-#include "sphere.hpp"
+#include "ffengine/math/ray.hpp"
+
+
+Ray::Ray():
+    origin(),
+    direction()
+{
+
+}
+
+Ray::Ray(const Vector3f &origin, const Vector3f &direction):
+    origin(origin),
+    direction(direction.normalized())
+{
+
+}

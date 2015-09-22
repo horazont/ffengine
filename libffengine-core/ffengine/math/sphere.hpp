@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: shapes.hpp
+File name: sphere.hpp
 This file is part of: SCC (working title)
 
 LICENSE
@@ -21,8 +21,27 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "aabb.hpp"
-#include "line.hpp"
-#include "plane.hpp"
-#include "ray.hpp"
-#include "sphere.hpp"
+#ifndef SCC_ENGINE_MATH_SPHERE_H
+#define SCC_ENGINE_MATH_SPHERE_H
+
+#include "ffengine/math/vector.hpp"
+
+
+/**
+ * An ideal, mathematical sphere.
+ */
+struct Sphere
+{
+    /**
+     * The center of the sphere.
+     */
+    Vector3f center;
+
+    /**
+     * The radius of the sphere.
+     */
+    float radius;
+};
+
+
+#endif

@@ -73,16 +73,16 @@ std::tuple<float, PlaneSide> isect_plane_ray(
         const Ray &ray)
 {
     const float normal_dir = ray.direction * Vector3f(
-                plane.homogenous.as_array[0],
-                plane.homogenous.as_array[1],
-                plane.homogenous.as_array[2]);
+                plane.homogeneous.as_array[0],
+                plane.homogeneous.as_array[1],
+                plane.homogeneous.as_array[2]);
 
     if (normal_dir > -ISECT_EPSILON && normal_dir < ISECT_EPSILON) {
         // parallel
         return std::make_tuple(0, plane.side_of(ray.origin));
     }
 
-    const float t = -(plane.homogenous*Vector4f(ray.origin, -1)) / normal_dir;
+    const float t = -(plane.homogeneous*Vector4f(ray.origin, -1)) / normal_dir;
 
     return std::make_tuple(t, PlaneSide::BOTH);
 }

@@ -15,15 +15,20 @@ set(ENGINE_HEADERS
   ffengine/io/stream.hpp
   ffengine/io/stream_operators.inc.hpp
   ffengine/io/utils.hpp
+  ffengine/math/aabb.hpp
   ffengine/math/algo.hpp
   ffengine/math/curve.hpp
   ffengine/math/intersect.hpp
+  ffengine/math/line.hpp
   ffengine/math/matrix.hpp
   ffengine/math/octree.hpp
   ffengine/math/perlin.hpp
+  ffengine/math/plane.hpp
   ffengine/math/quaternion.hpp
+  ffengine/math/ray.hpp
   ffengine/math/rect.hpp
   ffengine/math/shapes.hpp
+  ffengine/math/sphere.hpp
   ffengine/math/variadic_initializer.inc.hpp
   ffengine/math/vector.hpp
   )
@@ -42,15 +47,19 @@ set(ENGINE_SRC
   src/io/stream.cpp
   src/io/stream_operators.inc.cpp
   src/io/utils.cpp
+  src/math/aabb.cpp
   src/math/algo.cpp
   src/math/curve.cpp
   src/math/intersect.cpp
+  src/math/line.cpp
   src/math/matrix.cpp
   src/math/octree.cpp
   src/math/perlin.cpp
+  src/math/plane.cpp
   src/math/quaternion.cpp
+  src/math/ray.cpp
   src/math/rect.cpp
-  src/math/shapes.cpp
+  src/math/sphere.cpp
   src/math/vector.cpp
   )
 

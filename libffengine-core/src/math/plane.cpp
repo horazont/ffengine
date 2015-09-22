@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: shapes.cpp
+File name: plane.cpp
 This file is part of: SCC (working title)
 
 LICENSE
@@ -21,25 +21,10 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/plane.hpp"
 
 #include "ffengine/math/algo.hpp"
 #include "ffengine/math/intersect.hpp"
-
-
-Ray::Ray():
-    origin(),
-    direction()
-{
-
-}
-
-Ray::Ray(const Vector3f &origin, const Vector3f &direction):
-    origin(origin),
-    direction(direction.normalized())
-{
-
-}
 
 
 Plane::Plane(const float dist, const Vector3f &normal):
@@ -55,20 +40,20 @@ Plane::Plane(const Vector3f &origin, const Vector3f &normal):
 }
 
 Plane::Plane(const Vector4f &homogenous_vector):
-    homogenous(homogenous_vector)
+    homogeneous(homogenous_vector)
 {
     const float magnitude = std::sqrt(
-                sqr(homogenous.as_array[0])
-            + sqr(homogenous.as_array[1])
-            + sqr(homogenous.as_array[2]));
-    homogenous /= magnitude;
+                sqr(homogeneous.as_array[0])
+            + sqr(homogeneous.as_array[1])
+            + sqr(homogeneous.as_array[2]));
+    homogeneous /= magnitude;
 }
 
 PlaneSide Plane::side_of(const Sphere &other) const
 {
     const float normal_projected_center =
-            Vector4f(other.center, -1) * homogenous;
-    if (fabs(normal_projected_center) <= other.radius) {
+            Vector4f(other.center, -1) * homogeneous;
+    if (std::fabs(normal_projected_center) <= other.radius) {
         return PlaneSide::BOTH;
     } else {
         if (normal_projected_center > 0) {
@@ -81,8 +66,8 @@ PlaneSide Plane::side_of(const Sphere &other) const
 
 PlaneSide Plane::side_of(const Vector3f &other) const
 {
-    const float ndist = Vector4f(other, -1.f) * homogenous;
-    if (fabs(ndist) < ISECT_EPSILON) {
+    const float ndist = Vector4f(other, -1.f) * homogeneous;
+    if (std::fabs(ndist) < ISECT_EPSILON) {
         return PlaneSide::BOTH;
     } else if (ndist < 0) {
         return PlaneSide::NEGATIVE_NORMAL;
@@ -94,7 +79,7 @@ PlaneSide Plane::side_of(const Vector3f &other) const
 
 std::ostream &operator<<(std::ostream &stream, const Plane &plane)
 {
-    return stream << "Plane(" << plane.homogenous << ")";
+    return stream << "Plane(" << plane.homogeneous << ")";
 }
 
 std::ostream &operator<<(std::ostream &stream, const PlaneSide side)
@@ -115,9 +100,4 @@ std::ostream &operator<<(std::ostream &stream, const PlaneSide side)
     }
     }
     return stream << "PlaneSide(" << static_cast<long int>(side) << ")";
-}
-
-std::ostream &operator<<(std::ostream &stream, const Sphere &sphere)
-{
-    return stream << "Sphere(" << sphere.center << ", " << sphere.radius << ")";
 }

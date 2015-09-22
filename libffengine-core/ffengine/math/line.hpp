@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: shapes.hpp
+File name: line.hpp
 This file is part of: SCC (working title)
 
 LICENSE
@@ -21,8 +21,21 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "aabb.hpp"
-#include "line.hpp"
-#include "plane.hpp"
-#include "ray.hpp"
-#include "sphere.hpp"
+#ifndef SCC_ENGINE_MATH_LINE_H
+#define SCC_ENGINE_MATH_LINE_H
+
+#include "ffengine/math/vector.hpp"
+
+struct Line2f
+{
+    Line2f(const Vector2f p0, const Vector2f v):
+        homogeneous(-v[eY], v[eX], v[eX]*p0[eY]-v[eY]*p0[eX])
+    {
+
+    }
+
+    Vector3f homogeneous;
+
+};
+
+#endif
