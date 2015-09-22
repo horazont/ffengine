@@ -68,7 +68,7 @@ public:
 class FluidSource: public RenderableOctreeObject, public scenegraph::OctNode
 {
 public:
-    FluidSource(FluidSourceMaterial &mat);
+    FluidSource(Octree &octree, FluidSourceMaterial &mat);
 
 private:
     FluidSourceMaterial &m_mat;

@@ -25,8 +25,8 @@ the AUTHORS file.
 
 namespace ffe {
 
-OctSphere::OctSphere(Material &mat, float radius):
-    OctNode(),
+OctSphere::OctSphere(Octree &octree, Material &mat, float radius):
+    OctNode(octree),
     RenderableOctreeObject(),
     m_radius(radius),
     m_material(mat),
@@ -80,6 +80,7 @@ OctSphere::OctSphere(Material &mat, float radius):
         *dest++ = base+5;
         m_ibo_alloc.mark_dirty();
     }
+    octree.insert_object(this);
 }
 
 void OctSphere::prepare(RenderContext &)
@@ -97,22 +98,12 @@ void OctSphere::render(RenderContext &context)
     context.render_all(AABB{}, GL_TRIANGLES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
-void OctSphere::sync(ffe::Octree &octree,
-                     scenegraph::OctContext &positioning)
+void OctSphere::sync(scenegraph::OctContext &positioning)
 {
-    if (this->octree() != &octree) {
-        if (this->octree()) {
-            this->octree()->remove_object(this);
-        }
-    }
-
     m_origin = positioning.get_origin();
     /* std::cout << m_origin << std::endl; */
     update_bounds(Sphere{m_origin, m_radius});
 
-    if (this->octree() != &octree) {
-        octree.insert_object(this);
-    }
 }
 
 }

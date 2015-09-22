@@ -35,7 +35,7 @@ class QuadBezier3fDebug: public scenegraph::OctNode,
                          public RenderableOctreeObject
 {
 public:
-    QuadBezier3fDebug(Material &mat, unsigned int steps);
+    QuadBezier3fDebug(Octree &octree, Material &mat, unsigned int steps);
 
 private:
     Material &m_mat;
@@ -61,8 +61,7 @@ public:
 public:
     void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
-    void sync(ffe::Octree &octree,
-              scenegraph::OctContext &positioning) override;
+    void sync(scenegraph::OctContext &positioning) override;
 
 };
 
@@ -70,7 +69,7 @@ class QuadBezier3fRoadTest: public scenegraph::OctNode,
                          public RenderableOctreeObject
 {
 public:
-    QuadBezier3fRoadTest(Material &mat, unsigned int steps);
+    QuadBezier3fRoadTest(Octree &octree, Material &mat, unsigned int steps);
 
 private:
     Material &m_mat;
@@ -96,8 +95,7 @@ public:
 public:
     void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
-    void sync(ffe::Octree &octree,
-              scenegraph::OctContext &positioning) override;
+    void sync(scenegraph::OctContext &positioning) override;
 
 };
 

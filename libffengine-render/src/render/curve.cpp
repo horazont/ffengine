@@ -27,9 +27,12 @@ namespace ffe {
 
 /* engine::QuadBezier3fDebug */
 
-QuadBezier3fDebug::QuadBezier3fDebug(Material &mat, unsigned int steps):
+QuadBezier3fDebug::QuadBezier3fDebug(Octree &octree,
+                                     Material &mat, unsigned int steps):
+    OctNode(octree),
     m_mat(mat),
     m_steps(steps),
+    m_curve_changed(true),
     m_vbo_alloc(mat.vbo().allocate(steps+2)),
     m_ibo_alloc(mat.ibo().allocate(steps+4))
 {
@@ -43,6 +46,7 @@ QuadBezier3fDebug::QuadBezier3fDebug(Material &mat, unsigned int steps):
         *dest++ = steps;
         m_ibo_alloc.mark_dirty();
     }
+    m_octree.insert_object(this);
 }
 
 void QuadBezier3fDebug::prepare(RenderContext &)
@@ -55,19 +59,15 @@ void QuadBezier3fDebug::render(RenderContext &context)
     context.render_all(AABB{}, GL_LINE_STRIP, m_mat, m_ibo_alloc, m_vbo_alloc);
 }
 
-void QuadBezier3fDebug::sync(ffe::Octree &octree,
-                             scenegraph::OctContext &positioning)
+void QuadBezier3fDebug::sync(scenegraph::OctContext &positioning)
 {
-    if (m_curve_changed || !this->octree()) {
+    if (m_curve_changed) {
         Vector3f center((m_curve.p_start + m_curve.p_control + m_curve.p_end)/3.f);
         float radius = std::max((center - m_curve.p_start).length(),
                                 std::max((center - m_curve.p_control).length(),
                                          (center - m_curve.p_end).length()));
 
         update_bounds(Sphere{center, radius});
-        if (!this->octree()) {
-            octree.insert_object(this);
-        }
     }
 
     if (m_curve_changed) {
@@ -88,12 +88,14 @@ void QuadBezier3fDebug::sync(ffe::Octree &octree,
 
 /* engine::QuadBezier3fRoadTest */
 
-QuadBezier3fRoadTest::QuadBezier3fRoadTest(Material &mat, unsigned int steps):
+QuadBezier3fRoadTest::QuadBezier3fRoadTest(Octree &octree,
+                                           Material &mat, unsigned int steps):
+    OctNode(octree),
     m_mat(mat),
     m_steps(steps),
     m_curve_changed(true)
 {
-
+    octree.insert_object(this);
 }
 
 void QuadBezier3fRoadTest::prepare(RenderContext &)
@@ -107,19 +109,15 @@ void QuadBezier3fRoadTest::render(RenderContext &context)
                 AABB{}, GL_TRIANGLES, m_mat, m_ibo_alloc, m_vbo_alloc);
 }
 
-void QuadBezier3fRoadTest::sync(ffe::Octree &octree,
-                                scenegraph::OctContext &positioning)
+void QuadBezier3fRoadTest::sync(scenegraph::OctContext &positioning)
 {
-    if (m_curve_changed || !this->octree()) {
+    if (m_curve_changed) {
         Vector3f center((m_curve.p_start + m_curve.p_control + m_curve.p_end)/3.f);
         float radius = std::max((center - m_curve.p_start).length(),
                                 std::max((center - m_curve.p_control).length(),
                                          (center - m_curve.p_end).length()));
 
         update_bounds(Sphere{center, radius});
-        if (!this->octree()) {
-            octree.insert_object(this);
-        }
     }
 
     if (m_curve_changed) {

@@ -33,7 +33,7 @@ namespace ffe {
 class OctSphere: public scenegraph::OctNode, public RenderableOctreeObject
 {
 public:
-    OctSphere(Material &mat, float radius);
+    OctSphere(Octree &octree, Material &mat, float radius);
 
 private:
     Vector3f m_origin;
@@ -47,8 +47,7 @@ private:
 public:
     void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
-    void sync(ffe::Octree &octree,
-              scenegraph::OctContext &positioning) override;
+    void sync(scenegraph::OctContext &positioning) override;
 
 };
 

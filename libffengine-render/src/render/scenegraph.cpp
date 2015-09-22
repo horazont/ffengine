@@ -314,6 +314,12 @@ void OctContext::reset()
 
 /* engine::scenegraph::OctNode */
 
+OctNode::OctNode(ffe::Octree &octree):
+    m_octree(octree)
+{
+
+}
+
 OctNode::~OctNode()
 {
 
@@ -324,18 +330,12 @@ void OctNode::advance(TimeInterval)
 
 }
 
-void OctNode::sync(ffe::Octree &, OctContext &)
+void OctNode::sync(OctContext &)
 {
 
 }
 
 /* engine::scenegraph::OctGroup */
-
-OctGroup::OctGroup():
-    OctNode()
-{
-
-}
 
 void OctGroup::add(std::unique_ptr<OctNode> &&node)
 {
@@ -384,22 +384,15 @@ void OctGroup::advance(TimeInterval seconds)
     }
 }
 
-void OctGroup::sync(ffe::Octree &octree, OctContext &positioning)
+void OctGroup::sync(OctContext &positioning)
 {
     m_locked_children.clear();
     for (auto &child: m_children) {
-        child->sync(octree, positioning);
+        child->sync(positioning);
     }
 }
 
 /* engine::scenegraph::OctParentNode */
-
-std::unique_ptr<OctNode> OctParentNode::swap_child(std::unique_ptr<OctNode> &&node)
-{
-    std::unique_ptr<OctNode> result = std::move(m_child);
-    m_child = std::move(node);
-    return result;
-}
 
 void OctParentNode::set_child(std::unique_ptr<OctNode> &&node)
 {
@@ -415,50 +408,53 @@ void OctParentNode::advance(TimeInterval seconds)
     }
 }
 
-void OctParentNode::sync(ffe::Octree &octree,
-                         OctContext &positioning)
+void OctParentNode::sync(OctContext &positioning)
 {
     m_locked_child = nullptr;
     if (m_child) {
-        m_child->sync(octree, positioning);
+        m_child->sync(positioning);
     }
 }
 
 /* engine::scenegraph::OctRotation */
 
-OctRotation::OctRotation(const Quaternionf &q):
-    OctParentNode(),
+OctRotation::OctRotation(Octree &octree, const Quaternionf &q):
+    OctParentNode(octree),
     m_rotation(q)
 {
 
 }
 
-void OctRotation::sync(ffe::Octree &octree,
-                       OctContext &positioning)
+void OctRotation::sync(OctContext &positioning)
 {
     positioning.push_rotation(m_rotation);
-    OctParentNode::sync(octree, positioning);
+    OctParentNode::sync(positioning);
     positioning.pop_transform();
 }
 
 /* engine::scenegraph::OctTranslation */
 
-OctTranslation::OctTranslation(const Vector3f &d):
-    OctParentNode(),
+OctTranslation::OctTranslation(Octree &octree, const Vector3f &d):
+    OctParentNode(octree),
     m_translation(d)
 {
 
 }
 
-void OctTranslation::sync(ffe::Octree &octree,
-                          OctContext &positioning)
+void OctTranslation::sync(OctContext &positioning)
 {
     positioning.push_translation(m_translation);
-    OctParentNode::sync(octree, positioning);
+    OctParentNode::sync(positioning);
     positioning.pop_transform();
 }
 
 /* engine::scenegraph::OctreeGroup */
+
+OctreeGroup::OctreeGroup():
+    m_root(m_octree)
+{
+
+}
 
 void OctreeGroup::advance(TimeInterval seconds)
 {
@@ -507,7 +503,7 @@ void OctreeGroup::sync()
 {
     m_to_render.clear();
     m_positioning.reset();
-    m_root.sync(m_octree, m_positioning);
+    m_root.sync(m_positioning);
 }
 
 

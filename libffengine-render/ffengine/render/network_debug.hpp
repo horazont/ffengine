@@ -62,7 +62,8 @@ public:
 class DebugEdgeBundle: public scenegraph::OctNode, public RenderableOctreeObject
 {
 public:
-    DebugEdgeBundle(ffe::Material &material,
+    DebugEdgeBundle(Octree &octree,
+                    ffe::Material &material,
                     const sim::PhysicalEdgeBundle &bundle);
 
 private:
@@ -71,9 +72,9 @@ private:
     VBOAllocation m_vbo_alloc;
 
 public:
-    void prepare(RenderContext &context);
-    void render(RenderContext &context);
-    void sync(Octree &octree, scenegraph::OctContext &positioning);
+    void prepare(RenderContext &context) override;
+    void render(RenderContext &context) override;
+    void sync(scenegraph::OctContext &positioning) override;
 
 };
 

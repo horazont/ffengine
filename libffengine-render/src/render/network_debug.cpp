@@ -98,8 +98,12 @@ void DebugNodes::sync()
     m_changed = false;
 }
 
-DebugEdgeBundle::DebugEdgeBundle(Material &material,
+
+/* ffe::DebugEdgeBundle */
+
+DebugEdgeBundle::DebugEdgeBundle(Octree &octree, Material &material,
                                  const sim::PhysicalEdgeBundle &bundle):
+    OctNode(octree),
     m_material(material)
 {
     unsigned int vertex_count = 0;
@@ -176,6 +180,8 @@ DebugEdgeBundle::DebugEdgeBundle(Material &material,
               << min << " to " << max << std::endl;
 
     update_bounds(Sphere{(max + min)/2.f, (max - min).length() / 2.f});
+
+    octree.insert_object(this);
 }
 
 void DebugEdgeBundle::prepare(RenderContext &)
@@ -188,15 +194,8 @@ void DebugEdgeBundle::render(RenderContext &context)
     context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
 }
 
-void DebugEdgeBundle::sync(Octree &octree,
-                           scenegraph::OctContext &)
+void DebugEdgeBundle::sync(scenegraph::OctContext &)
 {
-    if (this->octree() != &octree) {
-        if (this->octree()) {
-            this->octree()->remove_object(this);
-        }
-        octree.insert_object(this);
-    }
 
 }
 

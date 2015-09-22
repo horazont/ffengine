@@ -110,7 +110,8 @@ FluidSourceMaterial::FluidSourceMaterial(unsigned int resolution):
 
 /* ffe::FluidSource */
 
-FluidSource::FluidSource(FluidSourceMaterial &mat):
+FluidSource::FluidSource(Octree &octree, FluidSourceMaterial &mat):
+    OctNode(octree),
     m_mat(mat),
     m_source(nullptr),
     m_state(UI_STATE_INACTIVE),

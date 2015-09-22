@@ -606,7 +606,11 @@ public:
 class OctNode
 {
 public:
+    explicit OctNode(Octree &octree);
     virtual ~OctNode();
+
+protected:
+    Octree &m_octree;
 
 public:
     /**
@@ -628,8 +632,7 @@ public:
      *
      * @opengl
      */
-    virtual void sync(ffe::Octree &octree,
-                      OctContext &positioning);
+    virtual void sync(OctContext &positioning);
 
 
 };
@@ -645,7 +648,7 @@ public:
     typedef std::reverse_iterator<iterator> reverse_iterator;
 
 public:
-    OctGroup();
+    using OctNode::OctNode;
 
 private:
     internal_container m_locked_children;
@@ -691,7 +694,7 @@ public:
     template <typename T, typename... arg_ts>
     T &emplace(arg_ts&&... args)
     {
-        T *result = new T(std::forward<arg_ts>(args)...);
+        T *result = new T(m_octree, std::forward<arg_ts>(args)...);
         m_children.emplace_back(result);
         return *result;
     }
@@ -761,17 +764,29 @@ public:
 public:
     void advance(TimeInterval seconds) override;
 
-    void sync(ffe::Octree &octree,
-              OctContext &positioning) override;
+    void sync(OctContext &positioning) override;
 
 };
 
 
 class OctParentNode: public OctNode
 {
+public:
+    using OctNode::OctNode;
+
 private:
     std::unique_ptr<OctNode> m_child;
     std::unique_ptr<OctNode> m_locked_child;
+
+private:
+    /**
+     * Replace the current child, deleting it.
+     *
+     * The old child might be kept alive until the next call to sync().
+     *
+     * @param node New child to adopt
+     */
+    void set_child(std::unique_ptr<OctNode> &&node);
 
 public:
     /**
@@ -783,26 +798,6 @@ public:
     {
         return m_child.get();
     }
-
-    /**
-     * Swap the current child for a different one.
-     *
-     * You **must** keep the returned node alive until the next call to sync().
-     * If you simply want to set a new child, use set_child().
-     *
-     * @param node The new child to adopt
-     * @return The old child.
-     */
-    std::unique_ptr<OctNode> swap_child(std::unique_ptr<OctNode> &&node);
-
-    /**
-     * Replace the current child, deleting it.
-     *
-     * The old child might be kept alive until the next call to sync().
-     *
-     * @param node New child to adopt
-     */
-    void set_child(std::unique_ptr<OctNode> &&node);
 
     /**
      * Create a node and replace the current child with it.
@@ -822,8 +817,7 @@ public:
 
 public:
     void advance(TimeInterval seconds) override;
-    void sync(ffe::Octree &octree,
-              OctContext &positioning) override;
+    void sync(OctContext &positioning) override;
 
 };
 
@@ -831,8 +825,8 @@ public:
 class OctRotation: public OctParentNode
 {
 public:
-    OctRotation() = default;
-    explicit OctRotation(const Quaternionf &q);
+    using OctParentNode::OctParentNode;
+    OctRotation(Octree &octree, const Quaternionf &q);
 
 private:
     Quaternionf m_rotation;
@@ -849,8 +843,7 @@ public:
     }
 
 public:
-    void sync(ffe::Octree &octree,
-              OctContext &positioning) override;
+    void sync(OctContext &positioning) override;
 
 };
 
@@ -858,8 +851,8 @@ public:
 class OctTranslation: public OctParentNode
 {
 public:
-    OctTranslation() = default;
-    explicit OctTranslation(const Vector3f &d);
+    using OctParentNode::OctParentNode;
+    OctTranslation(Octree &octree, const Vector3f &d);
 
 private:
     Vector3f m_translation;
@@ -876,17 +869,19 @@ public:
     }
 
 public:
-    void sync(ffe::Octree &octree,
-              OctContext &positioning) override;
+    void sync(OctContext &positioning) override;
 
 };
 
 
 class OctreeGroup: public Node
 {
+public:
+    OctreeGroup();
+
 private:
-    OctGroup m_root;
     ffe::Octree m_octree;
+    OctGroup m_root;
 
     // used during sync
     OctContext m_positioning;
