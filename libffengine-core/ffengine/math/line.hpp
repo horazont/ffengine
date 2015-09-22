@@ -29,7 +29,7 @@ the AUTHORS file.
 struct Line2f
 {
     Line2f(const Vector2f p0, const Vector2f v):
-        homogeneous(-v[eY], v[eX], v[eX]*p0[eY]-v[eY]*p0[eX])
+        homogeneous(-v[eY], v[eX], v[eY]*p0[eX]-v[eX]*p0[eY])
     {
 
     }
@@ -37,5 +37,9 @@ struct Line2f
     Vector3f homogeneous;
 
 };
+
+
+Vector2f isect_line_line(const Line2f l1, const Line2f l2);
+
 
 #endif

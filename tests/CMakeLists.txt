@@ -6,6 +6,7 @@ set(TEST_SRC
   engine/math/algo.cpp
   engine/math/curve.cpp
   engine/math/intersect.cpp
+  engine/math/line.cpp
   engine/math/matrix.cpp
   engine/math/octree.cpp
   engine/math/plane.cpp

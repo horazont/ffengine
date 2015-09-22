@@ -22,3 +22,16 @@ For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
 #include "ffengine/math/line.hpp"
+
+#include "ffengine/math/intersect.hpp"
+
+
+Vector2f isect_line_line(const Line2f l1, const Line2f l2)
+{
+    Vector3f homogeneous(l1.homogeneous % l2.homogeneous);
+    if (std::fabs(homogeneous[eZ]) < ISECT_EPSILON) {
+        return Vector2f(NAN, NAN);
+    }
+
+    return Vector2f(homogeneous[eX], homogeneous[eY]) / homogeneous[eZ];
+}
