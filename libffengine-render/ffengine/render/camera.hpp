@@ -29,7 +29,7 @@ the AUTHORS file.
 #include "ffengine/common/types.hpp"
 
 #include "ffengine/math/matrix.hpp"
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/ray.hpp"
 
 
 namespace ffe {

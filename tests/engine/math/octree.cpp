@@ -27,6 +27,8 @@ the AUTHORS file.
 
 #include <iostream>
 
+#include "ffengine/math/ray.hpp"
+
 
 class TestObject: public ffe::OctreeObject
 {

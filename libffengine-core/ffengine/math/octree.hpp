@@ -28,7 +28,15 @@ the AUTHORS file.
 #include <memory>
 #include <vector>
 
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/sphere.hpp"
+#include "ffengine/math/plane.hpp"
+
+
+struct Ray;
+
+template <typename float_t>
+struct GenericAABB;
+typedef GenericAABB<float> AABB;
 
 
 namespace ffe {
@@ -70,7 +78,7 @@ protected:
      * @see Octree.insert_object()
      * @see Octree.remove_object()
      */
-    void update_bounds(Sphere new_bounds);
+    void update_bounds(const Sphere &new_bounds);
 
 public:
     /**

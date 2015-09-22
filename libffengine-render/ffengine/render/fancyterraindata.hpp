@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_RENDER_FANCYTERRAINDATA_H
 #define SCC_ENGINE_RENDER_FANCYTERRAINDATA_H
 
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/ray.hpp"
 
 #include "ffengine/sim/terrain.hpp"
 

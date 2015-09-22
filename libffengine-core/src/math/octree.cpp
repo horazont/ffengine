@@ -48,7 +48,7 @@ OctreeObject::~OctreeObject()
     }
 }
 
-void OctreeObject::update_bounds(Sphere new_bounds)
+void OctreeObject::update_bounds(const Sphere &new_bounds)
 {
     Octree *tree = nullptr;
     if (m_parent) {

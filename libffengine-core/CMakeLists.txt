@@ -27,7 +27,6 @@ set(ENGINE_HEADERS
   ffengine/math/quaternion.hpp
   ffengine/math/ray.hpp
   ffengine/math/rect.hpp
-  ffengine/math/shapes.hpp
   ffengine/math/sphere.hpp
   ffengine/math/variadic_initializer.inc.hpp
   ffengine/math/vector.hpp

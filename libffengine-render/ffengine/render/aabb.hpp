@@ -27,7 +27,7 @@ the AUTHORS file.
 #include <functional>
 #include <vector>
 
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/aabb.hpp"
 
 #include "ffengine/render/scenegraph.hpp"
 #include "ffengine/render/renderpass.hpp"

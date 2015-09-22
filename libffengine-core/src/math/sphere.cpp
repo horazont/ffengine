@@ -21,7 +21,7 @@ FEEDBACK & QUESTIONS
 For feedback and questions about SCC please e-mail one of the authors named in
 the AUTHORS file.
 **********************************************************************/
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/sphere.hpp"
 
 
 std::ostream &operator<<(std::ostream &stream, const Sphere &sphere)

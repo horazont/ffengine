@@ -27,7 +27,10 @@ the AUTHORS file.
 #include <array>
 
 #include "ffengine/math/vector.hpp"
-#include "ffengine/math/shapes.hpp"
+#include "ffengine/math/ray.hpp"
+#include "ffengine/math/aabb.hpp"
+#include "ffengine/math/plane.hpp"
+#include "ffengine/math/sphere.hpp"
 #include "ffengine/math/algo.hpp"
 
 /**
