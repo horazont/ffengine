@@ -28,6 +28,7 @@ set(ENGINE_HEADERS
   ffengine/math/ray.hpp
   ffengine/math/rect.hpp
   ffengine/math/sphere.hpp
+  ffengine/math/tikz.hpp
   ffengine/math/variadic_initializer.inc.hpp
   ffengine/math/vector.hpp
   )
@@ -59,6 +60,7 @@ set(ENGINE_SRC
   src/math/ray.cpp
   src/math/rect.cpp
   src/math/sphere.cpp
+  src/math/tikz.cpp
   src/math/vector.cpp
   )
 
