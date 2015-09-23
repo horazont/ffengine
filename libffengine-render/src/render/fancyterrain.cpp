@@ -331,6 +331,7 @@ void FancyTerrainNode::render(RenderContext &context,
                               const FullTerrainNode &,
                               const FullTerrainNode::Slices &slices)
 {
+    return;
     update_material(context, m_material);
     render_all(context, m_material, slices);
 

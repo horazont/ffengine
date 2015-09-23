@@ -38,11 +38,11 @@ const EdgeClass EDGE_CLASS_ROAD;
 const EdgeType EDGE_TYPE_BIDIRECTIONAL_ONE_LANE(
         EDGE_CLASS_ROAD,
         1, 0, 1, true,
-        1.5f);
+        0.5f);
 const EdgeType EDGE_TYPE_BIDIRECTIONAL_THREE_LANES(
         EDGE_CLASS_ROAD,
         3, 0.5, 1, true,
-        2.f);
+        1.5f);
 
 
 /* sim::EdgeType */
@@ -102,10 +102,105 @@ PhysicalEdge::PhysicalEdge(PhysicalEdgeBundle &parent,
     m_parent(parent),
     m_reversed(reversed),
     m_segments(std::move(segments)),
+    m_len(m_segments.back().s0 + m_segments.back().direction.length()),
     m_s0(0),
-    m_s1(m_segments.back().s0 + m_segments.back().direction.length())
+    m_s1(m_len)
 {
 
+}
+
+void PhysicalEdge::cut_s0(const Line2f &cut_line)
+{
+    std::cout << std::endl << std::endl;
+    std::cout << "\\begin{scope}[xshift=" << (-m_segments[0].start[eX]) << ",yshift=" << (-m_segments[0].start[eY]) << "]" << std::endl;
+    std::cout << "% member of bundle " << &m_parent << std::endl;
+    std::cout << "% cutting s0 at " << cut_line << std::endl;
+    tikz_draw_line_around_origin(
+                std::cout,
+                isect_line_line(cut_line, Line2f(Vector2f(m_segments[0].start), Vector2f(m_segments[0].direction))),
+                cut_line.point_and_direction().second.normalized() * 2.f,
+                0.5f,
+                "help lines");
+    for (unsigned int i = 0; i < m_segments.size(); ++i)
+    {
+        const PhysicalEdgeSegment &segment = m_segments[i];
+        const Vector2f start(segment.start);
+        const Vector2f direction(segment.direction);
+        const Vector2f direction_normalized(direction.normalized());
+
+        tikz_draw(std::cout,
+                  start, direction, "-latex");
+
+        Line2f segment_line(start, direction_normalized);
+        Vector2f intersection = isect_line_line(cut_line, segment_line);
+        tikz_node(std::cout, intersection, "", "inner sep=0.1mm,draw,rectangle,gray");
+        if (std::isnan(intersection[eX])) {
+            continue;
+        }
+
+        const float intersection_along_direction = (intersection-start) * direction_normalized;
+        std::cout << "% intersection_along_direction " << intersection_along_direction << std::endl;
+        if (intersection_along_direction >= direction.length()) {
+            // intersection point is behind end of segment, continue
+            continue;
+        }
+
+        m_s0 = segment.s0 + intersection_along_direction;
+        m_first_non_cut_segment = i;
+        std::cout << "% cut point found at segment " << i << " with s0 = " << m_s0 << std::endl;
+        break;
+    }
+    std::cout << "\\end{scope}" << std::endl;
+    std::cout << std::endl << std::endl;
+}
+
+void PhysicalEdge::cut_s1(const Line2f &cut_line)
+{
+    std::cout << std::endl << std::endl;
+    std::cout << "\\begin{scope}[xshift=" << (-m_segments[0].start[eX]) << ",yshift=" << (-m_segments[0].start[eY]) << "]" << std::endl;
+    std::cout << "% member of bundle " << &m_parent << std::endl;
+    std::cout << "% cutting s1 at " << cut_line << std::endl;
+    tikz_draw_line_around_origin(
+                std::cout,
+                isect_line_line(cut_line, Line2f(Vector2f(m_segments[0].start), Vector2f(m_segments[0].direction))),
+                cut_line.point_and_direction().second.normalized() * 2.f,
+                0.5f,
+                "help lines");
+
+    unsigned int i = m_segments.size() - 1;
+    do {
+        const PhysicalEdgeSegment &segment = m_segments[i];
+        const Vector2f start(segment.start);
+        const Vector2f direction(segment.direction);
+        const Vector2f direction_normalized(direction.normalized());
+
+        tikz_draw(std::cout,
+                  start, direction, "-latex");
+
+        Line2f segment_line(start, direction_normalized);
+        Vector2f intersection = isect_line_line(cut_line, segment_line);
+        tikz_node(std::cout, intersection, "", "inner sep=0.1mm,draw,rectangle,gray");
+        if (std::isnan(intersection[eX])) {
+            --i;
+            continue;
+        }
+
+        const float intersection_along_direction = (intersection-start) * direction_normalized;
+        std::cout << "% intersection_along_direction " << intersection_along_direction << std::endl;
+        if (intersection_along_direction < 0.f) {
+            // intersection point is behind end of segment, continue
+            --i;
+            continue;
+        }
+
+        m_s1 = segment.s0 + intersection_along_direction;
+        m_last_non_cut_segment = i;
+        std::cout << "% cut point found at segment " << i << " with s1 = " << m_s1 << " / " << m_len << std::endl;
+        break;
+    } while (i > 0);
+
+    std::cout << "\\end{scope}" << std::endl;
+    std::cout << std::endl << std::endl;
 }
 
 void PhysicalEdge::set_s0(const float new_s0)
@@ -245,21 +340,22 @@ void PhysicalEdgeBundle::mark_for_reshape()
     m_reshape_pending = true;
 }
 
-void PhysicalEdgeBundle::reshape()
+bool PhysicalEdgeBundle::reshape()
 {
     if (!m_reshape_pending) {
-        return;
+        return false;
     }
 
-    const float s0 = m_start_node->bundle_cut(*this);
-    const float s1 = m_end_node->bundle_cut(*this);
+    const Line2f cut_start = m_start_node->bundle_cut(*this);
+    const Line2f cut_end = m_end_node->bundle_cut(*this);
 
     for (std::unique_ptr<PhysicalEdge> &edge: m_edges) {
-        edge->set_s0(s0);
-        edge->set_s1(s1);
+        edge->cut_s0(cut_start);
+        edge->cut_s1(cut_end);
     }
 
     m_reshape_pending = false;
+    return true;
 }
 
 Vector3f PhysicalEdgeBundle::start_tangent() const
@@ -280,7 +376,8 @@ PhysicalNode::ExitRecord::ExitRecord(
     m_bundle(bundle),
     m_start_is_here(start_is_here),
     m_exit_vector(get_naive_exit_vector()),
-    m_exit_angle(std::atan2(m_exit_vector[eY], m_exit_vector[eX]))
+    m_exit_angle(std::atan2(m_exit_vector[eY], m_exit_vector[eX])),
+    m_cut_line(Vector2f(0, 0), Vector2f(0, 0))
 {
 
 }
@@ -329,100 +426,117 @@ void PhysicalNode::reshape()
     if (!m_reshape_pending) {
         return;
     }
+    m_reshape_pending = false;
 
     if (m_exits.empty()) {
         return;
     }
 
+    const Vector2f position_2f(m_position);
+    const Vector3f up(0, 0, 1);
+
+    std::cout << "\\begin{scope}[xshift=" << (-m_position[eX]) << ", yshift=" << (-m_position[eY]) << ", xscale=0.5, yscale=0.5]" << std::endl;
+
     if (m_exits.size() == 1) {
         // single exit
         m_exits[0].m_base_cut = 0.f;
         m_exits[0].m_exit_vector = m_exits[0].get_naive_exit_vector();
-        m_exits[0].m_bundle->mark_for_reshape();
-        return;
-    }
+        std::cout << "% only one exit" << std::endl;
+        std::cout << "% bundle " << m_exits[0].m_bundle.get() << std::endl;
+    } else {
+        std::sort(m_exits.begin(), m_exits.end(),
+                  [](const ExitRecord &a, const ExitRecord &b){ return a.m_exit_angle < b.m_exit_angle; });
 
-    std::sort(m_exits.begin(), m_exits.end(),
-              [](const ExitRecord &a, const ExitRecord &b){ return a.m_exit_angle < b.m_exit_angle; });
+        for (auto &exit: m_exits) {
+            exit.m_base_cut = 0;
+        }
 
-    const Vector3f up(0, 0, 1);
+        for (unsigned int i = 0; i < m_exits.size(); ++i) {
+            ExitRecord &first = m_exits[i];
+            std::cout << "% bundle " << first.m_bundle.get() << std::endl;
+            ExitRecord &second = m_exits[(i+1)%m_exits.size()];
 
-    std::cout << "\\begin{scope}[xshift=" << (-m_position[eX]) << ", yshift=" << (-m_position[eY]) << ", xscale=0.5, yscale=0.5]" << std::endl;
-    for (unsigned int i = 0; i < m_exits.size(); ++i) {
-        ExitRecord &first = m_exits[i];
-        ExitRecord &second = m_exits[(i+1)%m_exits.size()];
+            const Vector3f first_exit_vector_3f(first.get_naive_exit_vector().normalized());
+            const Vector3f second_exit_vector_3f(second.get_naive_exit_vector().normalized());
 
-        const Vector3f first_exit_vector(first.get_naive_exit_vector().normalized());
-        const Vector3f second_exit_vector(second.get_naive_exit_vector().normalized());
+            const Vector2f first_exit_vector(first_exit_vector_3f);
+            const Vector2f second_exit_vector(second_exit_vector_3f);
 
-        const Vector3f first_normal((first_exit_vector % up).normalized());
-        const Vector3f second_normal((second_exit_vector % up).normalized());
+            const Vector2f first_normal(Vector2f(first_exit_vector_3f % up).normalized());
+            const Vector2f second_normal(Vector2f(second_exit_vector_3f % up).normalized());
 
-        const Line2f first_right(
-                    Vector2f(m_position + first_normal * first.m_bundle->type().m_half_cut_width),
-                    Vector2f(first_exit_vector));
-        const Line2f first_left(
-                    Vector2f(m_position - first_normal * first.m_bundle->type().m_half_cut_width),
-                    Vector2f(first_exit_vector));
+            const Line2f first_right(
+                        position_2f + first_normal * first.m_bundle->type().m_half_cut_width,
+                        first_exit_vector);
+            const Line2f first_left(
+                        position_2f - first_normal * first.m_bundle->type().m_half_cut_width,
+                        first_exit_vector);
 
-        const Line2f second_right(
-                    Vector2f(m_position + second_normal * second.m_bundle->type().m_half_cut_width),
-                    Vector2f(second_exit_vector));
-        const Line2f second_left(
-                    Vector2f(m_position - second_normal * second.m_bundle->type().m_half_cut_width),
-                    Vector2f(second_exit_vector));
+            const Line2f second_right(
+                        position_2f + second_normal * second.m_bundle->type().m_half_cut_width,
+                        second_exit_vector);
+            const Line2f second_left(
+                        position_2f - second_normal * second.m_bundle->type().m_half_cut_width,
+                        second_exit_vector);
 
-        const Vector2f intersection_1 = isect_line_line(first_right, second_left);
-        const Vector2f intersection_2 = isect_line_line(second_right, first_left);
+            const Vector2f intersection_1 = isect_line_line(first_right, second_left);
+            const Vector2f intersection_2 = isect_line_line(second_right, first_left);
 
-        float first_cut = std::max((Vector3f(intersection_1, 0.f) - m_position) * first_exit_vector,
-                                   (Vector3f(intersection_2, 0.f) - m_position) * first_exit_vector);
-        float second_cut = std::max((Vector3f(intersection_1, 0.f) - m_position) * second_exit_vector,
-                                    (Vector3f(intersection_2, 0.f) - m_position) * second_exit_vector);
+            float first_cut = std::max((intersection_1 - position_2f) * first_exit_vector,
+                                       (intersection_2 - position_2f) * first_exit_vector);
+            float second_cut = std::max((intersection_1 - position_2f) * second_exit_vector,
+                                        (intersection_2 - position_2f) * second_exit_vector);
 
-        tikz_draw(std::cout,
-                  Vector2f(m_position),
-                  Vector2f(first_exit_vector * 10.f),
-                  "->",
-                  "$t_{" + std::to_string(i) + "}$");
-        tikz_draw(std::cout,
-                  Vector2f(m_position),
-                  Vector2f(first_normal * first.m_bundle->type().m_half_cut_width),
-                  "help lines");
-        tikz_draw_line_around_origin(std::cout,
-                                     Vector2f(m_position + first_normal * first.m_bundle->type().m_half_cut_width),
-                                     first_right.point_and_direction().second * 10.f,
-                                     0.1f,
-                                     "red");
-        tikz_draw_line_around_origin(std::cout,
-                                     Vector2f(m_position - first_normal * first.m_bundle->type().m_half_cut_width),
-                                     first_left.point_and_direction().second * 10.f,
-                                     0.1f,
-                                     "blue");
-        tikz_node(std::cout, intersection_1, "", "draw,rectangle,inner sep=1mm");
-        tikz_node(std::cout, intersection_2, "", "draw,rectangle,inner sep=1mm");
-
-        std::cout << "% " << first_cut << " " << second_cut << std::endl;
-
-        first.m_base_cut = std::max(first.m_base_cut, first_cut);
-        second.m_base_cut = std::max(second.m_base_cut, second_cut);
-    }
-
-    for (auto &exit: m_exits) {
-        const Vector3f exit_vector(exit.get_naive_exit_vector().normalized());
-        const Vector3f normal((exit_vector % up).normalized());
-        if (std::fabs(exit.m_base_cut) < 10) {
+            tikz_draw(std::cout,
+                      Vector2f(m_position),
+                      Vector2f(first_exit_vector * 10.f),
+                      "->",
+                      "$t_{" + std::to_string(i) + "}$");
+            tikz_draw(std::cout,
+                      Vector2f(m_position),
+                      Vector2f(first_normal * first.m_bundle->type().m_half_cut_width),
+                      "help lines");
             tikz_draw_line_around_origin(std::cout,
-                                         Vector2f(m_position + exit_vector * exit.m_base_cut),
-                                         Vector2f(normal)*exit.m_bundle->type().m_half_cut_width*2.5f,
-                                         0.5f,
-                                         "help lines,dashed");
+                                         position_2f + first_normal * first.m_bundle->type().m_half_cut_width,
+                                         first_exit_vector * 10.f,
+                                         0.1f,
+                                         "red");
+            tikz_draw_line_around_origin(std::cout,
+                                         position_2f - first_normal * first.m_bundle->type().m_half_cut_width,
+                                         first_exit_vector * 10.f,
+                                         0.1f,
+                                         "blue");
+            tikz_node(std::cout, intersection_1, "", "draw,rectangle,inner sep=1mm");
+            tikz_node(std::cout, intersection_2, "", "draw,rectangle,inner sep=1mm");
+
+            std::cout << "% " << first_cut << " " << second_cut << std::endl;
+
+            if (!std::isnan(first_cut)) {
+                first.m_base_cut = std::max(first.m_base_cut, first_cut);
+            }
+            if (!std::isnan(second_cut)) {
+                second.m_base_cut = std::max(second.m_base_cut, second_cut);
+            }
         }
     }
 
-    std::cout << "\\end{scope}" << std::endl;
+    for (auto &exit: m_exits) {
+        const Vector3f exit_vector_3f(exit.get_naive_exit_vector().normalized());
+        const Vector2f exit_vector(exit_vector_3f);
+        const Vector2f normal(Vector2f(exit_vector_3f % up).normalized());
+        if (std::fabs(exit.m_base_cut) < 10) {
+            tikz_draw_line_around_origin(std::cout,
+                                         position_2f + exit_vector * exit.m_base_cut,
+                                         normal*exit.m_bundle->type().m_half_cut_width*2.5f,
+                                         0.5f,
+                                         "help lines,dashed");
+        }
 
-    m_reshape_pending = false;
+        exit.m_cut_line = Line2f(position_2f + exit_vector * exit.m_base_cut, normal);
+        exit.m_bundle->mark_for_reshape();
+    }
+
+    std::cout << "\\end{scope}" << std::endl;
 }
 
 void PhysicalNode::register_edge_bundle(
@@ -532,7 +646,9 @@ void PhysicalGraph::reshape()
                 iter = m_bundles.erase(iter);
                 continue;
             }
-            (*iter)->reshape();
+            if ((*iter)->reshape()) {
+                m_edge_bundle_reshaped(*iter);
+            }
             ++iter;
         }
     }

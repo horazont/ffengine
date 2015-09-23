@@ -25,6 +25,7 @@ the AUTHORS file.
 #define SCC_RENDER_NETWORK_DEBUG_H
 
 #include "ffengine/sim/network.hpp"
+#include "ffengine/sim/signals.hpp"
 
 #include "ffengine/render/scenegraph.hpp"
 
@@ -86,12 +87,23 @@ class DebugEdgeBundle: public scenegraph::OctNode, public RenderableOctreeObject
 public:
     DebugEdgeBundle(Octree &octree,
                     ffe::Material &material,
-                    const sim::PhysicalEdgeBundle &bundle);
+                    sim::SignalQueue &queue,
+                    const sim::PhysicalGraph &graph,
+                    const sim::object_ptr<sim::PhysicalEdgeBundle> &bundle);
+    ~DebugEdgeBundle() override;
 
 private:
+    sim::object_ptr<sim::PhysicalEdgeBundle> m_bundle;
+
     ffe::Material &m_material;
     IBOAllocation m_ibo_alloc;
     VBOAllocation m_vbo_alloc;
+
+    bool m_reshaped;
+    sig11::connection_guard<void(sim::object_ptr<sim::PhysicalEdgeBundle>)> m_reshaped_conn;
+
+private:
+    void on_reshaped(sim::object_ptr<sim::PhysicalEdgeBundle> bundle);
 
 public:
     void prepare(RenderContext &context) override;

@@ -135,10 +135,62 @@ void DebugNodes::sync(scenegraph::OctContext &)
 /* ffe::DebugEdgeBundle */
 
 DebugEdgeBundle::DebugEdgeBundle(Octree &octree, Material &material,
-                                 const sim::PhysicalEdgeBundle &bundle):
+                                 sim::SignalQueue &queue,
+                                 const sim::PhysicalGraph &graph,
+                                 const sim::object_ptr<sim::PhysicalEdgeBundle> &bundle):
     OctNode(octree),
-    m_material(material)
+    m_bundle(bundle),
+    m_material(material),
+    m_reshaped(true),
+    m_reshaped_conn(queue.connect_queued(
+                        graph.edge_bundle_reshaped(),
+                        std::bind(&DebugEdgeBundle::on_reshaped,
+                                  this,
+                                  std::placeholders::_1)))
 {
+
+}
+
+DebugEdgeBundle::~DebugEdgeBundle()
+{
+    if (!m_bundle) {
+        m_reshaped_conn.release();
+    }
+}
+
+void DebugEdgeBundle::on_reshaped(sim::object_ptr<sim::PhysicalEdgeBundle> bundle)
+{
+    if (!m_bundle) {
+        m_reshaped_conn.release();
+        return;
+    }
+
+    if (m_bundle.get() != bundle.get()) {
+        return;
+    }
+
+    std::cout << bundle.get() << " reshaped!!!" << std::endl;
+    m_reshaped = true;
+}
+
+void DebugEdgeBundle::prepare(RenderContext &)
+{
+
+}
+
+void DebugEdgeBundle::render(RenderContext &context)
+{
+    context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
+}
+
+void DebugEdgeBundle::sync(scenegraph::OctContext &)
+{
+    if (!m_reshaped || !m_bundle) {
+        return;
+    }
+    std::cout << m_bundle.get() << " reshaping!!!" << std::endl;
+    m_reshaped = false;
+
     unsigned int vertex_count = 0;
     unsigned int segment_count = 0;
     Vector3f min(std::numeric_limits<float>::max(),
@@ -148,30 +200,48 @@ DebugEdgeBundle::DebugEdgeBundle(Octree &octree, Material &material,
                 std::numeric_limits<float>::min(),
                 std::numeric_limits<float>::min());
     std::vector<std::vector<std::tuple<Vector3f, Vector2f>> > lines;
-    for (const sim::PhysicalEdge &edge: bundle)
+    for (const sim::PhysicalEdge &edge: *m_bundle)
     {
         lines.emplace_back();
         std::vector<std::tuple<Vector3f, Vector2f>> &line = lines.back();
-        vertex_count += edge.segments().size()+1;
-        segment_count += edge.segments().size();
 
-        for (const sim::PhysicalEdgeSegment &segment: edge.segments())
+        const float reverse_factor = (edge.reversed() ? -1 : 1);
+
         {
-            Vector2f direction(Vector2f(segment.direction).normalized());
-            if (edge.reversed()) {
-                direction = -direction;
-            }
-            line.emplace_back(segment.start, direction);
+            const sim::PhysicalEdgeSegment &first = edge.segments()[edge.first_non_cut_segment()];
+            line.emplace_back(
+                        first.start + first.direction.normalized() * (edge.s0() - first.s0),
+                        Vector2f(first.direction) * reverse_factor);
         }
 
-        Vector2f direction(Vector2f(edge.segments().back().direction).normalized());
-        if (edge.reversed()) {
-            direction = -direction;
+        for (unsigned int i = edge.first_non_cut_segment() + 1; i <= edge.last_non_cut_segment(); ++i)
+        {
+            const sim::PhysicalEdgeSegment &segment = edge.segments()[i];
+            line.emplace_back(
+                        segment.start,
+                        Vector2f(segment.direction) * reverse_factor
+                        );
         }
-        line.emplace_back(edge.segments().back().start + edge.segments().back().direction,
-                          direction);
 
-        std::cout << "edge " << std::get<0>(line.front()) << " -- " << std::get<0>(line.back()) << std::endl;
+        {
+            const sim::PhysicalEdgeSegment &last = edge.segments()[edge.last_non_cut_segment()];
+            line.emplace_back(
+                        last.start + last.direction.normalized() * (edge.s1() - last.s0),
+                        Vector2f(last.direction) * reverse_factor);
+        }
+
+        if (line.size() > 1) {
+            segment_count += line.size() - 1;
+            vertex_count += line.size();
+        } else {
+            line.clear();
+        }
+
+    }
+
+    if (m_ibo_alloc) {
+        m_ibo_alloc = nullptr;
+        m_vbo_alloc = nullptr;
     }
 
     m_ibo_alloc = m_material.ibo().allocate(segment_count*2);
@@ -183,6 +253,10 @@ DebugEdgeBundle::DebugEdgeBundle(Octree &octree, Material &material,
     auto directions = VBOSlice<Vector2f>(m_vbo_alloc, 1);
     for (const std::vector<std::tuple<Vector3f, Vector2f> > &line: lines)
     {
+        if (line.empty()) {
+            continue;
+        }
+
         for (unsigned int i = 0; i < line.size()-1; ++i)
         {
             *dest++ = vertex_counter + i;
@@ -214,22 +288,9 @@ DebugEdgeBundle::DebugEdgeBundle(Octree &octree, Material &material,
 
     update_bounds(Sphere{(max + min)/2.f, (max - min).length() / 2.f});
 
-    octree.insert_object(this);
-}
-
-void DebugEdgeBundle::prepare(RenderContext &)
-{
-
-}
-
-void DebugEdgeBundle::render(RenderContext &context)
-{
-    context.render_all(AABB{}, GL_LINES, m_material, m_ibo_alloc, m_vbo_alloc);
-}
-
-void DebugEdgeBundle::sync(scenegraph::OctContext &)
-{
-
+    if (!octree()) {
+        m_octree.insert_object(this);
+    }
 }
 
 }

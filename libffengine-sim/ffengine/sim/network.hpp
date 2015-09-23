@@ -34,6 +34,7 @@ the AUTHORS file.
 #include "ffengine/common/utils.hpp"
 
 #include "ffengine/math/curve.hpp"
+#include "ffengine/math/line.hpp"
 #include "ffengine/math/vector.hpp"
 
 #include "ffengine/sim/objects.hpp"
@@ -165,11 +166,32 @@ private:
     const bool m_reversed;
     const std::vector<PhysicalEdgeSegment> m_segments;
 
+    const float m_len;
+
+    unsigned int m_first_non_cut_segment;
+    unsigned int m_last_non_cut_segment;
     float m_s0, m_s1;
 
-    // TODO: type-specific information for the edge
+private:
+    void cut_s0(const Line2f &cut_line);
+    void cut_s1(const Line2f &cut_line);
 
 public:
+    inline unsigned int first_non_cut_segment() const
+    {
+        return m_first_non_cut_segment;
+    }
+
+    inline unsigned int last_non_cut_segment() const
+    {
+        return m_last_non_cut_segment;
+    }
+
+    inline float len() const
+    {
+        return m_len;
+    }
+
     inline bool reversed() const
     {
         return m_reversed;
@@ -194,6 +216,7 @@ public:
     void set_s0(const float new_s0);
     void set_s1(const float new_s1);
 
+    friend class PhysicalEdgeBundle;
 };
 
 
@@ -293,7 +316,7 @@ public:
 public:
     Vector3f end_tangent() const;
     void mark_for_reshape();
-    void reshape();
+    bool reshape();
     Vector3f start_tangent() const;
 
 };
@@ -313,6 +336,7 @@ private:
         Vector3f m_exit_vector;
         float m_exit_angle;
         float m_base_cut;
+        Line2f m_cut_line;
 
         Vector3f get_naive_exit_vector() const;
     };
@@ -343,13 +367,13 @@ public:
         return m_exits;
     }
 
-    inline float bundle_cut(const PhysicalEdgeBundle &bundle) const
+    inline Line2f bundle_cut(const PhysicalEdgeBundle &bundle) const
     {
         const ExitRecord *rec = record_for_bundle(bundle);
         if (!rec) {
-            return NAN;
+            return Line2f(Vector2f(NAN, NAN), Vector2f(NAN, NAN));
         }
-        return rec->m_base_cut;
+        return rec->m_cut_line;
     }
 
 public:
@@ -376,6 +400,7 @@ private:
     std::vector<object_ptr<PhysicalEdgeBundle> > m_bundles;
 
     mutable EdgeBundleSignal m_edge_bundle_created;
+    mutable EdgeBundleSignal m_edge_bundle_reshaped;
     mutable NodeSignal m_node_created;
 
 private:
@@ -396,6 +421,11 @@ public:
     inline EdgeBundleSignal &edge_bundle_created() const
     {
         return m_edge_bundle_created;
+    }
+
+    inline EdgeBundleSignal &edge_bundle_reshaped() const
+    {
+        return m_edge_bundle_reshaped;
     }
 
     inline NodeSignal &node_created() const
