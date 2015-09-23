@@ -924,4 +924,27 @@ public:
 
 }
 
+
+namespace std {
+
+template <typename T>
+struct hash<::sim::object_ptr<T> >
+{
+public:
+    typedef ::sim::object_ptr<T> argument_type;
+    typedef typename hash<void*>::result_type result_type;
+
+private:
+    hash<void*> m_ptr_hash;
+
+public:
+    result_type operator()(const ::sim::object_ptr<T> &ptr) const
+    {
+        return m_ptr_hash(ptr.get());
+    }
+
+};
+
+}
+
 #endif

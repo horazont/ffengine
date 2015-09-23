@@ -23,7 +23,13 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/sim/network.hpp"
 
+#include <algorithm>
+#include <iostream>
+
 #include "ffengine/math/curve.hpp"
+#include "ffengine/math/line.hpp"
+
+#include "ffengine/math/tikz.hpp"
 
 
 namespace sim {
@@ -31,10 +37,12 @@ namespace sim {
 const EdgeClass EDGE_CLASS_ROAD;
 const EdgeType EDGE_TYPE_BIDIRECTIONAL_ONE_LANE(
         EDGE_CLASS_ROAD,
-        1, 0, 1, true);
+        1, 0, 1, true,
+        1.5f);
 const EdgeType EDGE_TYPE_BIDIRECTIONAL_THREE_LANES(
         EDGE_CLASS_ROAD,
-        3, 0.5, 1, true);
+        3, 0.5, 1, true,
+        2.f);
 
 
 /* sim::EdgeType */
@@ -53,12 +61,14 @@ EdgeType::EdgeType(const EdgeClass &class_,
                    const unsigned int lanes,
                    const float lane_padding,
                    const float lane_center_margin,
-                   const bool bidirectional):
+                   const bool bidirectional,
+                   const float half_cut_width):
     m_class(class_),
     m_lanes(lanes),
     m_lane_padding(lane_padding),
     m_lane_center_margin(lane_center_margin),
-    m_bidirectional(bidirectional)
+    m_bidirectional(bidirectional),
+    m_half_cut_width(half_cut_width)
 {
 
 }
@@ -98,6 +108,16 @@ PhysicalEdge::PhysicalEdge(PhysicalEdgeBundle &parent,
 
 }
 
+void PhysicalEdge::set_s0(const float new_s0)
+{
+    m_s0 = new_s0;
+}
+
+void PhysicalEdge::set_s1(const float new_s1)
+{
+    m_s1 = new_s1;
+}
+
 
 /* sim::PhysicalEdgeBundle */
 
@@ -112,12 +132,13 @@ PhysicalEdgeBundle::PhysicalEdgeBundle(
     m_end_node(end_node),
     m_flat(true),
     m_control_point(NAN, NAN, NAN),
+    m_reshape_pending(true),
     m_segments({PhysicalEdgeSegment(
                    0,
                    m_start_node->position(),
                    m_end_node->position() - m_start_node->position())})
 {
-    apply_type(m_type);
+    apply_type();
 }
 
 PhysicalEdgeBundle::PhysicalEdgeBundle(
@@ -131,7 +152,8 @@ PhysicalEdgeBundle::PhysicalEdgeBundle(
     m_start_node(start_node),
     m_end_node(end_node),
     m_flat(false),
-    m_control_point(control_point)
+    m_control_point(control_point),
+    m_reshape_pending(true)
 {
     const Vector3f start_point(m_start_node->position());
     const Vector3f end_point(m_end_node->position());
@@ -154,7 +176,7 @@ PhysicalEdgeBundle::PhysicalEdgeBundle(
         s += direction.length();
     }
 
-    apply_type(m_type);
+    apply_type();
 }
 
 void PhysicalEdgeBundle::add_edge(const float offset,
@@ -166,8 +188,8 @@ void PhysicalEdgeBundle::add_edge(const float offset,
 
     std::vector<PhysicalEdgeSegment> segments;
     offset_segments(m_segments, adapted_offset,
-                    (m_control_point - m_start_node->position()).normalized(),
-                    (m_end_node->position() - m_control_point).normalized(),
+                    start_tangent().normalized(),
+                    end_tangent().normalized(),
                     segments);
     if (direction == EdgeDirection::REVERSE) {
         m_edges.emplace_back(std::make_unique<PhysicalEdge>(
@@ -182,29 +204,93 @@ void PhysicalEdgeBundle::add_edge(const float offset,
     }
 }
 
-void PhysicalEdgeBundle::apply_type(const EdgeType &type)
+void PhysicalEdgeBundle::apply_type()
 {
+
     m_edges.clear();
-    if (type.m_bidirectional) {
-        float offset = type.m_lane_center_margin / 2.f;
-        for (unsigned int lane = 0; lane < type.m_lanes; ++lane)
+    if (m_type.m_bidirectional) {
+        float offset = m_type.m_lane_center_margin / 2.f;
+        for (unsigned int lane = 0; lane < m_type.m_lanes; ++lane)
         {
             add_edge(offset, EdgeDirection::FORWARD);
             add_edge(offset, EdgeDirection::REVERSE);
-            offset += type.m_lane_padding;
+            offset += m_type.m_lane_padding;
         }
     } else {
-        if ((type.m_lanes & 1) == 1) {
+        if ((m_type.m_lanes & 1) == 1) {
             // odd number of lanes, this leads to center lane
             add_edge(0, EdgeDirection::FORWARD);
         }
-        float offset = type.m_lane_center_margin / 2.f;
-        for (unsigned int lane = 0; lane < type.m_lanes / 2; ++lane)
+        float offset = m_type.m_lane_center_margin / 2.f;
+        for (unsigned int lane = 0; lane < m_type.m_lanes / 2; ++lane)
         {
             add_edge(offset, EdgeDirection::FORWARD);
             add_edge(-offset, EdgeDirection::FORWARD);
-            offset += type.m_lane_padding;
+            offset += m_type.m_lane_padding;
         }
+    }
+}
+
+Vector3f PhysicalEdgeBundle::end_tangent() const
+{
+    if (m_flat) {
+        return m_start_node->position() - m_end_node->position();
+    } else {
+        return m_end_node->position() - m_control_point;
+    }
+}
+
+void PhysicalEdgeBundle::mark_for_reshape()
+{
+    m_reshape_pending = true;
+}
+
+void PhysicalEdgeBundle::reshape()
+{
+    if (!m_reshape_pending) {
+        return;
+    }
+
+    const float s0 = m_start_node->bundle_cut(*this);
+    const float s1 = m_end_node->bundle_cut(*this);
+
+    for (std::unique_ptr<PhysicalEdge> &edge: m_edges) {
+        edge->set_s0(s0);
+        edge->set_s1(s1);
+    }
+
+    m_reshape_pending = false;
+}
+
+Vector3f PhysicalEdgeBundle::start_tangent() const
+{
+    if (m_flat) {
+        return m_end_node->position() - m_start_node->position();
+    } else {
+        return m_control_point - m_start_node->position();
+    }
+}
+
+
+/* PhysicalNode::ExitRecord */
+
+PhysicalNode::ExitRecord::ExitRecord(
+        const object_ptr<PhysicalEdgeBundle> &bundle,
+        bool start_is_here):
+    m_bundle(bundle),
+    m_start_is_here(start_is_here),
+    m_exit_vector(get_naive_exit_vector()),
+    m_exit_angle(std::atan2(m_exit_vector[eY], m_exit_vector[eX]))
+{
+
+}
+
+Vector3f PhysicalNode::ExitRecord::get_naive_exit_vector() const
+{
+    if (m_start_is_here) {
+        return m_bundle->start_tangent();
+    } else {
+        return -m_bundle->end_tangent();
     }
 }
 
@@ -216,9 +302,135 @@ PhysicalNode::PhysicalNode(const Object::ID object_id,
                            const Vector3f &position):
     Object::Object(object_id),
     m_class(class_),
+    m_reshape_pending(false),
     m_position(position)
 {
 
+}
+
+const PhysicalNode::ExitRecord *PhysicalNode::record_for_bundle(
+        const PhysicalEdgeBundle &bundle) const
+{
+    auto iter = std::find_if(m_exits.begin(), m_exits.end(),
+                             [this, &bundle](const ExitRecord &rec){ return rec.m_bundle.get() == &bundle; });
+    if (iter == m_exits.end()) {
+        return nullptr;
+    }
+    return &(*iter);
+}
+
+void PhysicalNode::mark_for_reshape()
+{
+    m_reshape_pending = true;
+}
+
+void PhysicalNode::reshape()
+{
+    if (!m_reshape_pending) {
+        return;
+    }
+
+    if (m_exits.empty()) {
+        return;
+    }
+
+    if (m_exits.size() == 1) {
+        // single exit
+        m_exits[0].m_base_cut = 0.f;
+        m_exits[0].m_exit_vector = m_exits[0].get_naive_exit_vector();
+        m_exits[0].m_bundle->mark_for_reshape();
+        return;
+    }
+
+    std::sort(m_exits.begin(), m_exits.end(),
+              [](const ExitRecord &a, const ExitRecord &b){ return a.m_exit_angle < b.m_exit_angle; });
+
+    const Vector3f up(0, 0, 1);
+
+    std::cout << "\\begin{scope}[xshift=" << (-m_position[eX]) << ", yshift=" << (-m_position[eY]) << ", xscale=0.5, yscale=0.5]" << std::endl;
+    for (unsigned int i = 0; i < m_exits.size(); ++i) {
+        ExitRecord &first = m_exits[i];
+        ExitRecord &second = m_exits[(i+1)%m_exits.size()];
+
+        const Vector3f first_exit_vector(first.get_naive_exit_vector().normalized());
+        const Vector3f second_exit_vector(second.get_naive_exit_vector().normalized());
+
+        const Vector3f first_normal((first_exit_vector % up).normalized());
+        const Vector3f second_normal((second_exit_vector % up).normalized());
+
+        const Line2f first_right(
+                    Vector2f(m_position + first_normal * first.m_bundle->type().m_half_cut_width),
+                    Vector2f(first_exit_vector));
+        const Line2f first_left(
+                    Vector2f(m_position - first_normal * first.m_bundle->type().m_half_cut_width),
+                    Vector2f(first_exit_vector));
+
+        const Line2f second_right(
+                    Vector2f(m_position + second_normal * second.m_bundle->type().m_half_cut_width),
+                    Vector2f(second_exit_vector));
+        const Line2f second_left(
+                    Vector2f(m_position - second_normal * second.m_bundle->type().m_half_cut_width),
+                    Vector2f(second_exit_vector));
+
+        const Vector2f intersection_1 = isect_line_line(first_right, second_left);
+        const Vector2f intersection_2 = isect_line_line(second_right, first_left);
+
+        float first_cut = std::max((Vector3f(intersection_1, 0.f) - m_position) * first_exit_vector,
+                                   (Vector3f(intersection_2, 0.f) - m_position) * first_exit_vector);
+        float second_cut = std::max((Vector3f(intersection_1, 0.f) - m_position) * second_exit_vector,
+                                    (Vector3f(intersection_2, 0.f) - m_position) * second_exit_vector);
+
+        tikz_draw(std::cout,
+                  Vector2f(m_position),
+                  Vector2f(first_exit_vector * 10.f),
+                  "->",
+                  "$t_{" + std::to_string(i) + "}$");
+        tikz_draw(std::cout,
+                  Vector2f(m_position),
+                  Vector2f(first_normal * first.m_bundle->type().m_half_cut_width),
+                  "help lines");
+        tikz_draw_line_around_origin(std::cout,
+                                     Vector2f(m_position + first_normal * first.m_bundle->type().m_half_cut_width),
+                                     first_right.point_and_direction().second * 10.f,
+                                     0.1f,
+                                     "red");
+        tikz_draw_line_around_origin(std::cout,
+                                     Vector2f(m_position - first_normal * first.m_bundle->type().m_half_cut_width),
+                                     first_left.point_and_direction().second * 10.f,
+                                     0.1f,
+                                     "blue");
+        tikz_node(std::cout, intersection_1, "", "draw,rectangle,inner sep=1mm");
+        tikz_node(std::cout, intersection_2, "", "draw,rectangle,inner sep=1mm");
+
+        std::cout << "% " << first_cut << " " << second_cut << std::endl;
+
+        first.m_base_cut = std::max(first.m_base_cut, first_cut);
+        second.m_base_cut = std::max(second.m_base_cut, second_cut);
+    }
+
+    for (auto &exit: m_exits) {
+        const Vector3f exit_vector(exit.get_naive_exit_vector().normalized());
+        const Vector3f normal((exit_vector % up).normalized());
+        if (std::fabs(exit.m_base_cut) < 10) {
+            tikz_draw_line_around_origin(std::cout,
+                                         Vector2f(m_position + exit_vector * exit.m_base_cut),
+                                         Vector2f(normal)*exit.m_bundle->type().m_half_cut_width*2.5f,
+                                         0.5f,
+                                         "help lines,dashed");
+        }
+    }
+
+    std::cout << "\\end{scope}" << std::endl;
+
+    m_reshape_pending = false;
+}
+
+void PhysicalNode::register_edge_bundle(
+        const object_ptr<PhysicalEdgeBundle> &edge)
+{
+    assert(edge->start_node().get() == this || edge->end_node().get() == this);
+    m_exits.emplace_back(edge, edge->start_node().get() == this);
+    m_reshape_pending = true;
 }
 
 /* PhysicalGraph */
@@ -240,7 +452,11 @@ PhysicalEdgeBundle &PhysicalGraph::create_bundle(
                 m_objects.share(start_node),
                 m_objects.share(end_node),
                 control_point);
-    m_edge_bundle_created(m_objects.share(bundle));
+    object_ptr<PhysicalEdgeBundle> bundle_ptr(m_objects.share(bundle));
+    start_node.register_edge_bundle(bundle_ptr);
+    end_node.register_edge_bundle(bundle_ptr);
+    m_bundles.emplace_back(bundle_ptr);
+    m_edge_bundle_created(bundle_ptr);
     return bundle;
 }
 
@@ -250,6 +466,7 @@ void PhysicalGraph::construct_curve(
         PhysicalNode &end_node,
         const EdgeType &type)
 {
+    std::vector<PhysicalNode*> affected_nodes;
     std::vector<QuadBezier3f> segments;
     segmentize_curve(QuadBezier3f(start_node.position(),
                                   control_point,
@@ -258,28 +475,67 @@ void PhysicalGraph::construct_curve(
     assert(segments.size() > 0);
 
     if (segments.size() == 1) {
+        affected_nodes.emplace_back(&start_node);
+        affected_nodes.emplace_back(&end_node);
         create_bundle(start_node, control_point, end_node, type);
-        return;
+    } else {
+        PhysicalNode *prev_node = &start_node;
+        affected_nodes.emplace_back(prev_node);
+        for (unsigned int i = 0; i < segments.size()-1; ++i)
+        {
+            PhysicalNode &new_node = create_node(type.m_class, segments[i].p_end);
+            create_bundle(*prev_node, segments[i].p_control, new_node,
+                          type);
+            prev_node = &new_node;
+            affected_nodes.emplace_back(prev_node);
+        }
+
+        create_bundle(*prev_node, segments.back().p_control, end_node, type);
+        affected_nodes.emplace_back(&end_node);
     }
 
-    PhysicalNode *prev_node = &start_node;
-    for (unsigned int i = 0; i < segments.size()-1; ++i)
-    {
-        PhysicalNode &new_node = create_node(type.m_class, segments[i].p_end);
-        create_bundle(*prev_node, segments[i].p_control, new_node,
-                      type);
-        prev_node = &new_node;
+    for (PhysicalNode *node: affected_nodes) {
+        node->mark_for_reshape();
     }
-
-    create_bundle(*prev_node, segments.back().p_control, end_node, type);
 }
 
 PhysicalNode &PhysicalGraph::create_node(const EdgeClass &class_,
                                          const Vector3f &position)
 {
     PhysicalNode &node = m_objects.allocate<PhysicalNode>(class_, position);
-    m_node_created(m_objects.share(node));
+    object_ptr<PhysicalNode> node_ptr(m_objects.share(node));
+    m_nodes.emplace_back(node_ptr);
+    m_node_created(node_ptr);
     return node;
+}
+
+void PhysicalGraph::reshape()
+{
+    {
+        auto iter = m_nodes.begin();
+        while (iter != m_nodes.end())
+        {
+            if (!(*iter)) {
+                iter = m_nodes.erase(iter);
+                continue;
+            }
+            (*iter)->reshape();
+            ++iter;
+        }
+    }
+
+    {
+        auto iter = m_bundles.begin();
+        while (iter != m_bundles.end())
+        {
+            if (!(*iter)) {
+                iter = m_bundles.erase(iter);
+                continue;
+            }
+            (*iter)->reshape();
+            ++iter;
+        }
+    }
 }
 
 

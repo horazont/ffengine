@@ -24,22 +24,32 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_MATH_LINE_H
 #define SCC_ENGINE_MATH_LINE_H
 
+#include <ostream>
+
 #include "ffengine/math/vector.hpp"
 
 struct Line2f
 {
-    Line2f(const Vector2f p0, const Vector2f v):
-        homogeneous(-v[eY], v[eX], v[eY]*p0[eX]-v[eX]*p0[eY])
-    {
-
-    }
+    Line2f(const Vector2f p0, const Vector2f v);
 
     Vector3f homogeneous;
 
+    /**
+     * Return a point on the line.
+     */
+    Vector2f sample() const;
+
+    /**
+     * Return a point on the line and a direction from that point which together
+     * can be used as arguments to the Line2f constructor to create an identical
+     * line.
+     */
+    std::pair<Vector2f, Vector2f> point_and_direction() const;
 };
 
 
 Vector2f isect_line_line(const Line2f l1, const Line2f l2);
 
+std::ostream &operator<<(std::ostream &dest, const Line2f &l);
 
 #endif

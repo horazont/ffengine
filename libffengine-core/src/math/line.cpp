@@ -26,6 +26,28 @@ the AUTHORS file.
 #include "ffengine/math/intersect.hpp"
 
 
+Line2f::Line2f(const Vector2f p0, const Vector2f v):
+    homogeneous(-v[eY], v[eX], v[eY]*p0[eX]-v[eX]*p0[eY])
+{
+
+}
+
+Vector2f Line2f::sample() const
+{
+    if (std::fabs(homogeneous[eY]) > std::fabs(homogeneous[eX])) {
+        return Vector2f(0, -homogeneous[eZ]/homogeneous[eY]);
+    } else {
+        return Vector2f(-homogeneous[eZ]/homogeneous[eX], 0);
+    }
+}
+
+std::pair<Vector2f, Vector2f> Line2f::point_and_direction() const
+{
+    return std::make_pair(sample(), Vector2f(homogeneous[eY],
+                                             -homogeneous[eX]));
+}
+
+
 Vector2f isect_line_line(const Line2f l1, const Line2f l2)
 {
     Vector3f homogeneous(l1.homogeneous % l2.homogeneous);
@@ -34,4 +56,11 @@ Vector2f isect_line_line(const Line2f l1, const Line2f l2)
     }
 
     return Vector2f(homogeneous[eX], homogeneous[eY]) / homogeneous[eZ];
+}
+
+
+std::ostream &operator<<(std::ostream &dest, const Line2f &l)
+{
+    auto line = l.point_and_direction();
+    return dest << "Line2f(" << line.first << ", " << line.second << ")";
 }

@@ -91,7 +91,7 @@ void Server::game_frame()
     {
         op->execute(m_state);
     }
-
+    m_state.graph().reshape();
     m_sandifier.run_steps();
 
     m_op_buffer.clear();

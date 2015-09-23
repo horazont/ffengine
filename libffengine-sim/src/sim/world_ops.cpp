@@ -650,19 +650,28 @@ WorldOperationResult FluidReset::execute(WorldState &state)
 
 /* sim::ops::ConstructNewCurve */
 
-ConstructNewCurve::ConstructNewCurve(const QuadBezier3f &curve,
-                                     Object::ID new_object_id):
+ConstructNewCurve::ConstructNewCurve(
+        const Vector3f &start_point,
+        const sim::object_ptr<sim::PhysicalNode> &start_node,
+        const Vector3f &control_point,
+        const Vector3f &end_point,
+        const sim::object_ptr<sim::PhysicalNode> &end_node,
+        sim::Object::ID new_object_id):
     ObjectWorldOperation(new_object_id),
-    m_curve(curve)
+    m_end_node(end_node),
+    m_end_point(end_point),
+    m_control_point(control_point),
+    m_start_node(start_node),
+    m_start_point(start_point)
 {
 
 }
 
 WorldOperationResult ConstructNewCurve::execute(WorldState &state)
 {
-    PhysicalNode &start = state.graph().create_node(EDGE_CLASS_ROAD, m_curve.p_start);
-    PhysicalNode &end = state.graph().create_node(EDGE_CLASS_ROAD, m_curve.p_end);
-    state.graph().construct_curve(start, m_curve.p_control, end, EDGE_TYPE_BIDIRECTIONAL_THREE_LANES);
+    PhysicalNode &start = (m_start_node ? *m_start_node : state.graph().create_node(EDGE_CLASS_ROAD, m_start_point));
+    PhysicalNode &end = (m_end_node ? *m_end_node : state.graph().create_node(EDGE_CLASS_ROAD, m_end_point));
+    state.graph().construct_curve(start, m_control_point, end, EDGE_TYPE_BIDIRECTIONAL_THREE_LANES);
     return NO_ERROR;
 }
 

@@ -87,7 +87,8 @@ struct EdgeType
              const unsigned int lanes,
              const float lane_padding,
              const float lane_center_margin,
-             const bool bidirectional);
+             const bool bidirectional,
+             const float half_cut_width);
 
     // EdgeType instances are unique
     EdgeType(const EdgeType &ref) = delete;
@@ -101,6 +102,7 @@ struct EdgeType
     float m_lane_padding;
     float m_lane_center_margin;
     bool m_bidirectional;
+    float m_half_cut_width;
 
 
     bool operator==(const EdgeType &other) const
@@ -188,6 +190,10 @@ public:
         return m_segments;
     }
 
+public:
+    void set_s0(const float new_s0);
+    void set_s1(const float new_s1);
+
 };
 
 
@@ -217,6 +223,8 @@ public:
                        const object_ptr<PhysicalNode> &start_node,
                        const object_ptr<PhysicalNode> &end_node,
                        const Vector3f &control_point);
+    PhysicalEdgeBundle(const PhysicalEdgeBundle &ref) = delete;
+    PhysicalEdgeBundle &operator=(const PhysicalEdgeBundle &ref) = delete;
 
 private:
     const EdgeType &m_type;
@@ -226,6 +234,8 @@ private:
 
     const bool m_flat;
     const Vector3f m_control_point;
+
+    bool m_reshape_pending;
 
     std::vector<PhysicalEdgeSegment> m_segments;
 
@@ -242,7 +252,7 @@ private:
     void add_edge(const float offset,
                   const EdgeDirection direction);
 
-    void apply_type(const EdgeType &type);
+    void apply_type();
 
 public:
     inline bool flat() const
@@ -265,6 +275,11 @@ public:
         return m_start_node;
     }
 
+    inline const EdgeType &type() const
+    {
+        return m_type;
+    }
+
     inline const_iterator begin() const
     {
         return const_iterator(m_edges.begin());
@@ -275,11 +290,33 @@ public:
         return const_iterator(m_edges.end());
     }
 
+public:
+    Vector3f end_tangent() const;
+    void mark_for_reshape();
+    void reshape();
+    Vector3f start_tangent() const;
+
 };
 
 
 class PhysicalNode: public Object
 {
+private:
+    struct ExitRecord
+    {
+        ExitRecord() = default;
+        ExitRecord(const object_ptr<PhysicalEdgeBundle> &bundle,
+                   bool start_is_here);
+
+        object_ptr<PhysicalEdgeBundle> m_bundle;
+        bool m_start_is_here;
+        Vector3f m_exit_vector;
+        float m_exit_angle;
+        float m_base_cut;
+
+        Vector3f get_naive_exit_vector() const;
+    };
+
 public:
     PhysicalNode(const ID object_id,
                  const EdgeClass &class_,
@@ -287,14 +324,38 @@ public:
 
 private:
     const EdgeClass &m_class;
+    bool m_reshape_pending;
     Vector3f m_position;
-    std::vector<object_ptr<PhysicalEdgeBundle> > m_exits;
+    std::vector<ExitRecord> m_exits;
+
+private:
+    const ExitRecord *record_for_bundle(const PhysicalEdgeBundle &bundle) const;
 
 public:
     inline const Vector3f &position() const
     {
         return m_position;
     }
+
+public:
+    inline const std::vector<ExitRecord> &exits() const
+    {
+        return m_exits;
+    }
+
+    inline float bundle_cut(const PhysicalEdgeBundle &bundle) const
+    {
+        const ExitRecord *rec = record_for_bundle(bundle);
+        if (!rec) {
+            return NAN;
+        }
+        return rec->m_base_cut;
+    }
+
+public:
+    void mark_for_reshape();
+    void reshape();
+    void register_edge_bundle(const object_ptr<PhysicalEdgeBundle> &edge);
 
 };
 
@@ -310,6 +371,9 @@ public:
 
 private:
     ObjectManager &m_objects;
+
+    std::vector<object_ptr<PhysicalNode> > m_nodes;
+    std::vector<object_ptr<PhysicalEdgeBundle> > m_bundles;
 
     mutable EdgeBundleSignal m_edge_bundle_created;
     mutable NodeSignal m_node_created;
@@ -338,6 +402,9 @@ public:
     {
         return m_node_created;
     }
+
+public:
+    void reshape();
 
 };
 

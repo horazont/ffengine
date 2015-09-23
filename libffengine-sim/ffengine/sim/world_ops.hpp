@@ -291,11 +291,19 @@ public:
 class ConstructNewCurve: public ObjectWorldOperation
 {
 public:
-    ConstructNewCurve(const QuadBezier3f &curve,
+    ConstructNewCurve(const Vector3f &start_point,
+                      const sim::object_ptr<sim::PhysicalNode> &start_node,
+                      const Vector3f &control_point,
+                      const Vector3f &end_point,
+                      const sim::object_ptr<sim::PhysicalNode> &end_node,
                       Object::ID new_object_id = Object::NULL_OBJECT_ID);
 
 private:
-    const QuadBezier3f m_curve;
+    const sim::object_ptr<sim::PhysicalNode> m_end_node;
+    const Vector3f m_end_point;
+    const Vector3f m_control_point;
+    const sim::object_ptr<sim::PhysicalNode> m_start_node;
+    const Vector3f m_start_point;
 
 public:
     WorldOperationResult execute(WorldState &state) override;

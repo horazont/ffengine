@@ -33,10 +33,32 @@ namespace ffe {
 
 class Material;
 
-class DebugNodes: public scenegraph::Node
+
+class DebugNode: public RenderableOctreeObject
 {
 public:
-    DebugNodes(ffe::Material &material);
+    DebugNode(const sim::object_ptr<sim::PhysicalNode> &node);
+
+private:
+    const sim::object_ptr<sim::PhysicalNode> m_node;
+
+public:
+    inline sim::object_ptr<sim::PhysicalNode> node() const
+    {
+        return m_node;
+    }
+
+public:
+    void prepare(RenderContext &context) override;
+    void render(RenderContext &context) override;
+
+};
+
+
+class DebugNodes: public scenegraph::OctNode, public RenderableOctreeObject
+{
+public:
+    DebugNodes(Octree &octree, ffe::Material &material);
 
 private:
     ffe::Material &m_material;
@@ -44,7 +66,7 @@ private:
     VBOAllocation m_vbo_alloc;
     bool m_changed;
 
-    std::vector<sim::object_ptr<sim::PhysicalNode> > m_nodes;
+    std::unordered_map<sim::object_ptr<sim::PhysicalNode>, std::unique_ptr<DebugNode>> m_nodes;
 
 private:
     void cleanup_dead();
@@ -55,7 +77,7 @@ public:
 public:
     void prepare(RenderContext &context) override;
     void render(RenderContext &context) override;
-    void sync() override;
+    void sync(scenegraph::OctContext &positioning) override;
 };
 
 
