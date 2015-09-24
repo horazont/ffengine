@@ -120,7 +120,7 @@ FluidSource::FluidSource(Octree &octree, FluidSourceMaterial &mat):
     m_height(0),
     m_metrics_changed(true)
 {
-
+    m_octree.insert_object(this);
 }
 
 void FluidSource::set_base(const Vector2f &base)
@@ -173,14 +173,8 @@ void FluidSource::update_from_source()
     set_radius(m_source->m_radius);
 }
 
-void FluidSource::sync(Octree &octree, scenegraph::OctContext &positioning)
+void FluidSource::sync(scenegraph::OctContext &positioning)
 {
-    if (this->octree() != &octree) {
-        if (this->octree()) {
-            this->octree()->remove_object(this);
-        }
-    }
-
     if (m_metrics_changed) {
         const Vector3f v1(m_radius, 0, m_height);
         const Vector3f v2(-m_radius, 0, 0);
@@ -193,10 +187,6 @@ void FluidSource::sync(Octree &octree, scenegraph::OctContext &positioning)
         update_bounds(Sphere{origin, sphere_radius});
 
         m_metrics_changed = false;
-    }
-
-    if (this->octree() != &octree) {
-        octree.insert_object(this);
     }
 
     switch (m_state)

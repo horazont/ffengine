@@ -100,11 +100,11 @@ public:
     void update_from_source();
 
 public: // OctNode interface
-    void sync(Octree &octree, scenegraph::OctContext &positioning);
+    void sync(scenegraph::OctContext &positioning) override;
 
 public: // RenderableOctreeObject interface
-    void prepare(RenderContext &context);
-    void render(RenderContext &context);
+    void prepare(RenderContext &context) override;
+    void render(RenderContext &context) override;
 
 public: // OctreeObject interface
     bool isect_ray(const Ray &ray, float &tmin) const;
