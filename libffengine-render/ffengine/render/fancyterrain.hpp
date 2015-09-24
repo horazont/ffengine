@@ -47,7 +47,9 @@ class FancyTerrainNode: public FullTerrainRenderer
 public:
     struct OverlayConfig
     {
+        std::unique_ptr<Material> material;
         sim::TerrainRect clip_rect;
+        std::function<void(MaterialPass&)> configure_callback;
     };
 
     struct RenderOverlay
@@ -84,18 +86,23 @@ private:
     const sim::Terrain &m_terrain;
     NTMapGenerator &m_terrain_nt;
 
+    const spp::Program &m_vertex_shader;
+    const spp::Program &m_geometry_shader;
+
     sigc::connection m_invalidate_cache_conn;
 
     bool m_linear_filter;
+    bool m_sharp_geometry;
+    bool m_configured;
 
     Texture2D m_heightmap;
     Texture2D m_normalt;
+    Texture2D *m_grass, *m_blend, *m_rock, *m_sand;
 
     VBO m_vbo;
     IBO m_ibo;
 
     Material m_material;
-    Material m_normal_debug_material;
 
     VBOAllocation m_vbo_allocation;
     IBOAllocation m_ibo_allocation;
@@ -103,8 +110,16 @@ private:
     std::mutex m_cache_invalidation_mutex;
     sim::TerrainRect m_cache_invalidation;
 
-    std::unordered_map<Material*, OverlayConfig> m_overlays;
+    std::unordered_map<const spp::Program*, OverlayConfig> m_overlays;
     std::vector<RenderOverlay> m_render_overlays;
+
+private:
+    void configure_materials();
+    void configure_single_overlay_material(const spp::Program &fragment_shader,
+                                           OverlayConfig &config);
+    void configure_without_sharp_geometry();
+    void configure_with_sharp_geometry();
+    void reconfigure();
 
 protected:
     void render_all(RenderContext &context, Material &material,
@@ -156,8 +171,8 @@ public:
      *
      * @see remove_overlay
      */
-    void configure_overlay(Material &mat,
-                           const sim::TerrainRect &clip_rect);
+    void reposition_overlay(const spp::Program &fragment_shader,
+                            const sim::TerrainRect &clip_rect);
 
     /**
      * Configure a material for use in overlay rendering.
@@ -189,7 +204,11 @@ public:
      *
      * @opengl
      */
-    bool configure_overlay_material(Material &mat);
+    void configure_overlay_material(
+            const spp::Program &fragment_shader,
+            std::function<void(MaterialPass &)> &&configure_callback = nullptr);
+
+    MaterialPass *get_overlay_material(const spp::Program &fragment_shader);
 
     bool enable_linear_filter() const
     {
@@ -208,7 +227,7 @@ public:
      *
      * @see configure_overlay
      */
-    void remove_overlay(Material &mat);
+    void remove_overlay(const spp::Program &fragment_shader);
 
     /**
      * Enable or disable linear filtering of the vertex data of the terrain.

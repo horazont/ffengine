@@ -46,10 +46,16 @@ FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
     m_terrain_interface(terrain_interface),
     m_terrain(terrain_interface.terrain()),
     m_terrain_nt(terrain_interface.ntmap()),
+    m_vertex_shader(resources.load_shader_checked(
+                        ":/shaders/terrain/main.vert")),
+    m_geometry_shader(resources.load_shader_checked(
+                          ":/shaders/terrain/main.geom")),
     m_invalidate_cache_conn(terrain_interface.field_updated().connect(
                                 sigc::mem_fun(*this,
                                               &FancyTerrainNode::invalidate_cache))),
     m_linear_filter(true),
+    m_sharp_geometry(true),
+    m_configured(false),
     m_heightmap(GL_RGB32F,
                 m_terrain.size(),
                 m_terrain.size(),
@@ -60,106 +66,20 @@ FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
                 m_terrain.size(),
                 GL_RGBA,
                 GL_FLOAT),
+    m_grass(nullptr),
+    m_blend(nullptr),
+    m_rock(nullptr),
+    m_sand(nullptr),
     m_vbo(VBOFormat({
                         VBOAttribute(2)
                     })),
     m_material(m_vbo, m_ibo),
-    m_normal_debug_material(m_vbo, m_ibo),
     m_vbo_allocation(m_vbo.allocate(terrain_interface.grid_size()*terrain_interface.grid_size())),
-    m_ibo_allocation(m_ibo.allocate((terrain_interface.grid_size()-1)*(terrain_interface.grid_size()-1)*4)),
+    m_ibo_allocation(),
     m_cache_invalidation(0, 0, m_terrain.size(), m_terrain.size())
 {
-    uint16_t *dest = m_ibo_allocation.get();
-    for (unsigned int y = 0; y < grid_size-1; y++) {
-        for (unsigned int x = 0; x < grid_size-1; x++) {
-            const unsigned int curr_base = y*grid_size + x;
-            *dest++ = curr_base;
-            *dest++ = curr_base + grid_size;
-            *dest++ = curr_base + grid_size + 1;
-            *dest++ = curr_base + 1;
-        }
-    }
-
-    m_ibo_allocation.mark_dirty();
-
     const float heightmap_factor = 1.f / m_terrain_interface.size();
-
     m_eval_context.define1f("HEIGHTMAP_FACTOR", heightmap_factor);
-
-    // sub-context for defining the z-offset
-    spp::EvaluationContext ctx(m_eval_context);
-    ctx.define1f("ZOFFSET", 0.);
-
-    bool success = true;
-
-    {
-        MaterialPass &mat = m_material.make_pass_material(solid_pass);
-        mat.set_order(-2);
-
-        success = success && mat.shader().attach(
-                    resources.load_shader_checked(":/shaders/terrain/main.vert"),
-                    ctx,
-                    GL_VERTEX_SHADER);
-        success = success && mat.shader().attach(
-                    resources.load_shader_checked(":/shaders/terrain/main.geom"),
-                    ctx,
-                    GL_GEOMETRY_SHADER);
-        success = success && mat.shader().attach(
-                    resources.load_shader_checked(":/shaders/terrain/main.frag"),
-                    ctx,
-                    GL_FRAGMENT_SHADER);
-    }
-    m_material.declare_attribute("position", 0);
-
-    success = success && m_material.link();
-
-    {
-        MaterialPass &mat = m_normal_debug_material.make_pass_material(solid_pass);
-        mat.set_order(-1);
-
-        success = success && mat.shader().attach(
-                    resources.load_shader_checked(":/shaders/terrain/main.vert"),
-                    ctx,
-                    GL_VERTEX_SHADER);
-        success = success && mat.shader().attach(
-                    resources.load_shader_checked(":/shaders/terrain/normal_debug.geom"),
-                    ctx,
-                    GL_GEOMETRY_SHADER);
-        success = success && mat.shader().attach(
-                    resources.load_shader_checked(":/shaders/generic/normal_debug.frag"),
-                    ctx,
-                    GL_FRAGMENT_SHADER);
-    }
-
-    m_normal_debug_material.declare_attribute("position", 0);
-
-    success = success && m_normal_debug_material.link();
-
-    if (!success) {
-        throw std::runtime_error("failed to compile or link shader");
-    }
-
-    m_material.attach_texture("heightmap", &m_heightmap);
-    m_material.attach_texture("normalt", &m_normalt);
-    {
-        MaterialPass &mat = m_material.make_pass_material(solid_pass);
-        mat.shader().bind();
-        glUniform2f(mat.shader().uniform_location("chunk_translation"),
-                    0.0, 0.0);
-
-    }
-
-    m_normal_debug_material.attach_texture("heightmap", &m_heightmap);
-    m_normal_debug_material.attach_texture("normalt", &m_normalt);
-    {
-        MaterialPass &mat = m_normal_debug_material.make_pass_material(solid_pass);
-        mat.shader().bind();
-        glUniform2f(mat.shader().uniform_location("chunk_translation"),
-                    0.0, 0.0);
-        glUniform1f(mat.shader().uniform_location("normal_length"),
-                    2.);
-
-    }
 
     {
         auto slice = VBOSlice<Vector2f>(m_vbo_allocation, 0);
@@ -181,12 +101,167 @@ FancyTerrainNode::~FancyTerrainNode()
     m_invalidate_cache_conn.disconnect();
 }
 
+void FancyTerrainNode::configure_materials()
+{
+    raise_last_gl_error();
+    bool success = true;
+
+    spp::EvaluationContext main_context(m_eval_context);
+    main_context.define1f("ZOFFSET", 0.f);
+
+    m_material = Material(m_vbo, m_ibo);
+    {
+        MaterialPass &mat = m_material.make_pass_material(m_solid_pass);
+        mat.set_order(-2);
+
+        success = success && mat.shader().attach(
+                    m_vertex_shader,
+                    main_context,
+                    GL_VERTEX_SHADER);
+        if (m_sharp_geometry) {
+            success = success && mat.shader().attach(
+                        m_geometry_shader,
+                        main_context,
+                        GL_GEOMETRY_SHADER);
+        }
+        success = success && mat.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/terrain/main.frag"),
+                    main_context,
+                    GL_FRAGMENT_SHADER);
+    }
+    m_material.declare_attribute("position", 0);
+
+    success = success && m_material.link();
+
+    if (!success) {
+        throw std::runtime_error("failed to compile or link terrain material");
+    }
+
+    m_material.attach_texture("heightmap", &m_heightmap);
+    m_material.attach_texture("normalt", &m_normalt);
+    if (m_blend) {
+        m_material.attach_texture("blend", m_blend);
+    }
+    if (m_grass) {
+        m_material.attach_texture("grass", m_grass);
+    }
+    if (m_rock) {
+        m_material.attach_texture("rock", m_rock);
+    }
+    if (m_sand) {
+        m_material.attach_texture("sand", m_sand);
+    }
+    {
+        MaterialPass &mat = m_material.make_pass_material(m_solid_pass);
+        mat.shader().bind();
+        glUniform2f(mat.shader().uniform_location("chunk_translation"),
+                    0.0, 0.0);
+
+    }
+
+    raise_last_gl_error();
+
+    for (auto &entry: m_overlays)
+    {
+        configure_single_overlay_material(*entry.first, entry.second);
+        raise_last_gl_error();
+    }
+
+    raise_last_gl_error();
+}
+
+void FancyTerrainNode::configure_single_overlay_material(
+        const spp::Program &fragment_shader,
+        OverlayConfig &config)
+{
+    spp::EvaluationContext overlay_context(m_eval_context);
+    overlay_context.define1f("ZOFFSET", 1.f);
+
+    config.material = std::make_unique<Material>(m_vbo, m_ibo);
+    MaterialPass &pass = config.material->make_pass_material(m_solid_pass);
+    pass.set_order(-1);
+
+    bool success = pass.shader().attach(
+                m_vertex_shader,
+                overlay_context,
+                GL_VERTEX_SHADER);
+    if (m_sharp_geometry) {
+        success = success && pass.shader().attach(
+                    m_geometry_shader,
+                    overlay_context,
+                    GL_GEOMETRY_SHADER);
+    }
+    success = success && pass.shader().attach(
+                fragment_shader,
+                overlay_context,
+                GL_FRAGMENT_SHADER);
+
+    config.material->declare_attribute("position", 0);
+
+    success = success && config.material->link();
+
+    if (!success) {
+        throw std::runtime_error("failed to compile or link overlay material");
+    }
+
+    if (config.configure_callback) {
+        config.configure_callback(pass);
+    }
+
+    config.material->attach_texture("heightmap", &m_heightmap);
+    config.material->attach_texture("normalt", &m_normalt);
+
+    config.material->set_depth_mask(false);
+}
+
+void FancyTerrainNode::configure_without_sharp_geometry()
+{
+    configure_with_sharp_geometry();
+}
+
+void FancyTerrainNode::configure_with_sharp_geometry()
+{
+    m_ibo_allocation = m_ibo.allocate((m_terrain_interface.grid_size()-1)*(m_terrain_interface.grid_size()-1)*4);
+    uint16_t *dest = m_ibo_allocation.get();
+    for (unsigned int y = 0; y < m_grid_size-1; y++) {
+        for (unsigned int x = 0; x < m_grid_size-1; x++) {
+            const unsigned int curr_base = y*m_grid_size + x;
+            *dest++ = curr_base;
+            *dest++ = curr_base + m_grid_size;
+            *dest++ = curr_base + m_grid_size + 1;
+            *dest++ = curr_base + 1;
+        }
+    }
+    m_ibo_allocation.mark_dirty();
+}
+
+void FancyTerrainNode::reconfigure()
+{
+    if (m_configured) {
+        return;
+    }
+    m_configured = true;
+
+    m_ibo_allocation = nullptr;
+    if (m_sharp_geometry) {
+        configure_with_sharp_geometry();
+    } else {
+        configure_without_sharp_geometry();
+    }
+
+    configure_materials();
+
+    m_vbo.sync();
+    m_ibo.sync();
+}
+
 inline void render_slice(RenderContext &context,
                          Material &material,
                          IBOAllocation &ibo_allocation,
                          VBOAllocation &vbo_allocation,
                          const float x, const float y,
-                         const float scale)
+                         const float scale,
+                         const GLenum mode)
 {
     /*const float xtex = (float(slot_index % texture_cache_size) + 0.5/grid_size) / texture_cache_size;
     const float ytex = (float(slot_index / texture_cache_size) + 0.5/grid_size) / texture_cache_size;*/
@@ -195,7 +270,7 @@ inline void render_slice(RenderContext &context,
     std::cout << "  translationx  = " << x << std::endl;
     std::cout << "  translationy  = " << y << std::endl;
     std::cout << "  scale         = " << scale << std::endl;*/
-    context.render_all(AABB{}, GL_LINES_ADJACENCY, material,
+    context.render_all(AABB{}, mode, material,
                        ibo_allocation, vbo_allocation,
                        [scale, x, y](MaterialPass &pass){
                            glUniform1f(pass.shader().uniform_location("chunk_size"), scale);
@@ -206,13 +281,15 @@ inline void render_slice(RenderContext &context,
 void FancyTerrainNode::render_all(RenderContext &context, Material &material,
                                   const FullTerrainNode::Slices &slices_to_render)
 {
+    const GLenum mode = (m_sharp_geometry ? GL_LINES_ADJACENCY : GL_TRIANGLES);
     for (auto &slice: slices_to_render) {
         const float x = slice.basex;
         const float y = slice.basey;
         const float scale = slice.lod;
 
         render_slice(context, material, m_ibo_allocation, m_vbo_allocation,
-                     x, y, scale);
+                     x, y, scale,
+                     mode);
     }
 }
 
@@ -245,74 +322,70 @@ void FancyTerrainNode::update_material(RenderContext &context, Material &materia
 
 void FancyTerrainNode::attach_blend_texture(Texture2D *tex)
 {
-    m_material.attach_texture("blend", tex);
+    if (m_configured) {
+        m_material.attach_texture("blend", tex);
+    }
+    m_blend = tex;
 }
 
 void FancyTerrainNode::attach_grass_texture(Texture2D *tex)
 {
-    m_material.attach_texture("grass", tex);
+    if (m_configured) {
+        m_material.attach_texture("grass", tex);
+    }
+    m_grass = tex;
 }
 
 void FancyTerrainNode::attach_rock_texture(Texture2D *tex)
 {
-    m_material.attach_texture("rock", tex);
+    if (m_configured) {
+        m_material.attach_texture("rock", tex);
+    }
+    m_rock = tex;
 }
 
 void FancyTerrainNode::attach_sand_texture(Texture2D *tex)
 {
-    m_material.attach_texture("sand", tex);
+    if (m_configured) {
+        m_material.attach_texture("sand", tex);
+    }
+    m_sand = tex;
 }
 
-void FancyTerrainNode::configure_overlay(
-        Material &mat,
+void FancyTerrainNode::reposition_overlay(
+        const spp::Program &fragment_shader,
         const sim::TerrainRect &clip_rect)
 {
-    OverlayConfig &conf = m_overlays[&mat];
+    OverlayConfig &conf = m_overlays.at(&fragment_shader);
     conf.clip_rect = clip_rect;
 }
 
-bool FancyTerrainNode::configure_overlay_material(Material &mat)
+void FancyTerrainNode::configure_overlay_material(
+        const spp::Program &fragment_shader,
+        std::function<void (MaterialPass &)> &&configure_callback)
 {
-    // sub-context for redefining the zoffset
-    spp::EvaluationContext ctx(m_eval_context);
-    ctx.define1f("ZOFFSET", 1.);
-
-    bool success = true;
-
-    for (auto iter = mat.cbegin();
-         iter != mat.cend();
-         ++iter)
-    {
-        MaterialPass &pass_mat = *iter->second;
-
-        success = pass_mat.shader().attach(
-                    m_resources.load_shader_checked(":/shaders/terrain/main.vert"),
-                    ctx,
-                    GL_VERTEX_SHADER);
-        success = success && pass_mat.shader().attach(
-                    m_resources.load_shader_checked(":/shaders/terrain/main.geom"),
-                    ctx,
-                    GL_GEOMETRY_SHADER);
+    OverlayConfig &conf = m_overlays[&fragment_shader];
+    conf.material = nullptr;
+    conf.configure_callback = std::move(configure_callback);
+    if (m_configured) {
+        configure_single_overlay_material(fragment_shader, conf);
     }
-
-    mat.declare_attribute("position", 0);
-
-    success = success && mat.link();
-    if (!success) {
-        return false;
-    }
-
-    mat.attach_texture("heightmap", &m_heightmap);
-    mat.attach_texture("normalt", &m_normalt);
-
-    mat.set_depth_mask(false);
-
-    return true;
 }
 
-void FancyTerrainNode::remove_overlay(Material &mat)
+MaterialPass *FancyTerrainNode::get_overlay_material(const spp::Program &fragment_shader)
 {
-    auto iter = m_overlays.find(&mat);
+    auto iter = m_overlays.find(&fragment_shader);
+    if (iter == m_overlays.end()) {
+        return nullptr;
+    }
+
+    reconfigure();
+    return iter->second.material->pass_material(m_solid_pass);
+}
+
+void FancyTerrainNode::remove_overlay(const spp::Program &fragment_shader)
+{
+    auto iter = m_overlays.find(&fragment_shader);
     if (iter == m_overlays.end()) {
         return;
     }
@@ -331,10 +404,10 @@ void FancyTerrainNode::render(RenderContext &context,
                               const FullTerrainNode &,
                               const FullTerrainNode::Slices &slices)
 {
-    return;
     update_material(context, m_material);
     render_all(context, m_material, slices);
 
+    const GLenum mode = (m_sharp_geometry ? GL_LINES_ADJACENCY : GL_TRIANGLES);
     for (auto &overlay: m_render_overlays)
     {
         Material &material = *overlay.material;
@@ -349,7 +422,8 @@ void FancyTerrainNode::render(RenderContext &context,
             if (slice_rect.overlaps(overlay.clip_rect)) {
                 render_slice(context,
                              material, m_ibo_allocation, m_vbo_allocation,
-                             x, y, scale);
+                             x, y, scale,
+                             mode);
             }
         }
     }
@@ -357,13 +431,15 @@ void FancyTerrainNode::render(RenderContext &context,
 
 void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)
 {
+    reconfigure();
+
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
-        sync_material(*item.first,
+        sync_material(*item.second.material,
                       fullterrain.scale_to_radius());
         m_render_overlays.emplace_back(
-                    RenderOverlay{item.first, item.second.clip_rect}
+                    RenderOverlay{item.second.material.get(), item.second.clip_rect}
                     );
     }
 
