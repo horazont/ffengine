@@ -216,7 +216,21 @@ void FancyTerrainNode::configure_single_overlay_material(
 
 void FancyTerrainNode::configure_without_sharp_geometry()
 {
-    configure_with_sharp_geometry();
+    m_ibo_allocation = m_ibo.allocate((m_terrain_interface.grid_size()-1)*(m_terrain_interface.grid_size()-1)*6);
+    uint16_t *dest = m_ibo_allocation.get();
+    for (unsigned int y = 0; y < m_grid_size-1; y++) {
+        for (unsigned int x = 0; x < m_grid_size-1; x++) {
+            const unsigned int curr_base = y*m_grid_size + x;
+            *dest++ = curr_base + m_grid_size;
+            *dest++ = curr_base;
+            *dest++ = curr_base + m_grid_size + 1;
+
+            *dest++ = curr_base + m_grid_size + 1;
+            *dest++ = curr_base;
+            *dest++ = curr_base + 1;
+        }
+    }
+    m_ibo_allocation.mark_dirty();
 }
 
 void FancyTerrainNode::configure_with_sharp_geometry()
@@ -391,6 +405,15 @@ void FancyTerrainNode::remove_overlay(const spp::Program &fragment_shader)
     }
 
     m_overlays.erase(iter);
+}
+
+void FancyTerrainNode::set_sharp_geometry(bool use)
+{
+    if (m_sharp_geometry == use) {
+        return;
+    }
+    m_sharp_geometry = use;
+    m_configured = false;
 }
 
 void FancyTerrainNode::invalidate_cache(sim::TerrainRect part)

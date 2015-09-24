@@ -243,6 +243,8 @@ public:
         m_linear_filter = filter;
     }
 
+    void set_sharp_geometry(bool use);
+
 public:
     void prepare(RenderContext &context,
                  const FullTerrainNode &render_terrain,
