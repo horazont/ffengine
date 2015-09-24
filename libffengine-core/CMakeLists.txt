@@ -64,7 +64,7 @@ set(ENGINE_SRC
   src/math/vector.cpp
   )
 
-add_library(ffengine-core STATIC ${ENGINE_SRC} ${PROTO_SRCS})
+add_library(ffengine-core STATIC ${ENGINE_SRC} ${ENGINE_HEADERS})
 setup_scc_target(ffengine-core)
 
 target_link_libraries(
@@ -75,7 +75,3 @@ target_link_libraries(ffengine-core "atomic")
 target_include_directories(
   ffengine-core
   PUBLIC ${INCLUDE_DIRS})
-
-add_custom_target(
-  dummy_ffengine-core_files
-  SOURCES ${ENGINE_HEADERS})

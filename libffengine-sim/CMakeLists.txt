@@ -45,7 +45,7 @@ PROTOBUF_GENERATE_CPP(
 
 qt5_generate_moc(ffengine/sim/server.hpp server.moc)
 
-add_library(ffengine-sim STATIC ${ENGINE_SRC} ${PROTO_SRCS} server.moc)
+add_library(ffengine-sim STATIC ${ENGINE_SRC} ${ENGINE_HEADERS} ${ENGINE_PROTOS} ${PROTO_SRCS} server.moc)
 setup_scc_target(ffengine-sim)
 
 target_link_libraries(ffengine-sim
@@ -62,7 +62,3 @@ target_include_directories(
 target_include_directories(
   ffengine-sim
   PUBLIC ${INCLUDE_DIRS})
-
-add_custom_target(
-  dummy_ffengine-sim_files
-  SOURCES ${ENGINE_HEADERS} ${ENGINE_PROTOS})

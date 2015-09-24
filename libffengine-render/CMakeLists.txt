@@ -63,7 +63,7 @@ set(ENGINE_SRC
   src/render/scenegraph.cpp
   )
 
-add_library(ffengine-render STATIC ${ENGINE_SRC})
+add_library(ffengine-render STATIC ${ENGINE_SRC} ${ENGINE_HEADERS})
 setup_scc_target(ffengine-render)
 
 target_link_libraries(
@@ -77,7 +77,7 @@ target_include_directories(
   ffengine-render
   PUBLIC ${INCLUDE_DIRS})
 
-add_custom_target(
-  dummy_ffengine-render_files
-  SOURCES ${ENGINE_HEADERS}
-  )
+#add_custom_target(
+#  dummy_ffengine-render_files
+#  SOURCES ${ENGINE_HEADERS}
+#  )
