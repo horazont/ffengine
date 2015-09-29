@@ -42,6 +42,7 @@ class SignalQueue;
 
 namespace ffe {
 
+
 struct FluidSlice
 {
     FluidSlice(IBOAllocation &&ibo_alloc, VBOAllocation &&vbo_alloc,
@@ -61,6 +62,7 @@ struct FluidSlice
      */
     unsigned int m_usage_level;
 };
+
 
 class CPUFluid: public FullTerrainRenderer
 {
@@ -130,6 +132,7 @@ public:
     void sync(const FullTerrainNode &fullterrain) override;
 
 };
+
 
 }
 

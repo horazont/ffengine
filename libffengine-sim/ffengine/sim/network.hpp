@@ -40,7 +40,6 @@ the AUTHORS file.
 #include "ffengine/sim/objects.hpp"
 
 
-
 namespace sim {
 
 
