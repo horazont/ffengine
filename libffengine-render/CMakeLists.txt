@@ -3,6 +3,7 @@ set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 set(ENGINE_HEADERS
   ffengine/gl/2darray.hpp
   ffengine/gl/array.hpp
+  ffengine/gl/debug.hpp
   ffengine/gl/fbo.hpp
   ffengine/gl/ibo.hpp
   ffengine/gl/mesh.hpp
@@ -36,6 +37,7 @@ set(ENGINE_HEADERS
 set(ENGINE_SRC
   src/gl/2darray.cpp
   src/gl/array.cpp
+  src/gl/debug.cpp
   src/gl/fbo.cpp
   src/gl/ibo.cpp
   src/gl/object.cpp
