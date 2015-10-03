@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_GL_OBJECT_H
 #define SCC_ENGINE_GL_OBJECT_H
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 #include <functional>
 #include <iostream>

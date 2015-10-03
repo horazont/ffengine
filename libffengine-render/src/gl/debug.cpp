@@ -61,7 +61,7 @@ void debug_to_log(GLenum source, GLenum type, GLuint id, GLenum severity,
 
 void send_gl_debug_to_logger(io::Logger &logger)
 {
-    glDebugMessageCallback(&debug_to_log, &logger);
+    glDebugMessageCallback(reinterpret_cast<GLDEBUGPROC>(&debug_to_log), &logger);
 }
 
 }

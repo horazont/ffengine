@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_RENDER_CAMERA_H
 #define SCC_ENGINE_RENDER_CAMERA_H
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 #include "ffengine/common/types.hpp"
 

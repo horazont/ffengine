@@ -24,10 +24,10 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_GL_UBO_H
 #define SCC_ENGINE_GL_UBO_H
 
-#include <GL/glew.h>
-
 #include <tuple>
 #include <utility>
+
+#include <epoxy/gl.h>
 
 #include "ffengine/gl/object.hpp"
 

@@ -31,7 +31,7 @@ the AUTHORS file.
 #include <unordered_map>
 #include <vector>
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 #include "ffengine/gl/object.hpp"
 #include "ffengine/gl/array.hpp"

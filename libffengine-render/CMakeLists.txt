@@ -1,3 +1,5 @@
+find_package(epoxy REQUIRED)
+
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 set(ENGINE_HEADERS
@@ -74,7 +76,8 @@ target_link_libraries(
   ffengine-sim
   Qt5::Core
   sigc++
-  spp)
+  spp
+  epoxy)
 target_include_directories(
   ffengine-render
   PUBLIC ${INCLUDE_DIRS})

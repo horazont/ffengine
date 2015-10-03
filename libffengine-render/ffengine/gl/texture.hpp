@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_GL_TEXTURE_H
 #define SCC_ENGINE_GL_TEXTURE_H
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 #include "ffengine/gl/object.hpp"
 #include "ffengine/gl/2darray.hpp"
@@ -42,6 +42,7 @@ public:
     virtual GLenum target() = 0;
 
 };
+
 
 class Texture2D: public GLObject<GL_TEXTURE_BINDING_2D>,
                  public GL2DArray,

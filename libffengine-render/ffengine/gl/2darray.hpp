@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_GL_2DARRAY_H
 #define SCC_ENGINE_GL_2DARRAY_H
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 namespace ffe {
 

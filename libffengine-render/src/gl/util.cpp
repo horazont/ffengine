@@ -23,6 +23,8 @@ the AUTHORS file.
 **********************************************************************/
 #include "ffengine/gl/util.hpp"
 
+#include <GL/glu.h>
+
 #include <stdexcept>
 
 

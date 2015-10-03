@@ -24,7 +24,6 @@ the AUTHORS file.
 #include "ffengine/sim/fluid.hpp"
 
 #include <algorithm>
-#include <GL/glew.h>
 
 #include "ffengine/io/log.hpp"
 #include "ffengine/math/algo.hpp"

@@ -24,7 +24,7 @@ the AUTHORS file.
 #ifndef SCC_ENGINE_GL_FBO_H
 #define SCC_ENGINE_GL_FBO_H
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 #include <memory>
 #include <unordered_map>

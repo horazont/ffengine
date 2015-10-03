@@ -1,7 +1,7 @@
 #ifndef SCC_GL_DEBUG_H
 #define SCC_GL_DEBUG_H
 
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 
 #include "ffengine/io/log.hpp"
 
