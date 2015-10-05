@@ -76,6 +76,60 @@ public:
 
 };
 
+
+class Texture2DArray: public GLObject<GL_TEXTURE_BINDING_2D_ARRAY, Texture>
+{
+public:
+    Texture2DArray(const GLenum internal_format,
+                   const GLsizei width,
+                   const GLsizei height,
+                   const GLsizei layers);
+    Texture2DArray(Texture2DArray &&src);
+    Texture2DArray &operator=(Texture2DArray &&src);
+    ~Texture2DArray() override;
+
+private:
+    GLenum m_internal_format;
+    GLsizei m_width;
+    GLsizei m_height;
+    GLsizei m_layers;
+
+protected:
+    void delete_globject() override;
+
+public:
+    void bind() override;
+    void bound() override;
+    void sync() override;
+    void unbind() override;
+
+public:
+    inline GLsizei height() const
+    {
+        return m_height;
+    }
+
+    inline GLenum internal_format() const
+    {
+        return m_internal_format;
+    }
+
+    inline GLsizei layers() const
+    {
+        return m_layers;
+    }
+
+    inline GLsizei width() const
+    {
+        return m_width;
+    }
+
+public:
+    GLenum shader_uniform_type() override;
+    GLenum target() override;
+
+};
+
 }
 
 #endif

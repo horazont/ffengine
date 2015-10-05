@@ -159,4 +159,98 @@ void Texture2D::reinit(const GLenum internal_format,
 
 }
 
+
+/* ffe::TextureArray */
+
+Texture2DArray::Texture2DArray(const GLenum internal_format,
+                               const GLsizei width,
+                               const GLsizei height,
+                               const GLsizei layers):
+    GLObject<GL_TEXTURE_BINDING_2D_ARRAY, Texture>(),
+    m_internal_format(internal_format),
+    m_width(width),
+    m_height(height),
+    m_layers(layers)
+{
+    glGenTextures(1, &m_glid);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_glid);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, internal_format,
+                   width, height, layers);
+    raise_last_gl_error();
+}
+
+Texture2DArray::Texture2DArray(Texture2DArray &&src):
+    GLObject<GL_TEXTURE_BINDING_2D_ARRAY, Texture>(std::move(src)),
+    m_internal_format(src.m_internal_format),
+    m_width(src.m_width),
+    m_height(src.m_height),
+    m_layers(src.m_layers)
+{
+    src.m_internal_format = 0;
+    src.m_width = 0;
+    src.m_height = 0;
+    src.m_layers = 0;
+}
+
+Texture2DArray &Texture2DArray::operator=(Texture2DArray &&src)
+{
+    if (m_glid != 0) {
+        delete_globject();
+    }
+    m_glid = src.m_glid;
+    src.m_glid = 0;
+    m_internal_format = src.m_internal_format;
+    src.m_internal_format = 0;
+    m_width = src.m_width;
+    src.m_width = 0;
+    m_height = src.m_height;
+    src.m_height = 0;
+    m_layers = src.m_layers;
+    src.m_layers = 0;
+    return *this;
+}
+
+Texture2DArray::~Texture2DArray()
+{
+    if (m_glid) {
+        delete_globject();
+    }
+}
+
+void Texture2DArray::delete_globject()
+{
+    glDeleteTextures(1, &m_glid);
+    m_glid = 0;
+}
+
+void Texture2DArray::bind()
+{
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_glid);
+}
+
+void Texture2DArray::bound()
+{
+
+}
+
+void Texture2DArray::sync()
+{
+
+}
+
+void Texture2DArray::unbind()
+{
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+}
+
+GLenum Texture2DArray::shader_uniform_type()
+{
+    return GL_SAMPLER_2D_ARRAY;
+}
+
+GLenum Texture2DArray::target()
+{
+    return GL_TEXTURE_2D_ARRAY;
+}
+
 }
