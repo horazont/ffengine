@@ -66,6 +66,27 @@ FullTerrainRenderer::~FullTerrainRenderer()
 
 }
 
+
+/* engine::FullTerrainNode::SliceBookkeeping */
+
+FullTerrainNode::SliceBookkeeping::SliceBookkeeping():
+    m_texture_layer(-1),
+    m_usage_level(-1),
+    m_invalidated(true)
+{
+
+}
+
+FullTerrainNode::SliceBookkeeping::SliceBookkeeping(int texture_layer,
+                                                    int usage_level):
+    m_texture_layer(texture_layer),
+    m_usage_level(usage_level),
+    m_invalidated(true)
+{
+
+}
+
+
 /* engine::FullTerrainNode */
 
 FullTerrainNode::FullTerrainNode(const unsigned int terrain_size,
@@ -75,7 +96,30 @@ FullTerrainNode::FullTerrainNode(const unsigned int terrain_size,
     m_max_depth(log2_of_pot((m_terrain_size-1)/(m_grid_size-1))),
     m_detail_level((unsigned int)-1)
 {
+    m_layer_slices.resize(512);
     set_detail_level(1);
+}
+
+int FullTerrainNode::acquire_layer_for_slice(const TerrainSlice &slice)
+{
+    if (!slice) {
+        return -1;
+    }
+
+    auto iter = m_slice_bookkeeping.find(slice);
+    if (iter != m_slice_bookkeeping.end()) {
+        return iter->second.m_texture_layer;
+    }
+
+    for (unsigned int i = 0; i < m_layer_slices.size(); ++i) {
+        if (!m_layer_slices[i]) {
+            m_slice_bookkeeping[slice] = SliceBookkeeping(i, 0);
+            m_layer_slices[i] = slice;
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 void FullTerrainNode::collect_slices_recurse(
@@ -109,6 +153,7 @@ void FullTerrainNode::collect_slices_recurse(
     {
         // next LOD not required, insert node
         dest.emplace_back(absolute_x, absolute_y, size);
+        touch_slice(dest.back());
         return;
     }
 
@@ -125,6 +170,34 @@ void FullTerrainNode::collect_slices_recurse(
                         frustum);
         }
     }
+}
+
+void FullTerrainNode::touch_slice(const TerrainSlice &slice)
+{
+    if (!slice) {
+        return;
+    }
+
+    auto iter = m_slice_bookkeeping.find(slice);
+    if (iter == m_slice_bookkeeping.end()) {
+        if (acquire_layer_for_slice(slice) >= 0) {
+            iter = m_slice_bookkeeping.find(slice);
+            assert(iter != m_slice_bookkeeping.end());
+        } else {
+            return;
+        }
+    }
+    iter->second.m_usage_level += 1;
+}
+
+int FullTerrainNode::get_texture_layer_for_slice(
+        const TerrainSlice &slice) const
+{
+    auto iter = m_slice_bookkeeping.find(slice);
+    if (iter == m_slice_bookkeeping.end()) {
+        return -1;
+    }
+    return iter->second.m_texture_layer;
 }
 
 void FullTerrainNode::set_detail_level(unsigned int level)
@@ -159,6 +232,11 @@ void FullTerrainNode::render(RenderContext &context)
 
 void FullTerrainNode::sync()
 {
+    for (auto &slice: m_layer_slices) {
+        slice = TerrainSlice();
+    }
+    m_slice_bookkeeping.clear();
+
     m_render_slices.clear();
     for (auto &renderer: m_renderers) {
         renderer->sync(*this);

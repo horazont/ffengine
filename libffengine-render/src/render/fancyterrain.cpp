@@ -459,6 +459,10 @@ void FancyTerrainNode::sync(const FullTerrainNode &fullterrain)
     m_render_overlays.clear();
     m_render_overlays.reserve(m_overlays.size());
     for (auto &item: m_overlays) {
+        if (item.second.clip_rect == NotARect) {
+            continue;
+        }
+
         sync_material(*item.second.material,
                       fullterrain.scale_to_radius());
         m_render_overlays.emplace_back(

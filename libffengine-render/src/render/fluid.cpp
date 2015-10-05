@@ -40,7 +40,8 @@ FluidSlice::FluidSlice(IBOAllocation &&ibo_alloc,
                        unsigned int size):
     m_ibo_alloc(std::move(ibo_alloc)),
     m_vbo_alloc(std::move(vbo_alloc)),
-    m_size(size)
+    m_size(size),
+    m_usage_level(0)
 {
 
 }
@@ -68,10 +69,12 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
                                )),
     m_max_slices(2*(terrain_size-1)/(grid_size-1)), // this is usually much more than needed
     m_mat(VBOFormat({
-                        VBOAttribute(3),  // position
-                        VBOAttribute(4),  // normal + tangent
-                        VBOAttribute(4)   // fluid data
-                    }))
+                        VBOAttribute(2)  // grid position
+                    })),
+    /*m_fluid_data(GL_RGBA32F, m_fluidsim.blocks().cells_per_axis()+1, m_fluidsim.blocks().cells_per_axis()+1),
+    m_normalt(GL_RGBA32F, m_fluidsim.blocks().cells_per_axis()+1, m_fluidsim.blocks().cells_per_axis()+1)*/
+    m_fluid_data(GL_RGBA32F, m_block_size+1, m_block_size+1, 512),
+    m_normalt(GL_RGBA32F, m_block_size+1, m_block_size+1, 512)
 {
     if ((grid_size-1) != m_block_size) {
         throw std::logic_error("terrain grid_size does not match fluidsim block_size");
@@ -80,6 +83,7 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     reinitialise_cache();
 
     spp::EvaluationContext context(m_resources.shader_library());
+    context.define1f("TEXTURE_SIZE_FACTOR", m_fluidsim.blocks().cells_per_axis()+1);
 
     bool success = true;
 
@@ -96,13 +100,14 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     }
 
     m_mat.declare_attribute("position", 0);
-    m_mat.declare_attribute("normal_t", 1);
-    m_mat.declare_attribute("fluiddata", 2);
 
     success = success && m_mat.link();
     if (!success) {
         throw std::runtime_error("material failed to compile or link");
     }
+
+    m_mat.attach_texture("normalt", &m_normalt);
+    m_mat.attach_texture("fluiddata", &m_fluid_data);
 }
 
 void CPUFluid::fluid_resetted()
@@ -260,23 +265,38 @@ unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
 
     const Vector3f normal = tx % ty;
 
+    // ensure that the morphed to vertex is present in the dataset
+    if (x % 2 == 0 || y % 2 == 0) {
+        request_vertex_inject(x0f, y0f, oversample, x | 1, y | 1);
+    }
+
     unsigned int index = m_tmp_vertex_data.size();
-    m_tmp_vertex_data.emplace_back(pos, Vector4f(normal, ty_z), original);
+    m_tmp_vertex_data.emplace_back(pos, original);
     m_tmp_index_mapping[src_index] = index;
+
+    if (y >= 1 && x >= 1 && y < m_block_size+2 && x < m_block_size+2) {
+        const unsigned int texindex = (y-1)*(m_block_size+1)+x-1;
+        // absolute height, fluid height, flow
+        m_tmp_data_texture[texindex] = Vector4f(pos[eZ], original[eY], original[eZ], original[eW]);
+        m_tmp_normalt_texture[texindex] = Vector4f(normal, ty_z);
+    }
 
     return index;
 }
 
-std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx,
-                                                       const unsigned int blocky,
-                                                       const unsigned int world_size,
-                                                       const unsigned int oversample)
+std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(
+        const unsigned int blockx,
+        const unsigned int blocky,
+        const unsigned int world_size,
+        const unsigned int oversample)
 {
     const unsigned int fcache_size = m_block_size+3;
 
     m_tmp_fluid_data_cache.resize(fcache_size*fcache_size, Vector4f());
     m_tmp_index_mapping.resize(m_tmp_fluid_data_cache.size(),
                                std::numeric_limits<unsigned int>::max());
+    m_tmp_data_texture = std::move(decltype(m_tmp_data_texture)((m_block_size+1)*(m_block_size+1), Vector4f(0, 0, 0, 0)));
+    m_tmp_normalt_texture = std::move(decltype(m_tmp_normalt_texture)((m_block_size+1)*(m_block_size+1), Vector4f(0, 0, 0, 0)));
 
     Vector4f *dest = &m_tmp_fluid_data_cache[0];
     unsigned int x0 = blockx*m_block_size;
@@ -428,13 +448,9 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
     VBOAllocation vbo_alloc(m_mat.vbo().allocate(m_tmp_vertex_data.size()));
 
     {
-        auto pos_slice = VBOSlice<Vector3f>(vbo_alloc, 0);
-        auto nt_slice = VBOSlice<Vector4f>(vbo_alloc, 1);
-        auto fd_slice = VBOSlice<Vector4f>(vbo_alloc, 2);
+        auto pos_slice = VBOSlice<Vector2f>(vbo_alloc, 0);
         for (unsigned int i = 0; i < m_tmp_vertex_data.size(); ++i) {
-            pos_slice[i] = std::get<0>(m_tmp_vertex_data[i]);
-            nt_slice[i] = std::get<1>(m_tmp_vertex_data[i]);
-            fd_slice[i] = std::get<2>(m_tmp_vertex_data[i]);
+            pos_slice[i] = Vector2f(std::get<0>(m_tmp_vertex_data[i]));
         }
         vbo_alloc.mark_dirty();
     }
@@ -451,7 +467,7 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(const unsigned int blockx
 }
 
 void CPUFluid::prepare(RenderContext &context,
-                       const FullTerrainNode &,
+                       const FullTerrainNode &parent,
                        const FullTerrainNode::Slices &slices)
 {
     std::vector<FluidSlice*> &render_slices = m_render_slices[&context];
@@ -463,6 +479,7 @@ void CPUFluid::prepare(RenderContext &context,
         const unsigned int blocky = slice.basey / m_block_size;
         const unsigned int lodblockx = blockx / lod;
         const unsigned int lodblocky = blocky / lod;
+        const unsigned int layer = parent.get_texture_layer_for_slice(slice);
 
         auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
         // if valid
@@ -481,6 +498,23 @@ void CPUFluid::prepare(RenderContext &context,
                                                slice.lod / m_block_size);
         if (geometry_slice) {
             render_slices.push_back(geometry_slice.get());
+            geometry_slice->m_layer = layer;
+            geometry_slice->m_base_x = slice.basex;
+            geometry_slice->m_base_y = slice.basey;
+            m_fluid_data.bind();
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                            0,
+                            0, 0, layer,
+                            m_block_size+1, m_block_size+1, 1,
+                            GL_RGBA, GL_FLOAT,
+                            m_tmp_data_texture.data());
+            m_normalt.bind();
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                            0,
+                            0, 0, layer,
+                            m_block_size+1, m_block_size+1, 1,
+                            GL_RGBA, GL_FLOAT,
+                            m_tmp_normalt_texture.data());
             geometry_slice->m_usage_level += 1;
         }
 
@@ -518,11 +552,17 @@ void CPUFluid::render(RenderContext &context,
         context.render_all(AABB{}, GL_TRIANGLES, m_mat,
                            slice->m_ibo_alloc,
                            slice->m_vbo_alloc,
-                           [world_size, this](MaterialPass &pass){
+                           [world_size, this, slice](MaterialPass &pass){
                                glUniform1f(pass.shader().uniform_location("chunk_size"),
                                            world_size);
                                glUniform1f(pass.shader().uniform_location("chunk_lod_scale"),
                                            world_size / m_block_size);
+                               glUniform1f(pass.shader().uniform_location("chunk_lod"),
+                                           log2_of_pot(world_size / m_block_size));
+                               glUniform1f(pass.shader().uniform_location("layer"),
+                                           slice->m_layer);
+                               glUniform2f(pass.shader().uniform_location("base"),
+                                           slice->m_base_x, slice->m_base_y);
                            });
     }
 }

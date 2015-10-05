@@ -51,6 +51,8 @@ struct FluidSlice
     IBOAllocation m_ibo_alloc;
     VBOAllocation m_vbo_alloc;
     unsigned int m_size;
+    unsigned int m_layer;
+    float m_base_x, m_base_y;
 
     /**
      * The usage level describes how the fluid slice was used in the last frame.
@@ -88,6 +90,8 @@ private:
     unsigned int m_max_slices;
 
     Material m_mat;
+    Texture2DArray m_fluid_data;
+    Texture2DArray m_normalt;
 
     std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
     std::unordered_map<RenderContext*, std::vector<FluidSlice*> > m_render_slices;
@@ -95,8 +99,13 @@ private:
     std::vector<const sim::FluidBlock*> m_tmp_used_blocks;
     std::vector<Vector4f> m_tmp_fluid_data_cache;
     std::vector<unsigned int> m_tmp_index_mapping;
-    std::vector<std::tuple<Vector3f, Vector4f, Vector4f> > m_tmp_vertex_data;
+    std::vector<std::tuple<Vector3f, Vector4f> > m_tmp_vertex_data;
     std::vector<uint16_t> m_tmp_index_data;
+
+    typedef std::basic_string<Vector4f> FluidDataTextureBuffer;
+    typedef std::basic_string<Vector4f> NormalTTextureBuffer;
+    FluidDataTextureBuffer m_tmp_data_texture;
+    NormalTTextureBuffer m_tmp_normalt_texture;
 
     typedef std::tuple<unsigned int, unsigned int, unsigned int> CacheTuple;
     std::vector<CacheTuple> m_tmp_slices;
@@ -105,7 +114,6 @@ private:
     void fluid_resetted();
     void reinitialise_cache();
 
-protected:
     void invalidate_caches(const unsigned int blockx,
                            const unsigned int blocky);
 

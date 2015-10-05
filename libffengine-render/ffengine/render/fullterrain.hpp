@@ -63,6 +63,11 @@ struct TerrainSlice
         }
         return (basex == other.basex) && (basey == other.basey) && (lod == other.lod);
     }
+
+    inline operator bool() const
+    {
+        return valid;
+    }
 };
 
 }
@@ -122,6 +127,21 @@ public:
                     const unsigned int grid_size);
 
 private:
+    struct SliceBookkeeping
+    {
+        SliceBookkeeping();
+        explicit SliceBookkeeping(int texture_layer, int usage_level);
+        SliceBookkeeping(const SliceBookkeeping &ref) = default;
+        SliceBookkeeping &operator=(const SliceBookkeeping &ref) = default;
+        SliceBookkeeping(SliceBookkeeping &&src) = default;
+        SliceBookkeeping &operator=(SliceBookkeeping &&src) = default;
+
+        int m_texture_layer;
+        int m_usage_level;
+        bool m_invalidated;
+    };
+
+private:
     const unsigned int m_terrain_size;
     const unsigned int m_grid_size;
     const unsigned int m_max_depth;
@@ -131,9 +151,14 @@ private:
 
     std::vector<std::unique_ptr<FullTerrainRenderer> > m_renderers;
 
+    std::vector<TerrainSlice> m_layer_slices;
+    std::unordered_map<TerrainSlice, SliceBookkeeping> m_slice_bookkeeping;
+
     std::unordered_map<RenderContext*, Slices> m_render_slices;
 
 private:
+    int acquire_layer_for_slice(const TerrainSlice &slice);
+
     /**
      * Generate TerrainSlice instances and fill the m_render_slices vector.
      *
@@ -150,11 +175,13 @@ private:
             const Vector3f &viewpoint,
             const std::array<Plane, 6> &frustum);
 
+    void touch_slice(const TerrainSlice &slice);
+
 public:
     /**
      * Create and add a new renderer. Return a reference to the newly created
      * object. The FullTerrainNode holds ownership of the new object.
-     *-
+     *
      * The arguments are passed using std::forward to the constructor of \a T.
      */
     template <typename T, typename... arg_ts>
@@ -180,6 +207,8 @@ public:
     {
         return m_detail_level;
     }
+
+    int get_texture_layer_for_slice(const TerrainSlice &slice) const;
 
     /**
      * The maximum detail level available.
@@ -236,8 +265,6 @@ public:
 
     /**
      * Call sync() on all FullTerrainRenderer instances.
-     *
-     * @param context The render context to use.
      */
     void sync() override;
 
