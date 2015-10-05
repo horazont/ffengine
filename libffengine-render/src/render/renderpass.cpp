@@ -74,7 +74,7 @@ bool MaterialPass::link()
     return true;
 }
 
-bool MaterialPass::attach_texture(const std::string &name, Texture2D *tex)
+bool MaterialPass::attach_texture(const std::string &name, Texture *tex)
 {
     if (!is_linked()) {
         throw std::logic_error("cannot attach texture to unlinked material");
@@ -88,8 +88,8 @@ bool MaterialPass::attach_texture(const std::string &name, Texture2D *tex)
     }
 
     GLint unit = get_next_texture_unit();
-    logger.logf(io::LOG_DEBUG, "binding %p to name `%s' at unit %d",
-                tex, name.c_str(), unit);
+    logger.logf(io::LOG_DEBUG, "binding %p (glid = %d) to name `%s' at unit %d",
+                tex, tex->glid(), name.c_str(), unit);
 
     if (m_shader.uniform_location(name) >= 0) {
         const ShaderUniform &uniform_info = m_shader.uniform(name);
@@ -271,7 +271,7 @@ void Material::teardown()
     }
 }
 
-void Material::attach_texture(const std::string &name, Texture2D *tex)
+void Material::attach_texture(const std::string &name, Texture *tex)
 {
     for (auto &pass_entry: m_passes) {
         pass_entry.second->attach_texture(name, tex);

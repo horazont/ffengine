@@ -88,7 +88,7 @@ private:
     {
         std::string name;
         GLint texture_unit;
-        _GLObjectBase *texture_obj;
+        Texture *texture_obj;
     };
 
 public:
@@ -138,7 +138,7 @@ public:
     }
 
 public:
-    bool attach_texture(const std::string &name, Texture2D *tex);
+    bool attach_texture(const std::string &name, Texture *tex);
     void bind();
     void detach_texture(const std::string &name);
     void set_order(int order);
@@ -189,7 +189,7 @@ protected:
     void teardown();
 
 public:
-    void attach_texture(const std::string &name, Texture2D *tex);
+    void attach_texture(const std::string &name, Texture *tex);
 
     inline iterator cbegin() const
     {
