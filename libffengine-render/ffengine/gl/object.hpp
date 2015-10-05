@@ -66,8 +66,8 @@ public:
 
 };
 
-template <GLuint _binding_type>
-class GLObject: public _GLObjectBase
+template <GLuint _binding_type, typename base = _GLObjectBase>
+class GLObject: public base
 {
 public:
     static constexpr GLuint binding_type = _binding_type;
@@ -77,7 +77,7 @@ public:
     {
         GLuint binding;
         glGetIntegerv(binding_type, reinterpret_cast<GLint*>(&binding));
-        return binding == m_glid;
+        return binding == this->m_glid;
     }
 
 };

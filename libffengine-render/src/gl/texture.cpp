@@ -47,18 +47,14 @@ GLint get_suitable_format_for_null(const GLenum internal_format)
 }
 
 
-Texture::~Texture()
-{
-
-}
-
+/* ffe::Texture2D */
 
 Texture2D::Texture2D(const GLenum internal_format,
                      const GLsizei width,
                      const GLsizei height,
                      const GLenum init_format,
                      const GLenum init_type):
-    GLObject<GL_TEXTURE_BINDING_2D>(),
+    GLObject<GL_TEXTURE_BINDING_2D, Texture>(),
     GL2DArray(internal_format, width, height)
 {
 
@@ -81,6 +77,7 @@ Texture2D &Texture2D::operator =(Texture2D &&src)
     m_width = src.m_width;
     m_height = src.m_height;
     src.m_glid = 0;
+    src.m_internal_format = 0;
     src.m_width = 0;
     src.m_height = 0;
     return *this;

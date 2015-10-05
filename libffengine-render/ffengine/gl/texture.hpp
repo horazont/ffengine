@@ -32,11 +32,8 @@ the AUTHORS file.
 
 namespace ffe {
 
-class Texture
+class Texture: public _GLObjectBase
 {
-public:
-    virtual ~Texture();
-
 public:
     virtual GLenum shader_uniform_type() = 0;
     virtual GLenum target() = 0;
@@ -44,9 +41,8 @@ public:
 };
 
 
-class Texture2D: public GLObject<GL_TEXTURE_BINDING_2D>,
-                 public GL2DArray,
-                 public Texture
+class Texture2D: public GLObject<GL_TEXTURE_BINDING_2D, Texture>,
+                 public GL2DArray
 {
 public:
     Texture2D(const GLenum internal_format,
