@@ -180,7 +180,7 @@ protected:
 
 public:
     void log(LogLevel level, const std::string &message) const;
-    void logf(LogLevel level, const std::string &format, ...) const;
+    void logf(LogLevel level, const char *format, ...) const;
     LogPipe &log(LogLevel level) const;
 
     Logger &get_child(const std::string &name);

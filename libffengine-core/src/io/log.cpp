@@ -283,7 +283,7 @@ void Logger::log(LogLevel level, const std::string &message) const
     m_root->log_submit(log_clock_t::now(), level, m_fullpath, message);
 }
 
-void Logger::logf(LogLevel level, const std::string &format, ...) const
+void Logger::logf(LogLevel level, const char *format, ...) const
 {
     if (level < m_level) {
         return;
@@ -292,7 +292,7 @@ void Logger::logf(LogLevel level, const std::string &format, ...) const
     LogTimestamp timestamp = log_clock_t::now();
     std::va_list args;
     va_start(args, format);
-    const std::string message = awesomef(format.data(), args);
+    const std::string message = awesomef(format, args);
     va_end(args);
 
     m_root->log_submit(timestamp, level, m_fullpath, message);
