@@ -34,6 +34,7 @@ public:
     GL2DArray(const GLenum internal_format,
               const GLsizei width,
               const GLsizei height);
+    GL2DArray(GL2DArray &&src) = default;
 
 protected:
     GLenum m_internal_format;
