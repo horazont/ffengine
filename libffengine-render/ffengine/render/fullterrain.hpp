@@ -208,7 +208,7 @@ public:
         return m_detail_level;
     }
 
-    int get_texture_layer_for_slice(const TerrainSlice &slice) const;
+    std::pair<int, bool> get_texture_layer_for_slice(const TerrainSlice &slice) const;
 
     /**
      * The maximum detail level available.

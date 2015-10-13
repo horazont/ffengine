@@ -37,10 +37,14 @@ static io::Logger &logger = io::logging().get_logger("render.fluid.cpu");
 
 FluidSlice::FluidSlice(IBOAllocation &&ibo_alloc,
                        VBOAllocation &&vbo_alloc,
-                       unsigned int size):
+                       unsigned int size,
+                       std::basic_string<Vector4f> &&data_texture,
+                       std::basic_string<Vector4f> &&normalt_texture):
     m_ibo_alloc(std::move(ibo_alloc)),
     m_vbo_alloc(std::move(vbo_alloc)),
     m_size(size),
+    m_data_texture(std::move(data_texture)),
+    m_normalt_texture(std::move(normalt_texture)),
     m_usage_level(0)
 {
 
@@ -463,7 +467,9 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(
 
     return std::make_unique<FluidSlice>(std::move(ibo_alloc),
                                         std::move(vbo_alloc),
-                                        world_size);
+                                        world_size,
+                                        std::move(m_tmp_data_texture),
+                                        std::move(m_tmp_normalt_texture));
 }
 
 void CPUFluid::prepare(RenderContext &context,
@@ -479,7 +485,9 @@ void CPUFluid::prepare(RenderContext &context,
         const unsigned int blocky = slice.basey / m_block_size;
         const unsigned int lodblockx = blockx / lod;
         const unsigned int lodblocky = blocky / lod;
-        const unsigned int layer = parent.get_texture_layer_for_slice(slice);
+        unsigned int layer;
+        bool invalidated;
+        std::tie(layer, invalidated) = parent.get_texture_layer_for_slice(slice);
 
         auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
         // if valid
@@ -488,6 +496,22 @@ void CPUFluid::prepare(RenderContext &context,
             if (cache_entry.second) {
                 render_slices.push_back(cache_entry.second.get());
                 cache_entry.second->m_usage_level += 1;
+                if (invalidated) {
+                    m_fluid_data.bind();
+                    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                                    0,
+                                    0, 0, layer,
+                                    m_block_size+1, m_block_size+1, 1,
+                                    GL_RGBA, GL_FLOAT,
+                                    cache_entry.second->m_data_texture.data());
+                    m_normalt.bind();
+                    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                                    0,
+                                    0, 0, layer,
+                                    m_block_size+1, m_block_size+1, 1,
+                                    GL_RGBA, GL_FLOAT,
+                                    cache_entry.second->m_normalt_texture.data());
+                }
             }
             continue;
         }
@@ -507,14 +531,14 @@ void CPUFluid::prepare(RenderContext &context,
                             0, 0, layer,
                             m_block_size+1, m_block_size+1, 1,
                             GL_RGBA, GL_FLOAT,
-                            m_tmp_data_texture.data());
+                            geometry_slice->m_data_texture.data());
             m_normalt.bind();
             glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
                             0,
                             0, 0, layer,
                             m_block_size+1, m_block_size+1, 1,
                             GL_RGBA, GL_FLOAT,
-                            m_tmp_normalt_texture.data());
+                            geometry_slice->m_normalt_texture.data());
             geometry_slice->m_usage_level += 1;
         }
 

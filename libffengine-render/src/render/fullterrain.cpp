@@ -51,6 +51,7 @@ TerrainSlice::TerrainSlice(unsigned int basex,
 
 }
 
+
 /* engine::FullTerrainRenderer */
 
 FullTerrainRenderer::FullTerrainRenderer(const unsigned int terrain_size,
@@ -190,14 +191,15 @@ void FullTerrainNode::touch_slice(const TerrainSlice &slice)
     iter->second.m_usage_level += 1;
 }
 
-int FullTerrainNode::get_texture_layer_for_slice(
+std::pair<int, bool> FullTerrainNode::get_texture_layer_for_slice(
         const TerrainSlice &slice) const
 {
     auto iter = m_slice_bookkeeping.find(slice);
     if (iter == m_slice_bookkeeping.end()) {
-        return -1;
+        return std::make_pair(-1, false);
     }
-    return iter->second.m_texture_layer;
+    return std::make_pair(iter->second.m_texture_layer,
+                          iter->second.m_invalidated);
 }
 
 void FullTerrainNode::set_detail_level(unsigned int level)
@@ -232,10 +234,20 @@ void FullTerrainNode::render(RenderContext &context)
 
 void FullTerrainNode::sync()
 {
-    for (auto &slice: m_layer_slices) {
-        slice = TerrainSlice();
+    auto iter = m_slice_bookkeeping.begin();
+    while (iter != m_slice_bookkeeping.end())
+    {
+        std::pair<const TerrainSlice, SliceBookkeeping> &item = *iter;
+        if (!item.second.m_usage_level) {
+            // erase unused slices
+            m_layer_slices[item.second.m_texture_layer] = TerrainSlice();
+            iter = m_slice_bookkeeping.erase(iter);
+            continue;
+        }
+        item.second.m_usage_level = 0;
+        item.second.m_invalidated = false;
+        ++iter;
     }
-    m_slice_bookkeeping.clear();
 
     m_render_slices.clear();
     for (auto &renderer: m_renderers) {

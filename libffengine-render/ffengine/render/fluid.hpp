@@ -46,13 +46,17 @@ namespace ffe {
 struct FluidSlice
 {
     FluidSlice(IBOAllocation &&ibo_alloc, VBOAllocation &&vbo_alloc,
-               unsigned int size);
+               unsigned int size,
+               std::basic_string<Vector4f> &&data_texture,
+               std::basic_string<Vector4f> &&normalt_texture);
 
     IBOAllocation m_ibo_alloc;
     VBOAllocation m_vbo_alloc;
     unsigned int m_size;
     unsigned int m_layer;
     float m_base_x, m_base_y;
+    std::basic_string<Vector4f> m_data_texture;
+    std::basic_string<Vector4f> m_normalt_texture;
 
     /**
      * The usage level describes how the fluid slice was used in the last frame.
