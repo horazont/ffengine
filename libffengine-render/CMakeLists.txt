@@ -2,6 +2,8 @@ find_package(epoxy REQUIRED)
 
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
+find_package(OpenGL REQUIRED)
+
 set(ENGINE_HEADERS
   ffengine/gl/2darray.hpp
   ffengine/gl/array.hpp
@@ -77,7 +79,8 @@ target_link_libraries(
   Qt5::Core
   sigc++
   spp
-  epoxy)
+  epoxy
+  ${OPENGL_glu_LIBRARY})
 target_include_directories(
   ffengine-render
   PUBLIC ${INCLUDE_DIRS})
