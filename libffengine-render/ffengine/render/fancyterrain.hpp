@@ -98,6 +98,7 @@ private:
     Texture2D m_heightmap;
     Texture2D m_normalt;
     Texture2D *m_grass, *m_blend, *m_rock, *m_sand;
+    Texture2DArray *m_fluid_data;
 
     VBO m_vbo;
     IBO m_ibo;
@@ -122,7 +123,7 @@ private:
     void reconfigure();
 
 protected:
-    void render_all(RenderContext &context, Material &material,
+    void render_all(RenderContext &context, Material &material, const FullTerrainNode &parent,
                     const FullTerrainNode::Slices &slices_to_render);
     void sync_material(Material &material,
                        const float scale_to_radius);
@@ -133,6 +134,7 @@ public:
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
     void attach_sand_texture(Texture2D *tex);
+    void attach_fluid_data_texture(Texture2DArray *tex);
 
     Texture2D &heightmap()
     {

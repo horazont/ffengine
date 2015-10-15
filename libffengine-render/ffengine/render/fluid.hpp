@@ -135,6 +135,12 @@ private:
             const unsigned int oversample);
 
 public:
+    inline Texture2DArray *fluid_data()
+    {
+        return &m_fluid_data;
+    }
+
+public:
     void prepare(RenderContext &context,
                  const FullTerrainNode &fullterrain,
                  const FullTerrainNode::Slices &slices) override;

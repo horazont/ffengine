@@ -70,6 +70,7 @@ FancyTerrainNode::FancyTerrainNode(const unsigned int terrain_size,
     m_blend(nullptr),
     m_rock(nullptr),
     m_sand(nullptr),
+    m_fluid_data(nullptr),
     m_vbo(VBOFormat({
                         VBOAttribute(2)
                     })),
@@ -108,6 +109,9 @@ void FancyTerrainNode::configure_materials()
 
     spp::EvaluationContext main_context(m_eval_context);
     main_context.define1f("ZOFFSET", 0.f);
+    if (m_fluid_data) {
+        main_context.define("USE_WATER_DEPTH", "");
+    }
 
     m_material = Material(m_vbo, m_ibo);
     {
@@ -150,6 +154,9 @@ void FancyTerrainNode::configure_materials()
     }
     if (m_sand) {
         m_material.attach_texture("sand", m_sand);
+    }
+    if (m_fluid_data) {
+        m_material.attach_texture("fluid_data", m_fluid_data);
     }
     {
         MaterialPass &mat = m_material.make_pass_material(m_solid_pass);
@@ -275,7 +282,8 @@ inline void render_slice(RenderContext &context,
                          VBOAllocation &vbo_allocation,
                          const float x, const float y,
                          const float scale,
-                         const GLenum mode)
+                         const GLenum mode,
+                         const float data_layer)
 {
     /*const float xtex = (float(slot_index % texture_cache_size) + 0.5/grid_size) / texture_cache_size;
     const float ytex = (float(slot_index / texture_cache_size) + 0.5/grid_size) / texture_cache_size;*/
@@ -286,13 +294,15 @@ inline void render_slice(RenderContext &context,
     std::cout << "  scale         = " << scale << std::endl;*/
     context.render_all(AABB{}, mode, material,
                        ibo_allocation, vbo_allocation,
-                       [scale, x, y](MaterialPass &pass){
+                       [scale, x, y, data_layer](MaterialPass &pass){
                            glUniform1f(pass.shader().uniform_location("chunk_size"), scale);
                            glUniform2f(pass.shader().uniform_location("chunk_translation"), x, y);
+                           glUniform1f(pass.shader().uniform_location("data_layer"), data_layer);
                        });
 }
 
 void FancyTerrainNode::render_all(RenderContext &context, Material &material,
+                                  const FullTerrainNode &parent,
                                   const FullTerrainNode::Slices &slices_to_render)
 {
     const GLenum mode = (m_sharp_geometry ? GL_LINES_ADJACENCY : GL_TRIANGLES);
@@ -303,7 +313,8 @@ void FancyTerrainNode::render_all(RenderContext &context, Material &material,
 
         render_slice(context, material, m_ibo_allocation, m_vbo_allocation,
                      x, y, scale,
-                     mode);
+                     mode,
+                     parent.get_texture_layer_for_slice(slice).first);
     }
 }
 
@@ -366,6 +377,14 @@ void FancyTerrainNode::attach_sand_texture(Texture2D *tex)
     m_sand = tex;
 }
 
+void FancyTerrainNode::attach_fluid_data_texture(Texture2DArray *tex)
+{
+    if (m_fluid_data != tex) {
+        m_configured = false;
+    }
+    m_fluid_data = tex;
+}
+
 void FancyTerrainNode::reposition_overlay(
         const spp::Program &fragment_shader,
         const sim::TerrainRect &clip_rect)
@@ -424,11 +443,11 @@ void FancyTerrainNode::invalidate_cache(sim::TerrainRect part)
 }
 
 void FancyTerrainNode::render(RenderContext &context,
-                              const FullTerrainNode &,
+                              const FullTerrainNode &parent,
                               const FullTerrainNode::Slices &slices)
 {
     update_material(context, m_material);
-    render_all(context, m_material, slices);
+    render_all(context, m_material, parent, slices);
 
     const GLenum mode = (m_sharp_geometry ? GL_LINES_ADJACENCY : GL_TRIANGLES);
     for (auto &overlay: m_render_overlays)
@@ -446,7 +465,8 @@ void FancyTerrainNode::render(RenderContext &context,
                 render_slice(context,
                              material, m_ibo_allocation, m_vbo_allocation,
                              x, y, scale,
-                             mode);
+                             mode,
+                             parent.get_texture_layer_for_slice(slice).first);
             }
         }
     }
