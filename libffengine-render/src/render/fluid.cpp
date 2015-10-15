@@ -72,14 +72,16 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
                                          this)
                                )),
     m_max_slices(2*(terrain_size-1)/(grid_size-1)), // this is usually much more than needed
-    m_detail_level(DETAIL_WATER_PASS),
+    m_detail_level(DETAIL_REFRACTIVE),
     m_configured(false),
     m_vbo(VBOFormat({VBOAttribute(2)})),
     m_ibo(),
     /*m_fluid_data(GL_RGBA32F, m_fluidsim.blocks().cells_per_axis()+1, m_fluidsim.blocks().cells_per_axis()+1),
     m_normalt(GL_RGBA32F, m_fluidsim.blocks().cells_per_axis()+1, m_fluidsim.blocks().cells_per_axis()+1)*/
     m_fluid_data(GL_RGBA32F, m_block_size+1, m_block_size+1, 512),
-    m_normalt(GL_RGBA32F, m_block_size+1, m_block_size+1, 512)
+    m_normalt(GL_RGBA32F, m_block_size+1, m_block_size+1, 512),
+    m_scene_colour(nullptr),
+    m_scene_depth(nullptr)
 {
     if ((grid_size-1) != m_block_size) {
         throw std::logic_error("terrain grid_size does not match fluidsim block_size");
@@ -285,6 +287,18 @@ void CPUFluid::upload_texture_layer(const unsigned int layer,
                     m_block_size+1, m_block_size+1, 1,
                     GL_RGBA, GL_FLOAT,
                     normalt.data());
+}
+
+void CPUFluid::set_scene_colour(Texture2D *tex)
+{
+    m_configured = false;
+    m_scene_colour = tex;
+}
+
+void CPUFluid::set_scene_depth(Texture2D *tex)
+{
+    m_configured = false;
+    m_scene_depth = tex;
 }
 
 void CPUFluid::prepare(RenderContext &context,
@@ -545,6 +559,14 @@ void CPUFluid::reconfigure()
     spp::EvaluationContext context(m_resources.shader_library());
     context.define1f("TEXTURE_SIZE_FACTOR", m_fluidsim.blocks().cells_per_axis()+1);
 
+    if (m_detail_level >= DETAIL_REFRACTIVE) {
+        context.define("REFRACTIVE", "");
+    }
+
+    if (m_detail_level >= DETAIL_REFRACTIVE_TILED_FLOW) {
+        context.define("TILED_FLOW", "");
+    }
+
     bool success = true;
 
     {
@@ -571,6 +593,11 @@ void CPUFluid::reconfigure()
 
     m_mat.attach_texture("normalt", &m_normalt);
     m_mat.attach_texture("fluiddata", &m_fluid_data);
+
+    if (m_detail_level >= DETAIL_REFRACTIVE) {
+        m_mat.attach_texture("scene_colour", m_scene_colour);
+        m_mat.attach_texture("scene_depth", m_scene_depth);
+    }
 
     m_configured = true;
 }

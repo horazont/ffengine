@@ -109,6 +109,8 @@ private:
     Material m_mat;
     Texture2DArray m_fluid_data;
     Texture2DArray m_normalt;
+    Texture2D *m_scene_colour;
+    Texture2D *m_scene_depth;
 
     std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
     std::unordered_map<RenderContext*, std::vector<FluidSlice*> > m_render_slices;
@@ -161,6 +163,9 @@ public:
     {
         return &m_fluid_data;
     }
+
+    void set_scene_colour(Texture2D *tex);
+    void set_scene_depth(Texture2D *tex);
 
 public:
     void prepare(RenderContext &context,
