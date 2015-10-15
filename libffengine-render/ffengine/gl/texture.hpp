@@ -130,6 +130,56 @@ public:
 
 };
 
+
+class TextureCubeMap: public GLObject<GL_TEXTURE_BINDING_CUBE_MAP, Texture>
+{
+public:
+    TextureCubeMap(const GLenum internal_format,
+                   const GLsizei width,
+                   const GLsizei height,
+                   const GLenum init_format = 0,
+                   const GLenum init_type = GL_UNSIGNED_BYTE);
+    TextureCubeMap(TextureCubeMap &&src);
+    TextureCubeMap &operator=(TextureCubeMap &&src);
+    ~TextureCubeMap() override;
+
+private:
+    GLenum m_internal_format;
+    GLsizei m_width;
+    GLsizei m_height;
+
+protected:
+    void delete_globject() override;
+
+public:
+    void bind() override;
+    void bound() override;
+    void sync() override;
+    void unbind() override;
+
+public:
+    inline GLsizei height() const
+    {
+        return m_height;
+    }
+
+    inline GLenum internal_format() const
+    {
+        return m_internal_format;
+    }
+
+    inline GLsizei width() const
+    {
+        return m_width;
+    }
+
+public:
+    GLenum shader_uniform_type() override;
+    GLenum target() override;
+
+};
+
+
 }
 
 #endif

@@ -253,4 +253,132 @@ GLenum Texture2DArray::target()
     return GL_TEXTURE_2D_ARRAY;
 }
 
+
+/* TextureCubeMap */
+
+TextureCubeMap::TextureCubeMap(const GLenum internal_format,
+                               const GLsizei width,
+                               const GLsizei height,
+                               const GLenum init_format,
+                               const GLenum init_type):
+    GLObject<GL_TEXTURE_BINDING_CUBE_MAP, Texture>(),
+    m_internal_format(internal_format),
+    m_width(width),
+    m_height(height)
+{
+    glGenTextures(1, &m_glid);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_glid);
+    const GLenum null_format = (init_format ? init_format : get_suitable_format_for_null(m_internal_format));
+    const GLenum null_type = init_type;
+
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+                 0,
+                 m_internal_format,
+                 m_width,
+                 m_height, 0,
+                 null_format, null_type, nullptr);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+                 0,
+                 m_internal_format,
+                 m_width,
+                 m_height, 0,
+                 null_format, null_type, nullptr);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+                 0,
+                 m_internal_format,
+                 m_width,
+                 m_height, 0,
+                 null_format, null_type, nullptr);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+                 0,
+                 m_internal_format,
+                 m_width,
+                 m_height, 0,
+                 null_format, null_type, nullptr);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+                 0,
+                 m_internal_format,
+                 m_width,
+                 m_height, 0,
+                 null_format, null_type, nullptr);
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+                 0,
+                 m_internal_format,
+                 m_width,
+                 m_height, 0,
+                 null_format, null_type, nullptr);
+
+    raise_last_gl_error();
+}
+
+TextureCubeMap::TextureCubeMap(TextureCubeMap &&src):
+    GLObject<GL_TEXTURE_BINDING_CUBE_MAP, Texture>(std::move(src)),
+    m_internal_format(src.m_internal_format),
+    m_width(src.m_width),
+    m_height(src.m_height)
+{
+    src.m_internal_format = 0;
+    src.m_width = 0;
+    src.m_height = 0;
+}
+
+TextureCubeMap &TextureCubeMap::operator=(TextureCubeMap &&src)
+{
+    if (m_glid != 0) {
+        delete_globject();
+    }
+    m_glid = src.m_glid;
+    src.m_glid = 0;
+    m_internal_format = src.m_internal_format;
+    src.m_internal_format = 0;
+    m_width = src.m_width;
+    src.m_width = 0;
+    m_height = src.m_height;
+    src.m_height = 0;
+    return *this;
+}
+
+TextureCubeMap::~TextureCubeMap()
+{
+    if (m_glid) {
+        delete_globject();
+    }
+}
+
+void TextureCubeMap::delete_globject()
+{
+    glDeleteTextures(1, &m_glid);
+    m_glid = 0;
+}
+
+void TextureCubeMap::bind()
+{
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_glid);
+}
+
+void TextureCubeMap::bound()
+{
+
+}
+
+void TextureCubeMap::sync()
+{
+
+}
+
+void TextureCubeMap::unbind()
+{
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+GLenum TextureCubeMap::shader_uniform_type()
+{
+    return GL_SAMPLER_CUBE;
+}
+
+GLenum TextureCubeMap::target()
+{
+    return GL_TEXTURE_CUBE_MAP;
+}
+
 }
