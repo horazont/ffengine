@@ -47,6 +47,7 @@ const Terrain::height_t Terrain::min_height = 0.f;
 const Terrain::height_t Terrain::max_height = 500.f;
 
 const vector_component_x_t Terrain::HEIGHT_ATTR = eX;
+const vector_component_y_t Terrain::SAND_ATTR = eY;
 
 Terrain::Terrain(const unsigned int size):
     m_size(size),
