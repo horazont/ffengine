@@ -112,6 +112,11 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
 
     m_mat.attach_texture("normalt", &m_normalt);
     m_mat.attach_texture("fluiddata", &m_fluid_data);
+
+    m_null_data_block.resize((m_block_size+1)*(m_block_size+1),
+                             Vector4f(0, 0, 0, 0));
+    m_null_normalt_block.resize((m_block_size+1)*(m_block_size+1),
+                                Vector4f(0, 0, 0, 0));
 }
 
 void CPUFluid::fluid_resetted()
@@ -472,6 +477,26 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(
                                         std::move(m_tmp_normalt_texture));
 }
 
+void CPUFluid::upload_texture_layer(const unsigned int layer,
+                                    const CPUFluid::FluidDataTextureBuffer &data,
+                                    const CPUFluid::NormalTTextureBuffer &normalt)
+{
+    m_fluid_data.bind();
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,
+                    0, 0, layer,
+                    m_block_size+1, m_block_size+1, 1,
+                    GL_RGBA, GL_FLOAT,
+                    data.data());
+    m_normalt.bind();
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,
+                    0, 0, layer,
+                    m_block_size+1, m_block_size+1, 1,
+                    GL_RGBA, GL_FLOAT,
+                    normalt.data());
+}
+
 void CPUFluid::prepare(RenderContext &context,
                        const FullTerrainNode &parent,
                        const FullTerrainNode::Slices &slices)
@@ -497,20 +522,9 @@ void CPUFluid::prepare(RenderContext &context,
                 render_slices.push_back(cache_entry.second.get());
                 cache_entry.second->m_usage_level += 1;
                 if (invalidated) {
-                    m_fluid_data.bind();
-                    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                                    0,
-                                    0, 0, layer,
-                                    m_block_size+1, m_block_size+1, 1,
-                                    GL_RGBA, GL_FLOAT,
-                                    cache_entry.second->m_data_texture.data());
-                    m_normalt.bind();
-                    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                                    0,
-                                    0, 0, layer,
-                                    m_block_size+1, m_block_size+1, 1,
-                                    GL_RGBA, GL_FLOAT,
-                                    cache_entry.second->m_normalt_texture.data());
+                    upload_texture_layer(layer,
+                                         cache_entry.second->m_data_texture,
+                                         cache_entry.second->m_normalt_texture);
                 }
             }
             continue;
@@ -525,21 +539,16 @@ void CPUFluid::prepare(RenderContext &context,
             geometry_slice->m_layer = layer;
             geometry_slice->m_base_x = slice.basex;
             geometry_slice->m_base_y = slice.basey;
-            m_fluid_data.bind();
-            glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                            0,
-                            0, 0, layer,
-                            m_block_size+1, m_block_size+1, 1,
-                            GL_RGBA, GL_FLOAT,
-                            geometry_slice->m_data_texture.data());
-            m_normalt.bind();
-            glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                            0,
-                            0, 0, layer,
-                            m_block_size+1, m_block_size+1, 1,
-                            GL_RGBA, GL_FLOAT,
-                            geometry_slice->m_normalt_texture.data());
+            upload_texture_layer(layer,
+                                 geometry_slice->m_data_texture,
+                                 geometry_slice->m_normalt_texture);
             geometry_slice->m_usage_level += 1;
+        } else {
+            if (invalidated) {
+                upload_texture_layer(layer,
+                                     m_null_data_block,
+                                     m_null_normalt_block);
+            }
         }
 
         cache_entry = std::make_pair(

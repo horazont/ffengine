@@ -111,6 +111,9 @@ private:
     FluidDataTextureBuffer m_tmp_data_texture;
     NormalTTextureBuffer m_tmp_normalt_texture;
 
+    FluidDataTextureBuffer m_null_data_block;
+    NormalTTextureBuffer m_null_normalt_block;
+
     typedef std::tuple<unsigned int, unsigned int, unsigned int> CacheTuple;
     std::vector<CacheTuple> m_tmp_slices;
 
@@ -133,6 +136,10 @@ private:
             const unsigned int blocky,
             const unsigned int world_size,
             const unsigned int oversample);
+
+    void upload_texture_layer(const unsigned int layer,
+                              const FluidDataTextureBuffer &data,
+                              const NormalTTextureBuffer &normalt);
 
 public:
     inline Texture2DArray *fluid_data()
