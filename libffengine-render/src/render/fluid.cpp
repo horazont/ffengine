@@ -72,9 +72,10 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
                                          this)
                                )),
     m_max_slices(2*(terrain_size-1)/(grid_size-1)), // this is usually much more than needed
-    m_mat(VBOFormat({
-                        VBOAttribute(2)  // grid position
-                    })),
+    m_detail_level(DETAIL_WATER_PASS),
+    m_configured(false),
+    m_vbo(VBOFormat({VBOAttribute(2)})),
+    m_ibo(),
     /*m_fluid_data(GL_RGBA32F, m_fluidsim.blocks().cells_per_axis()+1, m_fluidsim.blocks().cells_per_axis()+1),
     m_normalt(GL_RGBA32F, m_fluidsim.blocks().cells_per_axis()+1, m_fluidsim.blocks().cells_per_axis()+1)*/
     m_fluid_data(GL_RGBA32F, m_block_size+1, m_block_size+1, 512),
@@ -86,33 +87,6 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
 
     reinitialise_cache();
 
-    spp::EvaluationContext context(m_resources.shader_library());
-    context.define1f("TEXTURE_SIZE_FACTOR", m_fluidsim.blocks().cells_per_axis()+1);
-
-    bool success = true;
-
-    {
-        MaterialPass &pass = m_mat.make_pass_material(m_transparent_pass);
-
-        success = success && pass.shader().attach(
-                    m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
-                    context);
-
-        success = success && pass.shader().attach(
-                    m_resources.load_shader_checked(":/shaders/fluid/cpu.frag"),
-                    context);
-    }
-
-    m_mat.declare_attribute("position", 0);
-
-    success = success && m_mat.link();
-    if (!success) {
-        throw std::runtime_error("material failed to compile or link");
-    }
-
-    m_mat.attach_texture("normalt", &m_normalt);
-    m_mat.attach_texture("fluiddata", &m_fluid_data);
-
     m_null_data_block.resize((m_block_size+1)*(m_block_size+1),
                              Vector4f(0, 0, 0, 0));
     m_null_normalt_block.resize((m_block_size+1)*(m_block_size+1),
@@ -122,18 +96,6 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
 void CPUFluid::fluid_resetted()
 {
     reinitialise_cache();
-}
-
-void CPUFluid::reinitialise_cache()
-{
-    m_slice_cache.resize(m_lods);
-    for (unsigned int i = 0; i < m_lods; ++i) {
-        const unsigned int logblocks = m_lods - i - 1;
-        m_slice_cache[i].resize((1<<logblocks)*(1<<logblocks));
-        for (unsigned int j = 0; j < m_slice_cache[i].size(); ++j) {
-            m_slice_cache[i][j] = std::make_pair(false, nullptr);
-        }
-    }
 }
 
 void CPUFluid::invalidate_caches(const unsigned int blockx,
@@ -163,6 +125,18 @@ void CPUFluid::invalidate_caches(const unsigned int blockx,
 
         divisor *= 2;
         blocks /= 2;
+    }
+}
+
+void CPUFluid::reinitialise_cache()
+{
+    m_slice_cache.resize(m_lods);
+    for (unsigned int i = 0; i < m_lods; ++i) {
+        const unsigned int logblocks = m_lods - i - 1;
+        m_slice_cache[i].resize((1<<logblocks)*(1<<logblocks));
+        for (unsigned int j = 0; j < m_slice_cache[i].size(); ++j) {
+            m_slice_cache[i][j] = std::make_pair(false, nullptr);
+        }
     }
 }
 
@@ -291,6 +265,94 @@ unsigned int CPUFluid::request_vertex_inject(const float x0f, const float y0f,
     }
 
     return index;
+}
+
+void CPUFluid::upload_texture_layer(const unsigned int layer,
+                                    const CPUFluid::FluidDataTextureBuffer &data,
+                                    const CPUFluid::NormalTTextureBuffer &normalt)
+{
+    m_fluid_data.bind();
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,
+                    0, 0, layer,
+                    m_block_size+1, m_block_size+1, 1,
+                    GL_RGBA, GL_FLOAT,
+                    data.data());
+    m_normalt.bind();
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,
+                    0, 0, layer,
+                    m_block_size+1, m_block_size+1, 1,
+                    GL_RGBA, GL_FLOAT,
+                    normalt.data());
+}
+
+void CPUFluid::prepare(RenderContext &context,
+                       const FullTerrainNode &parent,
+                       const FullTerrainNode::Slices &slices)
+{
+    std::vector<FluidSlice*> &render_slices = m_render_slices[&context];
+    for (const TerrainSlice &slice: slices) {
+        const unsigned int lod = slice.lod / m_block_size;
+        const unsigned int loglod = log2_of_pot(lod);
+        const unsigned int lodblocks = (1<<(m_lods - loglod - 1));
+        const unsigned int blockx = slice.basex / m_block_size;
+        const unsigned int blocky = slice.basey / m_block_size;
+        const unsigned int lodblockx = blockx / lod;
+        const unsigned int lodblocky = blocky / lod;
+        unsigned int layer;
+        bool invalidated;
+        std::tie(layer, invalidated) = parent.get_texture_layer_for_slice(slice);
+
+        auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
+        // if valid
+        if (cache_entry.first) {
+            // if has geometry
+            if (cache_entry.second) {
+                render_slices.push_back(cache_entry.second.get());
+                cache_entry.second->m_usage_level += 1;
+                if (invalidated) {
+                    upload_texture_layer(layer,
+                                         cache_entry.second->m_data_texture,
+                                         cache_entry.second->m_normalt_texture);
+                }
+            }
+            continue;
+        }
+
+        auto geometry_slice = produce_geometry(blockx,
+                                               blocky,
+                                               slice.lod,
+                                               slice.lod / m_block_size);
+        if (geometry_slice) {
+            render_slices.push_back(geometry_slice.get());
+            geometry_slice->m_layer = layer;
+            geometry_slice->m_base_x = slice.basex;
+            geometry_slice->m_base_y = slice.basey;
+            upload_texture_layer(layer,
+                                 geometry_slice->m_data_texture,
+                                 geometry_slice->m_normalt_texture);
+            geometry_slice->m_usage_level += 1;
+        } else {
+            if (invalidated) {
+                upload_texture_layer(layer,
+                                     m_null_data_block,
+                                     m_null_normalt_block);
+            }
+        }
+
+        cache_entry = std::make_pair(
+                    true,
+                    std::move(geometry_slice));
+
+        m_tmp_index_data.clear();
+        m_tmp_fluid_data_cache.clear();
+        m_tmp_index_mapping.clear();
+        m_tmp_vertex_data.clear();
+        m_tmp_used_blocks.clear();
+    }
+
+    m_mat.sync_buffers();
 }
 
 std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(
@@ -477,92 +539,40 @@ std::unique_ptr<FluidSlice> CPUFluid::produce_geometry(
                                         std::move(m_tmp_normalt_texture));
 }
 
-void CPUFluid::upload_texture_layer(const unsigned int layer,
-                                    const CPUFluid::FluidDataTextureBuffer &data,
-                                    const CPUFluid::NormalTTextureBuffer &normalt)
+void CPUFluid::reconfigure()
 {
-    m_fluid_data.bind();
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                    0,
-                    0, 0, layer,
-                    m_block_size+1, m_block_size+1, 1,
-                    GL_RGBA, GL_FLOAT,
-                    data.data());
-    m_normalt.bind();
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                    0,
-                    0, 0, layer,
-                    m_block_size+1, m_block_size+1, 1,
-                    GL_RGBA, GL_FLOAT,
-                    normalt.data());
-}
+    m_mat = std::move(Material(m_vbo, m_ibo));
+    spp::EvaluationContext context(m_resources.shader_library());
+    context.define1f("TEXTURE_SIZE_FACTOR", m_fluidsim.blocks().cells_per_axis()+1);
 
-void CPUFluid::prepare(RenderContext &context,
-                       const FullTerrainNode &parent,
-                       const FullTerrainNode::Slices &slices)
-{
-    std::vector<FluidSlice*> &render_slices = m_render_slices[&context];
-    for (const TerrainSlice &slice: slices) {
-        const unsigned int lod = slice.lod / m_block_size;
-        const unsigned int loglod = log2_of_pot(lod);
-        const unsigned int lodblocks = (1<<(m_lods - loglod - 1));
-        const unsigned int blockx = slice.basex / m_block_size;
-        const unsigned int blocky = slice.basey / m_block_size;
-        const unsigned int lodblockx = blockx / lod;
-        const unsigned int lodblocky = blocky / lod;
-        unsigned int layer;
-        bool invalidated;
-        std::tie(layer, invalidated) = parent.get_texture_layer_for_slice(slice);
+    bool success = true;
 
-        auto &cache_entry = m_slice_cache[loglod][lodblocky*lodblocks+lodblockx];
-        // if valid
-        if (cache_entry.first) {
-            // if has geometry
-            if (cache_entry.second) {
-                render_slices.push_back(cache_entry.second.get());
-                cache_entry.second->m_usage_level += 1;
-                if (invalidated) {
-                    upload_texture_layer(layer,
-                                         cache_entry.second->m_data_texture,
-                                         cache_entry.second->m_normalt_texture);
-                }
-            }
-            continue;
-        }
+    {
+        MaterialPass &pass = (
+                    m_detail_level >= DETAIL_WATER_PASS
+                    ? m_mat.make_pass_material(m_water_pass)
+                    : m_mat.make_pass_material(m_transparent_pass));
 
-        auto geometry_slice = produce_geometry(blockx,
-                                               blocky,
-                                               slice.lod,
-                                               slice.lod / m_block_size);
-        if (geometry_slice) {
-            render_slices.push_back(geometry_slice.get());
-            geometry_slice->m_layer = layer;
-            geometry_slice->m_base_x = slice.basex;
-            geometry_slice->m_base_y = slice.basey;
-            upload_texture_layer(layer,
-                                 geometry_slice->m_data_texture,
-                                 geometry_slice->m_normalt_texture);
-            geometry_slice->m_usage_level += 1;
-        } else {
-            if (invalidated) {
-                upload_texture_layer(layer,
-                                     m_null_data_block,
-                                     m_null_normalt_block);
-            }
-        }
+        success = success && pass.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
+                    context);
 
-        cache_entry = std::make_pair(
-                    true,
-                    std::move(geometry_slice));
-
-        m_tmp_index_data.clear();
-        m_tmp_fluid_data_cache.clear();
-        m_tmp_index_mapping.clear();
-        m_tmp_vertex_data.clear();
-        m_tmp_used_blocks.clear();
+        success = success && pass.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/fluid/cpu.frag"),
+                    context);
     }
 
-    m_mat.sync_buffers();
+    m_mat.declare_attribute("position", 0);
+
+    success = success && m_mat.link();
+    if (!success) {
+        throw std::runtime_error("material failed to compile or link");
+    }
+
+    m_mat.attach_texture("normalt", &m_normalt);
+    m_mat.attach_texture("fluiddata", &m_fluid_data);
+
+    m_configured = true;
 }
 
 void CPUFluid::render(RenderContext &context,
@@ -602,6 +612,10 @@ void CPUFluid::render(RenderContext &context,
 
 void CPUFluid::sync(const FullTerrainNode &fullterrain)
 {
+    if (!m_configured) {
+        reconfigure();
+    }
+
     m_render_slices.clear();
     const sim::FluidBlock *block = m_fluidsim.blocks().block(0, 0);
     for (unsigned int blocky = 0;

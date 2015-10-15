@@ -73,6 +73,14 @@ struct FluidSlice
 class CPUFluid: public FullTerrainRenderer
 {
 public:
+    enum DetailLevel {
+        DETAIL_MINIMAL = 0,
+        DETAIL_WATER_PASS = 1,
+        DETAIL_REFRACTIVE = 2,
+        DETAIL_REFRACTIVE_TILED_FLOW = 3
+    };
+
+public:
     CPUFluid(const unsigned int terrain_size,
              const unsigned int grid_size,
              GLResourceManager &resources,
@@ -93,6 +101,11 @@ private:
 
     unsigned int m_max_slices;
 
+    DetailLevel m_detail_level;
+
+    bool m_configured;
+    VBO m_vbo;
+    IBO m_ibo;
     Material m_mat;
     Texture2DArray m_fluid_data;
     Texture2DArray m_normalt;
@@ -119,23 +132,25 @@ private:
 
 private:
     void fluid_resetted();
-    void reinitialise_cache();
 
     void invalidate_caches(const unsigned int blockx,
                            const unsigned int blocky);
-
-
-    unsigned int request_vertex_inject(const float x0f,
-                                       const float y0f,
-                                       const unsigned int oversample,
-                                       const unsigned int x,
-                                       const unsigned int y);
 
     std::unique_ptr<FluidSlice> produce_geometry(
             const unsigned int blockx,
             const unsigned int blocky,
             const unsigned int world_size,
             const unsigned int oversample);
+
+    void reconfigure();
+
+    void reinitialise_cache();
+
+    unsigned int request_vertex_inject(const float x0f,
+                                       const float y0f,
+                                       const unsigned int oversample,
+                                       const unsigned int x,
+                                       const unsigned int y);
 
     void upload_texture_layer(const unsigned int layer,
                               const FluidDataTextureBuffer &data,
