@@ -409,7 +409,9 @@ void PassInfo::reset()
 
 void PassInfo::sort_instructions()
 {
-    // TODO: implement this
+    std::sort(m_instructions.begin(),
+              m_instructions.end(),
+              [](const PassRenderInstruction &a, const PassRenderInstruction &b){ return a.material_pass->order() < b.material_pass->order(); });
 }
 
 /* ffe::RenderNode */

@@ -85,7 +85,8 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
     m_normalt(GL_RGBA32F, m_block_size+1, m_block_size+1, 512),
     m_scene_colour(nullptr),
     m_scene_depth(nullptr),
-    m_wave_normalmap(nullptr)
+    m_wave_normalmap(nullptr),
+    m_skycube(nullptr)
 {
     if ((grid_size-1) != m_block_size) {
         throw std::logic_error("terrain grid_size does not match fluidsim block_size");
@@ -291,6 +292,12 @@ void CPUFluid::upload_texture_layer(const unsigned int layer,
                     m_block_size+1, m_block_size+1, 1,
                     GL_RGBA, GL_FLOAT,
                     normalt.data());
+}
+
+void CPUFluid::attach_skycube(TextureCubeMap *tex)
+{
+    m_configured = false;
+    m_skycube = tex;
 }
 
 void CPUFluid::attach_wave_normalmap(Texture2D *tex)
@@ -538,6 +545,7 @@ void CPUFluid::reconfigure()
 
     m_mat.attach_texture("normalt", &m_normalt);
     m_mat.attach_texture("fluiddata", &m_fluid_data);
+    m_mat.attach_texture("skycube", m_skycube);
 
     if (m_detail_level >= DETAIL_REFRACTIVE) {
         m_mat.attach_texture("scene_colour", m_scene_colour);

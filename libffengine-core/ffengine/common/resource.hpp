@@ -89,6 +89,13 @@ public:
     Resource *get(const std::string &name);
 
     template <typename T>
+    T *get_safe(const std::string &name)
+    {
+        Resource *tmp = get(name);
+        return dynamic_cast<T*>(tmp);
+    }
+
+    template <typename T>
     T &manage(const std::string &name,
                      std::unique_ptr<T> &&res)
     {

@@ -137,6 +137,11 @@ public:
         return m_shader;
     }
 
+    inline int order() const
+    {
+        return m_order;
+    }
+
 public:
     bool attach_texture(const std::string &name, Texture *tex);
     void bind();

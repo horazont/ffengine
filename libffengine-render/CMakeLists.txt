@@ -36,6 +36,7 @@ set(ENGINE_HEADERS
   ffengine/render/plane.hpp
   ffengine/render/pointer.hpp
   ffengine/render/scenegraph.hpp
+  ffengine/render/skycube.hpp
   )
 
 set(ENGINE_SRC
@@ -67,6 +68,7 @@ set(ENGINE_SRC
   src/render/plane.cpp
   src/render/pointer.cpp
   src/render/scenegraph.cpp
+  src/render/skycube.cpp
   )
 
 add_library(ffengine-render STATIC ${ENGINE_SRC} ${ENGINE_HEADERS})
