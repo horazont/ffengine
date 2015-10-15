@@ -275,7 +275,8 @@ public:
                     const unsigned int width,
                     const unsigned int height,
                     const unsigned int oversample,
-                    const unsigned int dest_width) const;
+                    const unsigned int dest_width,
+                    bool &used_active) const;
 
     /**
      * Copy a block of render fluid data into the given buffer. If the rect

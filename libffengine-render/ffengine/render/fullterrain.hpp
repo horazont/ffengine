@@ -247,6 +247,8 @@ public:
     void set_detail_level(unsigned int level);
 
 public:
+    void advance(TimeInterval seconds) override;
+
     /**
      * Determine the set pieces of terrain which are visible and call prepare()
      * on all FullTerrainRenderer instances.
@@ -284,6 +286,7 @@ protected:
     const unsigned int m_grid_size;
 
 public:
+    virtual void advance(TimeInterval seconds);
     virtual void prepare(RenderContext &context,
                          const FullTerrainNode &fullterrain,
                          const FullTerrainNode::Slices &slices) = 0;

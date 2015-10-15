@@ -99,6 +99,10 @@ bool ShaderProgram::compile(GLint shader_object,
             shader_logger.log(level) << m_glid << ": " << filename.toStdString()
                                      << ": shader failed to compile"
                                      << io::submit;
+            shader_logger.log(level) << m_glid << ": " << filename.toStdString()
+                                     << ": source" << std::endl
+                                     << std::string(source, source_len-1)
+                                     << io::submit;
         } else {
             shader_logger.log(level) << m_glid << ": " << filename.toStdString()
                                      << ": shader compiled with warnings"

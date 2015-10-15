@@ -260,13 +260,16 @@ void Fluid::copy_block(Vector4f *dest,
                        const unsigned int width,
                        const unsigned int height,
                        const unsigned int oversample,
-                       const unsigned int dest_width) const
+                       const unsigned int dest_width,
+                       bool &used_active) const
 {
     const unsigned int oversampled_width = width * oversample;
     const unsigned int oversampled_height = height * oversample;
 
     unsigned int ybase = y0;
     unsigned int ydest = 0;
+
+    used_active = false;
 
     while (ybase < y0 + oversampled_height) {
         const unsigned int blocky = ybase / IFluidSim::block_size;
@@ -293,8 +296,11 @@ void Fluid::copy_block(Vector4f *dest,
                       << "copy_height: " << copy_height << "; "
                       << std::endl;*/
 
+            const FluidBlock &block = *m_blocks.block(blockx, blocky);
+            used_active = used_active || block.front_meta().active;
+
             copy_from_block(&dest[ydest*dest_width+xdest],
-                            *m_blocks.block(blockx, blocky),
+                            block,
                             cellx, celly,
                             copy_width, copy_height,
                             row_stride,

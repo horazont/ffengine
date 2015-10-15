@@ -48,7 +48,8 @@ struct FluidSlice
     FluidSlice(IBOAllocation &&ibo_alloc, VBOAllocation &&vbo_alloc,
                unsigned int size,
                std::basic_string<Vector4f> &&data_texture,
-               std::basic_string<Vector4f> &&normalt_texture);
+               std::basic_string<Vector4f> &&normalt_texture,
+               bool reusable);
 
     IBOAllocation m_ibo_alloc;
     VBOAllocation m_vbo_alloc;
@@ -67,6 +68,8 @@ struct FluidSlice
      * deleting them starting with the lowest usage level.
      */
     unsigned int m_usage_level;
+
+    bool m_reusable;
 };
 
 
@@ -102,6 +105,7 @@ private:
     unsigned int m_max_slices;
 
     DetailLevel m_detail_level;
+    float m_t;
 
     bool m_configured;
     VBO m_vbo;
@@ -111,6 +115,7 @@ private:
     Texture2DArray m_normalt;
     Texture2D *m_scene_colour;
     Texture2D *m_scene_depth;
+    Texture2D *m_wave_normalmap;
 
     std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
     std::unordered_map<RenderContext*, std::vector<FluidSlice*> > m_render_slices;
@@ -159,6 +164,8 @@ private:
                               const NormalTTextureBuffer &normalt);
 
 public:
+    void attach_wave_normalmap(Texture2D *tex);
+
     inline Texture2DArray *fluid_data()
     {
         return &m_fluid_data;
@@ -168,6 +175,7 @@ public:
     void set_scene_depth(Texture2D *tex);
 
 public:
+    void advance(TimeInterval seconds) override;
     void prepare(RenderContext &context,
                  const FullTerrainNode &fullterrain,
                  const FullTerrainNode::Slices &slices) override;

@@ -67,6 +67,11 @@ FullTerrainRenderer::~FullTerrainRenderer()
 
 }
 
+void FullTerrainRenderer::advance(TimeInterval seconds)
+{
+
+}
+
 
 /* engine::FullTerrainNode::SliceBookkeeping */
 
@@ -210,6 +215,13 @@ void FullTerrainNode::set_detail_level(unsigned int level)
 
     m_detail_level = level;
     m_lod_range_base = (m_grid_size << level) - 1;
+}
+
+void FullTerrainNode::advance(TimeInterval seconds)
+{
+    for (auto &renderer: m_renderers) {
+        renderer->advance(seconds);
+    }
 }
 
 void FullTerrainNode::prepare(RenderContext &context)
