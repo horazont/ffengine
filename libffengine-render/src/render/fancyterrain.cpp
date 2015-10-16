@@ -218,7 +218,7 @@ void FancyTerrainNode::configure_single_overlay_material(
     config.material->attach_texture("heightmap", &m_heightmap);
     config.material->attach_texture("normalt", &m_normalt);
 
-    config.material->set_depth_mask(false);
+    pass.set_depth_mask(false);
 }
 
 void FancyTerrainNode::configure_without_sharp_geometry()

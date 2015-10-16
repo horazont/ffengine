@@ -35,6 +35,8 @@ SkyCubeNode::SkyCubeNode(GLResourceManager &resources,
         }
 
         pass.set_order(-100);
+        pass.set_depth_test(false);
+        pass.set_depth_mask(false);
     }
 
     m_mat.attach_texture("skycube", resources.get_safe<TextureCubeMap>("skycube"));
@@ -112,9 +114,6 @@ SkyCubeNode::SkyCubeNode(GLResourceManager &resources,
     m_vbo_alloc.mark_dirty();
     m_ibo_alloc.mark_dirty();
     m_mat.sync_buffers();
-
-    m_mat.set_depth_test(false);
-    m_mat.set_depth_mask(false);
 }
 
 void SkyCubeNode::prepare(RenderContext &)

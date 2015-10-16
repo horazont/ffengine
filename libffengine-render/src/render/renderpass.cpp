@@ -42,6 +42,10 @@ MaterialPass::MaterialPass(Material &material, RenderPass &pass):
     m_material(material),
     m_pass(pass),
     m_order(0),
+    m_polygon_mode(GL_FILL),
+    m_depth_mask(true),
+    m_depth_test(true),
+    m_point_size(0.f),
     m_base_free_unit(0)
 {
 
@@ -146,11 +150,32 @@ void MaterialPass::set_order(int order)
 void MaterialPass::setup()
 {
     bind();
+    if (m_polygon_mode != GL_FILL) {
+        glPolygonMode(GL_FRONT_AND_BACK, m_polygon_mode);
+    }
+    if (!m_depth_mask) {
+        glDepthMask(GL_FALSE);
+    }
+    if (!m_depth_test) {
+        glDisable(GL_DEPTH_TEST);
+    }
+    if (m_point_size != 0.f) {
+        glPointSize(m_point_size);
+    }
     m_material.setup();
 }
 
 void MaterialPass::teardown()
 {
+    if (!m_depth_test) {
+        glEnable(GL_DEPTH_TEST);
+    }
+    if (!m_depth_mask) {
+        glDepthMask(GL_TRUE);
+    }
+    if (m_polygon_mode != GL_FILL) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
     m_material.teardown();
 }
 
@@ -160,11 +185,7 @@ Material::Material():
     m_buffers_owned(false),
     m_vbo(nullptr),
     m_ibo(nullptr),
-    m_linked(false),
-    m_polygon_mode(GL_FILL),
-    m_depth_mask(true),
-    m_depth_test(true),
-    m_point_size(0.f)
+    m_linked(false)
 {
 
 }
@@ -173,11 +194,7 @@ Material::Material(const VBOFormat &format):
     m_buffers_owned(true),
     m_vbo(new VBO(format)),
     m_ibo(new IBO),
-    m_linked(false),
-    m_polygon_mode(GL_FILL),
-    m_depth_mask(true),
-    m_depth_test(true),
-    m_point_size(0.f)
+    m_linked(false)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -186,11 +203,7 @@ Material::Material(VBO &vbo, IBO &ibo):
     m_buffers_owned(false),
     m_vbo(&vbo),
     m_ibo(&ibo),
-    m_linked(false),
-    m_polygon_mode(GL_FILL),
-    m_depth_mask(true),
-    m_depth_test(true),
-    m_point_size(0.f)
+    m_linked(false)
 {
     m_vertex_attrs.set_ibo(m_ibo);
 }
@@ -200,10 +213,6 @@ Material::Material(Material &&src):
     m_vbo(std::move(src.m_vbo)),
     m_ibo(std::move(src.m_ibo)),
     m_linked(src.m_linked),
-    m_polygon_mode(src.m_polygon_mode),
-    m_depth_mask(src.m_depth_mask),
-    m_depth_test(src.m_depth_test),
-    m_point_size(src.m_point_size),
     m_vertex_attrs(std::move(src.m_vertex_attrs)),
     m_passes(std::move(src.m_passes))
 {
@@ -225,10 +234,6 @@ Material &Material::operator=(Material &&src)
     src.m_ibo = nullptr;
     m_linked = src.m_linked;
     src.m_linked = false;
-    m_polygon_mode = src.m_polygon_mode;
-    m_depth_mask = src.m_depth_mask;
-    m_depth_test = src.m_depth_test;
-    m_point_size = src.m_point_size;
     m_vertex_attrs = std::move(src.m_vertex_attrs);
     m_passes = std::move(src.m_passes);
     return *this;
@@ -244,31 +249,12 @@ Material::~Material()
 
 void Material::setup()
 {
-    if (m_polygon_mode != GL_FILL) {
-        glPolygonMode(GL_FRONT_AND_BACK, m_polygon_mode);
-    }
-    if (!m_depth_mask) {
-        glDepthMask(GL_FALSE);
-    }
-    if (!m_depth_test) {
-        glDisable(GL_DEPTH_TEST);
-    }
-    if (m_point_size != 0.f) {
-        glPointSize(m_point_size);
-    }
+
 }
 
 void Material::teardown()
 {
-    if (!m_depth_test) {
-        glEnable(GL_DEPTH_TEST);
-    }
-    if (!m_depth_mask) {
-        glDepthMask(GL_TRUE);
-    }
-    if (m_polygon_mode != GL_FILL) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
+
 }
 
 void Material::attach_texture(const std::string &name, Texture *tex)

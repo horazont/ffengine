@@ -104,6 +104,11 @@ private:
     int m_order;
     ffe::ShaderProgram m_shader;
 
+    GLenum m_polygon_mode;
+    bool m_depth_mask;
+    bool m_depth_test;
+    float m_point_size;
+
     std::unordered_map<std::string, TextureAttachment> m_texture_bindings;
     std::vector<GLint> m_free_units;
     GLint m_base_free_unit;
@@ -143,6 +148,47 @@ public:
     }
 
 public:
+    inline bool depth_mask() const
+    {
+        return m_depth_mask;
+    }
+
+    inline bool depth_test() const
+    {
+        return m_depth_test;
+    }
+
+    inline GLenum polygon_mode() const
+    {
+        return m_polygon_mode;
+    }
+
+    inline float point_size() const
+    {
+        return m_point_size;
+    }
+
+    inline void set_depth_mask(const bool mask)
+    {
+        m_depth_mask = mask;
+    }
+
+    inline void set_depth_test(const bool enabled)
+    {
+        m_depth_test = enabled;
+    }
+
+    inline void set_polygon_mode(const GLenum mode)
+    {
+        m_polygon_mode = mode;
+    }
+
+    inline void set_point_size(const float size)
+    {
+        m_point_size = size;
+    }
+
+public:
     bool attach_texture(const std::string &name, Texture *tex);
     void bind();
     void detach_texture(const std::string &name);
@@ -179,11 +225,6 @@ private:
     IBO *m_ibo;
 
     bool m_linked;
-
-    GLenum m_polygon_mode;
-    bool m_depth_mask;
-    bool m_depth_test;
-    float m_point_size;
 
     ArrayDeclaration m_vertex_attrs;
 
@@ -251,47 +292,6 @@ public:
     inline operator bool() const
     {
         return (m_ibo && m_vbo);
-    }
-
-public:
-    inline bool depth_mask() const
-    {
-        return m_depth_mask;
-    }
-
-    inline bool depth_test() const
-    {
-        return m_depth_test;
-    }
-
-    inline GLenum polygon_mode() const
-    {
-        return m_polygon_mode;
-    }
-
-    inline float point_size() const
-    {
-        return m_point_size;
-    }
-
-    inline void set_depth_mask(const bool mask)
-    {
-        m_depth_mask = mask;
-    }
-
-    inline void set_depth_test(const bool enabled)
-    {
-        m_depth_test = enabled;
-    }
-
-    inline void set_polygon_mode(const GLenum mode)
-    {
-        m_polygon_mode = mode;
-    }
-
-    inline void set_point_size(const float size)
-    {
-        m_point_size = size;
     }
 
 public:
