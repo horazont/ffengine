@@ -78,7 +78,6 @@ class CPUFluid: public FullTerrainRenderer
 public:
     enum DetailLevel {
         DETAIL_MINIMAL = 0,
-        DETAIL_WATER_PASS = 1,
         DETAIL_REFRACTIVE = 2,
         DETAIL_REFRACTIVE_TILED_FLOW = 3
     };
@@ -171,6 +170,12 @@ public:
     inline Texture2DArray *fluid_data()
     {
         return &m_fluid_data;
+    }
+
+    inline void set_detail_level(DetailLevel level)
+    {
+        m_detail_level = level;
+        m_configured = false;
     }
 
     void set_scene_colour(Texture2D *tex);

@@ -92,6 +92,10 @@ CPUFluid::CPUFluid(const unsigned int terrain_size,
         throw std::logic_error("terrain grid_size does not match fluidsim block_size");
     }
 
+    m_fluid_data.bind();
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     reinitialise_cache();
 
     m_null_data_block.resize((m_block_size+1)*(m_block_size+1),
@@ -279,6 +283,7 @@ void CPUFluid::upload_texture_layer(const unsigned int layer,
                                     const CPUFluid::NormalTTextureBuffer &normalt)
 {
     m_fluid_data.bind();
+    // std::cout << "layer " << layer << " " << data[0] << std::endl;
     glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
                     0,
                     0, 0, layer,
@@ -522,11 +527,25 @@ void CPUFluid::reconfigure()
     bool success = true;
 
     {
-        MaterialPass &pass = (
-                    m_detail_level >= DETAIL_WATER_PASS
-                    ? m_mat.make_pass_material(m_water_pass)
-                    : m_mat.make_pass_material(m_transparent_pass));
+        MaterialPass &back_pass = m_mat.make_pass_material(m_transparent_pass);
+        spp::EvaluationContext subcontext(context);
+        subcontext.define("MINIMAL", "");
 
+        success = success && back_pass.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
+                    subcontext);
+
+        success = success && back_pass.shader().attach(
+                    m_resources.load_shader_checked(":/shaders/fluid/dummy.frag"),
+                    subcontext);
+
+        back_pass.set_cull_face(GL_FRONT);
+        back_pass.set_colour_mask_all(false);
+        back_pass.set_order(1);
+    }
+
+    MaterialPass &pass = m_mat.make_pass_material(m_water_pass);
+    {
         success = success && pass.shader().attach(
                     m_resources.load_shader_checked(":/shaders/fluid/cpu.vert"),
                     context);
@@ -534,6 +553,8 @@ void CPUFluid::reconfigure()
         success = success && pass.shader().attach(
                     m_resources.load_shader_checked(":/shaders/fluid/cpu.frag"),
                     context);
+
+        pass.set_order(2);
     }
 
     m_mat.declare_attribute("position", 0);
@@ -543,17 +564,17 @@ void CPUFluid::reconfigure()
         throw std::runtime_error("material failed to compile or link");
     }
 
-    m_mat.attach_texture("normalt", &m_normalt);
+    pass.attach_texture("normalt", &m_normalt);
     m_mat.attach_texture("fluiddata", &m_fluid_data);
-    m_mat.attach_texture("skycube", m_skycube);
 
+    pass.attach_texture("skycube", m_skycube);
     if (m_detail_level >= DETAIL_REFRACTIVE) {
-        m_mat.attach_texture("scene_colour", m_scene_colour);
-        m_mat.attach_texture("scene_depth", m_scene_depth);
+        pass.attach_texture("scene_colour", m_scene_colour);
+        pass.attach_texture("scene_depth", m_scene_depth);
     }
 
     if (m_detail_level >= DETAIL_REFRACTIVE_TILED_FLOW) {
-        m_mat.attach_texture("wave_normals", m_wave_normalmap);
+        pass.attach_texture("wave_normals", m_wave_normalmap);
     }
 
     m_configured = true;
