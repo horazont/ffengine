@@ -46,6 +46,8 @@ MaterialPass::MaterialPass(Material &material, RenderPass &pass):
     m_depth_mask(true),
     m_depth_test(true),
     m_point_size(0.f),
+    m_cull_face(GL_BACK),
+    m_colour_mask_all(true),
     m_base_free_unit(0)
 {
 
@@ -153,6 +155,9 @@ void MaterialPass::setup()
     if (m_polygon_mode != GL_FILL) {
         glPolygonMode(GL_FRONT_AND_BACK, m_polygon_mode);
     }
+    if (!m_colour_mask_all) {
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    }
     if (!m_depth_mask) {
         glDepthMask(GL_FALSE);
     }
@@ -162,11 +167,21 @@ void MaterialPass::setup()
     if (m_point_size != 0.f) {
         glPointSize(m_point_size);
     }
+    if (m_cull_face != GL_BACK) {
+        glCullFace(m_cull_face);
+    }
     m_material.setup();
 }
 
 void MaterialPass::teardown()
 {
+    m_material.teardown();
+    if (m_cull_face != GL_BACK) {
+        glCullFace(GL_BACK);
+    }
+    if (!m_colour_mask_all) {
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    }
     if (!m_depth_test) {
         glEnable(GL_DEPTH_TEST);
     }
@@ -176,7 +191,6 @@ void MaterialPass::teardown()
     if (m_polygon_mode != GL_FILL) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
-    m_material.teardown();
 }
 
 /* ffe::Material */

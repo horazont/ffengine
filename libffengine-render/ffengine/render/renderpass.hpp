@@ -108,6 +108,8 @@ private:
     bool m_depth_mask;
     bool m_depth_test;
     float m_point_size;
+    GLenum m_cull_face;
+    bool m_colour_mask_all;
 
     std::unordered_map<std::string, TextureAttachment> m_texture_bindings;
     std::vector<GLint> m_free_units;
@@ -148,6 +150,11 @@ public:
     }
 
 public:
+    inline GLenum cull_face() const
+    {
+        return m_cull_face;
+    }
+
     inline bool depth_mask() const
     {
         return m_depth_mask;
@@ -166,6 +173,16 @@ public:
     inline float point_size() const
     {
         return m_point_size;
+    }
+
+    inline void set_colour_mask_all(const bool mask)
+    {
+        m_colour_mask_all = mask;
+    }
+
+    inline void set_cull_face(const GLenum face)
+    {
+        m_cull_face = face;
     }
 
     inline void set_depth_mask(const bool mask)
