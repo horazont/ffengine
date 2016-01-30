@@ -30,6 +30,29 @@ the AUTHORS file.
 #include "ffengine/math/algo.hpp"
 #include "ffengine/math/vector.hpp"
 
+
+template <typename curve_t, typename InputIterator, typename OutputIterator>
+inline void segmentize(const curve_t &curve,
+                       InputIterator iter, InputIterator end,
+                       OutputIterator dest)
+{
+    curve_t remaining_curve(curve);
+
+    float_t t_offset = 0.;
+    float_t t_scale = 1.;
+    for (; iter != end; ++iter) {
+        const float_t segment_t = *iter;
+        const float_t split_t = (segment_t + t_offset) * t_scale;
+        t_offset = -segment_t;
+        t_scale = 1./(1-segment_t);
+
+        std::tie(*dest++, remaining_curve) = remaining_curve.split(split_t);
+    }
+
+    *dest++ = remaining_curve;
+}
+
+
 template <typename _vector_t>
 struct QuadBezier
 {
@@ -94,20 +117,7 @@ struct QuadBezier
     inline void segmentize(InputIterator iter, InputIterator end,
                            OutputIterator dest) const
     {
-        QuadBezier remaining_curve(*this);
-
-        float_t t_offset = 0.;
-        float_t t_scale = 1.;
-        for (; iter != end; ++iter) {
-            const float_t segment_t = *iter;
-            const float_t split_t = (segment_t + t_offset) * t_scale;
-            t_offset = -segment_t;
-            t_scale = 1./(1-segment_t);
-
-            std::tie(*dest++, remaining_curve) = remaining_curve.split(split_t);
-        }
-
-        *dest++ = remaining_curve;
+        ::segmentize(*this, iter, end, dest);
     }
 
     // evaluating
@@ -127,8 +137,119 @@ struct QuadBezier
 
 };
 
+
+template<typename _vector_t>
+struct CubeBezier
+{
+    typedef _vector_t vector_t;
+    typedef typename vector_t::vector_float_t float_t;
+
+    CubeBezier()
+    {
+
+    }
+
+    template <typename p_1, typename p_2, typename p_3, typename p_4>
+    CubeBezier(p_1 &&start, p_2 &&control1, p_3 &&control2, p_4 &&end):
+        p_start(std::forward<p_1>(start)),
+        p_control1(std::forward<p_2>(control1)),
+        p_control2(std::forward<p_3>(control2)),
+        p_end(std::forward<p_4>(end))
+    {
+
+    }
+
+    vector_t p_start, p_control1, p_control2, p_end;
+
+    // equality
+
+    template <typename other_vector_t>
+    bool operator==(const CubeBezier<other_vector_t> &other) const
+    {
+        return (p_start == other.p_start &&
+                p_control1 == other.p_control1 &&
+                p_control2 == other.p_control2 &&
+                p_end == other.p_end);
+    }
+
+    template <typename other_vector_t>
+    bool operator!=(const CubeBezier<other_vector_t> &other) const
+    {
+        return !(*this == other);
+    }
+
+    // splitting
+
+    inline CubeBezier split_inplace(const float_t t)
+    {
+        const vector_t &c1 = p_start;
+        const vector_t c2 = p_start + (p_control1-p_start)*t;
+        const vector_t c4 = p_control1 + (p_control2-p_control1)*t;
+        const vector_t c3 = c2 + (c4-c2)*t;
+        const vector_t c6 = p_control2 + (p_end-p_control2)*t;
+        const vector_t c5 = c4 + (c6-c4)*t;
+        const vector_t &c7 = p_end;
+
+        const vector_t p2_start = c3 + (c5-c3)*t;
+        const vector_t &p2_control1 = c5;
+        const vector_t &p2_control2 = c6;
+        const vector_t p2_end = p_end;
+
+        p_control1 = c2;
+        p_control2 = c3;
+        p_end = p2_start;
+
+        return CubeBezier(p2_start, p2_control1, p2_control2, p2_end);
+    }
+
+    std::tuple<CubeBezier, CubeBezier> split(const float_t t) const
+    {
+        CubeBezier master = *this;
+        const CubeBezier splitoff = master.split_inplace(t);
+        return std::make_tuple(master, splitoff);
+    }
+
+    template <typename InputIterator, typename OutputIterator>
+    inline void segmentize(InputIterator iter, InputIterator end,
+                           OutputIterator dest) const
+    {
+        ::segmentize(*this, iter, end, dest);
+    }
+
+    // evaluating
+
+    template <typename float_t>
+    inline Vector<float_t, vector_t::dimension> operator[](const float_t t) const
+    {
+        const float_t t_inv = 1 - t;
+        const float_t t_inv_p2 = t_inv * t_inv;
+        const float_t t_inv_p3 = t_inv_p2 * t_inv;
+
+        const float_t t_p2 = t*t;
+        const float_t t_p3 = t_p2*t;
+
+        return p_start*t_inv_p3 + p_control1*3*t_inv_p2*t + p_control2*3*t_inv*t_p2 + p_end*t_p3;
+    }
+
+    template <typename float_t>
+    inline Vector<float_t, vector_t::dimension> diff(const float_t t) const
+    {
+        const float_t t_inv = t - 1;
+        const float_t t_inv_p2 = t_inv * t_inv;
+
+        const float_t t_p2 = t*t;
+
+        return 3*(p_control1-p_start)*t_inv_p2 + 6*(p_control1-p_control2)*t*t_inv + 3*(p_end-p_control2)*t_p2;
+    }
+};
+
+
 typedef QuadBezier<Vector3f> QuadBezier3f;
 typedef QuadBezier<Vector3d> QuadBezier3d;
+
+typedef CubeBezier<Vector3f> CubeBezier3f;
+typedef CubeBezier<Vector3d> CubeBezier3d;
+
 
 template <typename bezier_vector_t>
 inline float bisect_quadbezier(const QuadBezier<bezier_vector_t> &curve,
@@ -298,6 +419,16 @@ ostream &operator<<(ostream &stream, const QuadBezier<vector_t> &bezier)
     return stream << "bezier("
                   << bezier.p_start << ", "
                   << bezier.p_control << ", "
+                  << bezier.p_end << ")";
+}
+
+template <typename vector_t>
+ostream &operator<<(ostream &stream, const CubeBezier<vector_t> &bezier)
+{
+    return stream << "bezier("
+                  << bezier.p_start << ", "
+                  << bezier.p_control1 << ", "
+                  << bezier.p_control2 << ", "
                   << bezier.p_end << ")";
 }
 
