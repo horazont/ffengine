@@ -8,6 +8,7 @@ set(TEST_SRC
   engine/math/intersect.cpp
   engine/math/line.cpp
   engine/math/matrix.cpp
+  engine/math/mixedcurve.cpp
   engine/math/octree.cpp
   engine/math/plane.cpp
   engine/math/quaternion.cpp

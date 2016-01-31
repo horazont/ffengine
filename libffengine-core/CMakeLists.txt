@@ -21,6 +21,7 @@ set(ENGINE_HEADERS
   ffengine/math/intersect.hpp
   ffengine/math/line.hpp
   ffengine/math/matrix.hpp
+  ffengine/math/mixedcurve.hpp
   ffengine/math/octree.hpp
   ffengine/math/perlin.hpp
   ffengine/math/plane.hpp
@@ -53,6 +54,7 @@ set(ENGINE_SRC
   src/math/intersect.cpp
   src/math/line.cpp
   src/math/matrix.cpp
+  src/math/mixedcurve.cpp
   src/math/octree.cpp
   src/math/perlin.cpp
   src/math/plane.cpp
