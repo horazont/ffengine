@@ -608,6 +608,7 @@ void CPUFluid::prepare(RenderContext &context,
             // if has geometry
             if (cache_entry.second) {
                 render_slices.push_back(cache_entry.second.get());
+                cache_entry.second->m_layer = layer;
                 cache_entry.second->m_usage_level += 1;
                 if (invalidated) {
                     upload_texture_layer(layer,
