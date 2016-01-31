@@ -1,5 +1,5 @@
 /**********************************************************************
-File name: plane.hpp
+File name: skycube.hpp
 This file is part of: SCC (working title)
 
 LICENSE
