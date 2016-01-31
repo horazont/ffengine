@@ -27,6 +27,7 @@ the AUTHORS file.
 #include <iostream>
 
 #include "ffengine/math/curve.hpp"
+#include "ffengine/math/mixedcurve.hpp"
 #include "ffengine/math/line.hpp"
 
 #include "ffengine/math/tikz.hpp"
@@ -103,6 +104,8 @@ PhysicalEdge::PhysicalEdge(PhysicalEdgeBundle &parent,
     m_reversed(reversed),
     m_segments(std::move(segments)),
     m_len(m_segments.back().s0 + m_segments.back().direction.length()),
+    m_first_non_cut_segment(0),
+    m_last_non_cut_segment(m_segments.size()-1),
     m_s0(0),
     m_s1(m_len)
 {
@@ -111,7 +114,7 @@ PhysicalEdge::PhysicalEdge(PhysicalEdgeBundle &parent,
 
 void PhysicalEdge::cut_s0(const Line2f &cut_line)
 {
-    std::cout << std::endl << std::endl;
+    /*std::cout << std::endl << std::endl;
     std::cout << "\\begin{scope}[xshift=" << (-m_segments[0].start[eX]) << ",yshift=" << (-m_segments[0].start[eY]) << "]" << std::endl;
     std::cout << "% member of bundle " << &m_parent << std::endl;
     std::cout << "% cutting s0 at " << cut_line << std::endl;
@@ -120,7 +123,7 @@ void PhysicalEdge::cut_s0(const Line2f &cut_line)
                 isect_line_line(cut_line, Line2f(Vector2f(m_segments[0].start), Vector2f(m_segments[0].direction))),
                 cut_line.point_and_direction().second.normalized() * 2.f,
                 0.5f,
-                "help lines");
+                "help lines");*/
     for (unsigned int i = 0; i < m_segments.size(); ++i)
     {
         const PhysicalEdgeSegment &segment = m_segments[i];
@@ -128,18 +131,18 @@ void PhysicalEdge::cut_s0(const Line2f &cut_line)
         const Vector2f direction(segment.direction);
         const Vector2f direction_normalized(direction.normalized());
 
-        tikz_draw(std::cout,
-                  start, direction, "-latex");
+        /*tikz_draw(std::cout,
+                  start, direction, "-latex");*/
 
         Line2f segment_line(start, direction_normalized);
         Vector2f intersection = isect_line_line(cut_line, segment_line);
-        tikz_node(std::cout, intersection, "", "inner sep=0.1mm,draw,rectangle,gray");
+        /*tikz_node(std::cout, intersection, "", "inner sep=0.1mm,draw,rectangle,gray");*/
         if (std::isnan(intersection[eX])) {
             continue;
         }
 
         const float intersection_along_direction = (intersection-start) * direction_normalized;
-        std::cout << "% intersection_along_direction " << intersection_along_direction << std::endl;
+        /*std::cout << "% intersection_along_direction " << intersection_along_direction << std::endl;*/
         if (intersection_along_direction >= direction.length()) {
             // intersection point is behind end of segment, continue
             continue;
@@ -147,16 +150,16 @@ void PhysicalEdge::cut_s0(const Line2f &cut_line)
 
         m_s0 = segment.s0 + intersection_along_direction;
         m_first_non_cut_segment = i;
-        std::cout << "% cut point found at segment " << i << " with s0 = " << m_s0 << std::endl;
+        /*std::cout << "% cut point found at segment " << i << " with s0 = " << m_s0 << std::endl;*/
         break;
     }
-    std::cout << "\\end{scope}" << std::endl;
-    std::cout << std::endl << std::endl;
+    /*std::cout << "\\end{scope}" << std::endl;
+    std::cout << std::endl << std::endl;*/
 }
 
 void PhysicalEdge::cut_s1(const Line2f &cut_line)
 {
-    std::cout << std::endl << std::endl;
+    /*std::cout << std::endl << std::endl;
     std::cout << "\\begin{scope}[xshift=" << (-m_segments[0].start[eX]) << ",yshift=" << (-m_segments[0].start[eY]) << "]" << std::endl;
     std::cout << "% member of bundle " << &m_parent << std::endl;
     std::cout << "% cutting s1 at " << cut_line << std::endl;
@@ -165,7 +168,7 @@ void PhysicalEdge::cut_s1(const Line2f &cut_line)
                 isect_line_line(cut_line, Line2f(Vector2f(m_segments[0].start), Vector2f(m_segments[0].direction))),
                 cut_line.point_and_direction().second.normalized() * 2.f,
                 0.5f,
-                "help lines");
+                "help lines");*/
 
     unsigned int i = m_segments.size() - 1;
     do {
@@ -174,19 +177,19 @@ void PhysicalEdge::cut_s1(const Line2f &cut_line)
         const Vector2f direction(segment.direction);
         const Vector2f direction_normalized(direction.normalized());
 
-        tikz_draw(std::cout,
-                  start, direction, "-latex");
+        /*tikz_draw(std::cout,
+                  start, direction, "-latex");*/
 
         Line2f segment_line(start, direction_normalized);
         Vector2f intersection = isect_line_line(cut_line, segment_line);
-        tikz_node(std::cout, intersection, "", "inner sep=0.1mm,draw,rectangle,gray");
+        /*tikz_node(std::cout, intersection, "", "inner sep=0.1mm,draw,rectangle,gray");*/
         if (std::isnan(intersection[eX])) {
             --i;
             continue;
         }
 
         const float intersection_along_direction = (intersection-start) * direction_normalized;
-        std::cout << "% intersection_along_direction " << intersection_along_direction << std::endl;
+        /*std::cout << "% intersection_along_direction " << intersection_along_direction << std::endl;*/
         if (intersection_along_direction < 0.f) {
             // intersection point is behind end of segment, continue
             --i;
@@ -195,12 +198,12 @@ void PhysicalEdge::cut_s1(const Line2f &cut_line)
 
         m_s1 = segment.s0 + intersection_along_direction;
         m_last_non_cut_segment = i;
-        std::cout << "% cut point found at segment " << i << " with s1 = " << m_s1 << " / " << m_len << std::endl;
+        /*std::cout << "% cut point found at segment " << i << " with s1 = " << m_s1 << " / " << m_len << std::endl;*/
         break;
     } while (i > 0);
 
-    std::cout << "\\end{scope}" << std::endl;
-    std::cout << std::endl << std::endl;
+    /*std::cout << "\\end{scope}" << std::endl;
+    std::cout << std::endl << std::endl;*/
 }
 
 void PhysicalEdge::set_s0(const float new_s0)
@@ -250,28 +253,7 @@ PhysicalEdgeBundle::PhysicalEdgeBundle(
     m_control_point(control_point),
     m_reshape_pending(true)
 {
-    const Vector3f start_point(m_start_node->position());
-    const Vector3f end_point(m_end_node->position());
-
-    QuadBezier3f curve(start_point,
-                       m_control_point,
-                       end_point);
-    std::vector<float> ts;
-    autosample_quadbezier(curve, std::back_inserter(ts));
-    // erase 0
-    ts.erase(ts.begin());
-
-    float s = 0;
-    Vector3f prev_point = start_point;
-    for (float t: ts)
-    {
-        const Vector3f curr_point(curve[t]);
-        const Vector3f direction(curr_point - prev_point);
-        m_segments.emplace_back(s, prev_point, direction);
-        s += direction.length();
-    }
-
-    apply_type();
+    mark_for_reshape();
 }
 
 void PhysicalEdgeBundle::add_edge(const float offset,
@@ -301,7 +283,6 @@ void PhysicalEdgeBundle::add_edge(const float offset,
 
 void PhysicalEdgeBundle::apply_type()
 {
-
     m_edges.clear();
     if (m_type.m_bidirectional) {
         float offset = m_type.m_lane_center_margin / 2.f;
@@ -346,13 +327,48 @@ bool PhysicalEdgeBundle::reshape()
         return false;
     }
 
-    const Line2f cut_start = m_start_node->bundle_cut(*this);
-    const Line2f cut_end = m_end_node->bundle_cut(*this);
+    const Vector3f start_dir(m_control_point - m_start_node->position());
+    const float start_cut = m_start_node->bundle_base_cut(*this);
+    const Vector3f start_point(m_start_node->position() + Vector3f(Vector2f(start_dir).normalized() * start_cut, 0));
+    const float end_cut = m_end_node->bundle_base_cut(*this);
+    const Vector3f end_dir(m_control_point - m_end_node->position());
+    const Vector3f end_point(m_end_node->position() + Vector3f(Vector2f(end_dir).normalized() * end_cut, 0));
 
-    for (std::unique_ptr<PhysicalEdge> &edge: m_edges) {
-        edge->cut_s0(cut_start);
-        edge->cut_s1(cut_end);
+    std::cout << "bundle " << this << std::endl;
+    std::cout << m_start_node->position() << " " << start_point << std::endl;
+    std::cout << m_end_node->position() << " " << end_point << std::endl;
+
+    MixedCurvef curve(QuadBezier3f(start_point,
+                                   m_control_point,
+                                   end_point));
+    float z1 = curve.curve().p_control1[eZ];
+    float z2 = curve.curve().p_control2[eZ];
+    if (m_start_node->exits().size() > 2) {
+        z1 = start_point[eZ];
     }
+    if (m_end_node->exits().size() > 2) {
+        z2 = end_point[eZ];
+    }
+
+    curve.set_control(Vector2f(m_control_point), z1, z2);
+
+    m_segments.clear();
+    std::vector<float> ts;
+    autosample_curve(curve.curve(), std::back_inserter(ts));
+    // erase 0
+    ts.erase(ts.begin());
+
+    float s = 0;
+    Vector3f prev_point = start_point;
+    for (float t: ts)
+    {
+        const Vector3f curr_point(curve.curve()[t]);
+        const Vector3f direction(curr_point - prev_point);
+        m_segments.emplace_back(s, prev_point, direction);
+        s += direction.length();
+    }
+
+    apply_type();
 
     m_reshape_pending = false;
     return true;
@@ -459,8 +475,8 @@ void PhysicalNode::reshape()
             const Vector3f first_exit_vector_3f(first.get_naive_exit_vector().normalized());
             const Vector3f second_exit_vector_3f(second.get_naive_exit_vector().normalized());
 
-            const Vector2f first_exit_vector(first_exit_vector_3f);
-            const Vector2f second_exit_vector(second_exit_vector_3f);
+            const Vector2f first_exit_vector(Vector2f(first_exit_vector_3f).normalized());
+            const Vector2f second_exit_vector(Vector2f(second_exit_vector_3f).normalized());
 
             const Vector2f first_normal(Vector2f(first_exit_vector_3f % up).normalized());
             const Vector2f second_normal(Vector2f(second_exit_vector_3f % up).normalized());
@@ -522,7 +538,7 @@ void PhysicalNode::reshape()
 
     for (auto &exit: m_exits) {
         const Vector3f exit_vector_3f(exit.get_naive_exit_vector().normalized());
-        const Vector2f exit_vector(exit_vector_3f);
+        const Vector2f exit_vector(Vector2f(exit_vector_3f).normalized());
         const Vector2f normal(Vector2f(exit_vector_3f % up).normalized());
         if (std::fabs(exit.m_base_cut) < 10) {
             tikz_draw_line_around_origin(std::cout,
@@ -668,6 +684,7 @@ void offset_segments(const std::vector<PhysicalEdgeSegment> &segments,
     const Vector3f up(0, 0, 1);
     float s = segments[0].s0;
     Vector3f prev_end(segments[0].start);
+
     {
         Vector3f bitangent(segments[0].direction.normalized() % up);
         bitangent.normalize();
@@ -728,7 +745,7 @@ void segmentize_curve(const QuadBezier3f &curve,
     // we use the autosampled points as a reference for where we can approximate
     // the curve using line segments. inside those segments, we split as
     // neccessary
-    autosample_quadbezier(curve, std::back_inserter(ts));
+    autosample_curve(curve, std::back_inserter(ts));
 
     std::vector<float> segment_ts;
 

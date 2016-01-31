@@ -375,6 +375,15 @@ public:
         return rec->m_cut_line;
     }
 
+    inline float bundle_base_cut(const PhysicalEdgeBundle &bundle) const
+    {
+        const ExitRecord *rec = record_for_bundle(bundle);
+        if (!rec) {
+            return NAN;
+        }
+        return rec->m_base_cut;
+    }
+
 public:
     void mark_for_reshape();
     void reshape();

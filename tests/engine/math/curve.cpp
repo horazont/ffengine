@@ -329,7 +329,7 @@ TEST_CASE("math/curve/autosample_quadbezier/straight_line")
                              Vector3f(1, 0, 0));
 
     std::vector<float> dest;
-    autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.1, 0.1);
+    autosample_curve(curve, std::back_inserter(dest), 0.1, 0.1, 0.1);
 
     std::vector<float> expected({0.f, 1.f});
 
@@ -343,7 +343,7 @@ TEST_CASE("math/curve/autosample_quadbezier/curved")
                              Vector3f(1, 1, 0));
 
     std::vector<float> dest;
-    autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.1, 0.1);
+    autosample_curve(curve, std::back_inserter(dest), 0.1, 0.1, 0.1);
     CHECK(dest.size() == 20);
 }
 
@@ -354,7 +354,7 @@ TEST_CASE("math/curve/autosample_quadbezier/slightly_curved")
                              Vector3f(1, 0.1, 0));
 
     std::vector<float> dest;
-    autosample_quadbezier(curve, std::back_inserter(dest), 0.1, 0.01, 0.001);
+    autosample_curve(curve, std::back_inserter(dest), 0.1, 0.01, 0.001);
     CHECK(dest.size() == 10);
 }
 

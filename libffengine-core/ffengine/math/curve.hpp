@@ -251,11 +251,11 @@ typedef CubeBezier<Vector3f> CubeBezier3f;
 typedef CubeBezier<Vector3d> CubeBezier3d;
 
 
-template <typename bezier_vector_t>
-inline float bisect_quadbezier(const QuadBezier<bezier_vector_t> &curve,
-                               std::function<int(const QuadBezier<bezier_vector_t>&, float)> predicate,
-                               float t_min,
-                               float t_max)
+template <typename curve_t>
+inline float bisect_curve(const curve_t &curve,
+                          std::function<int(const curve_t&, float)> predicate,
+                          float t_min,
+                          float t_max)
 {
     while (t_max - t_min >= 1e-6) {
         const float t_center = (t_max + t_min) / 2;
@@ -272,18 +272,18 @@ inline float bisect_quadbezier(const QuadBezier<bezier_vector_t> &curve,
     return t_max;
 }
 
-template <typename bezier_vector_t>
-inline float bisect_quadbezier_length(const QuadBezier<bezier_vector_t> &curve,
-                                      const bezier_vector_t &origin,
-                                      const float t_min,
-                                      const float t_max,
-                                      const float distance,
-                                      const float epsilon)
+template <typename curve_t>
+inline float bisect_curve_length(const curve_t &curve,
+                                 const typename curve_t::vector_t &origin,
+                                 const float t_min,
+                                 const float t_max,
+                                 const float distance,
+                                 const float epsilon)
 {
-    std::function<int(const QuadBezier<bezier_vector_t> &curve, float t)> predicate = [distance, epsilon, &origin](
-            const QuadBezier<bezier_vector_t> &curve,
+    std::function<int(const curve_t &curve, float t)> predicate = [distance, epsilon, &origin](
+            const curve_t &curve,
             float t) {
-        const bezier_vector_t pos = curve[t];
+        const typename curve_t::vector_t pos = curve[t];
         const float curr_distance = (pos - origin).length();
         if (std::abs(curr_distance - distance) <= epsilon) {
             return 0;
@@ -293,22 +293,22 @@ inline float bisect_quadbezier_length(const QuadBezier<bezier_vector_t> &curve,
             return -1;
         }
     };
-    return bisect_quadbezier(curve, predicate, t_min, t_max);
+    return bisect_curve(curve, predicate, t_min, t_max);
 }
 
 
-template <typename bezier_vector_t>
-inline float bisect_quadbezier_tangent_angle(const QuadBezier<bezier_vector_t> &curve,
-                                             const bezier_vector_t &tangent,
-                                             const float t_min,
-                                             const float t_max,
-                                             const float angle,
-                                             const float epsilon)
+template <typename curve_t>
+inline float bisect_curve_tangent_angle(const curve_t &curve,
+                                        const typename curve_t::vector_t &tangent,
+                                        const float t_min,
+                                        const float t_max,
+                                        const float angle,
+                                        const float epsilon)
 {
-    std::function<int(const QuadBezier<bezier_vector_t> &curve, float t)> predicate = [angle, epsilon, &tangent](
-            const QuadBezier<bezier_vector_t> &curve,
+    std::function<int(const curve_t &curve, float t)> predicate = [angle, epsilon, &tangent](
+            const curve_t &curve,
             float t) -> int {
-        const bezier_vector_t curr_tangent = curve.diff(t).normalized();
+        const typename curve_t::vector_t curr_tangent = curve.diff(t).normalized();
         const float curr_angle = std::acos(curr_tangent * tangent);
         /*  std::cout << "tangent = " << tangent << "; " << "curr_tangent = " << curr_tangent << "; dotp = " << (curr_tangent * tangent) << "; α = " << curr_angle << std::endl; */
         if (std::abs(curr_angle - angle) <= epsilon) {
@@ -319,17 +319,18 @@ inline float bisect_quadbezier_tangent_angle(const QuadBezier<bezier_vector_t> &
             return -1;
         }
     };
-    return bisect_quadbezier(curve, predicate, t_min, t_max);
+    return bisect_curve(curve, predicate, t_min, t_max);
 }
 
 
-template <typename bezier_vector_t, typename OutputIterator>
-inline void autosample_quadbezier(const QuadBezier<bezier_vector_t> &curve,
-                                  OutputIterator dest,
-                                  const float threshold = 0.01,
-                                  const float min_length = 0.001,
-                                  const float epsilon = 0.0001)
+template <typename curve_t, typename OutputIterator>
+inline void autosample_curve(const curve_t &curve,
+                             OutputIterator dest,
+                             const float threshold = 0.01,
+                             const float min_length = 0.001,
+                             const float epsilon = 0.0001)
 {
+    using bezier_vector_t = typename curve_t::vector_t;
     float t = 0;
     bezier_vector_t prev_position = curve[t];
     bezier_vector_t prev_tangent = curve.diff(t).normalized();
@@ -345,7 +346,7 @@ inline void autosample_quadbezier(const QuadBezier<bezier_vector_t> &curve,
 
         next_position = curve[t_next];
         if ((next_position - prev_position).length() < min_length) {
-            t_next = bisect_quadbezier_length(curve, prev_position, t_lower, t_next, min_length, 0.01);
+            t_next = bisect_curve_length(curve, prev_position, t_lower, t_next, min_length, 0.01);
             t_lower = t_next;
         }
 
@@ -379,11 +380,11 @@ inline void autosample_quadbezier(const QuadBezier<bezier_vector_t> &curve,
         }
 
         /* std::cout << "bisecting" << std::endl; */
-        t_next = bisect_quadbezier_tangent_angle(curve, prev_tangent,
-                                                 t_lower,
-                                                 t_next,
-                                                 threshold,
-                                                 epsilon);
+        t_next = bisect_curve_tangent_angle(curve, prev_tangent,
+                                            t_lower,
+                                            t_next,
+                                            threshold,
+                                            epsilon);
         next_tangent = curve.diff(t_next).normalized();
         next_position = curve[t_next];
     }

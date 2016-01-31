@@ -126,7 +126,7 @@ void QuadBezier3fRoadTest::sync(scenegraph::OctContext &positioning)
         m_ibo_alloc = nullptr;
 
         std::vector<float> ts;
-        autosample_quadbezier(m_curve, std::back_inserter(ts));
+        autosample_curve(m_curve, std::back_inserter(ts));
 
         m_steps = ts.size();
 
