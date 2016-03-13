@@ -191,8 +191,8 @@ protected:
  *   This is the case for instances created or assigned from nullptr.
  * * *dead*, in which case it is boolean false, get() returns nullptr and
  *   was_valid() returns true. This is the case if the object to which the
- *   object_ptr pointed has been deleted. The object_id() is still valid in
- *   that case.
+ *   object_ptr pointed has been deleted. The object_id() is still valid (but
+ *   may refer to a different object already!).
  * * *alive*, in which case it is boolean true, get() returns the pointer to the
  *   object (and the ``*`` and ``->`` operators can be used normally) and
  *   was_valid() returns true. The object_id() is obviously valid.
@@ -224,6 +224,12 @@ protected:
  * events use object_ptr to pass the information about which object is
  * affected, the receiving thread can check whether the object is still alive
  * and act accordingly.
+ *
+ * Using object_ptr comes with a certain performance penalty, as objects
+ * need to be able to notify object_ptr instances of their deletion. Thus,
+ * objects keep a set of object_ptr instances referring to them and walk over
+ * that set when they are deleted. In addition, copying, creating or deleting
+ * an alive object_ptr mutates such a set.
  *
  * @see ObjectManager
  */
