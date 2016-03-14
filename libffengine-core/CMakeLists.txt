@@ -3,6 +3,8 @@ set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 set(ENGINE_HEADERS
   ffengine/common/qtutils.hpp
   ffengine/common/resource.hpp
+  ffengine/common/sequence_view.hpp
+  ffengine/common/stable_index_vector.hpp
   ffengine/common/types.hpp
   ffengine/common/utils.hpp
   ffengine/io/common.hpp
@@ -37,6 +39,8 @@ set(ENGINE_HEADERS
 set(ENGINE_SRC
   src/common/qtutils.cpp
   src/common/resource.cpp
+  src/common/sequence_view.cpp
+  src/common/stable_index_vector.cpp
   src/common/utils.cpp
   src/io/common.cpp
   src/io/errors.cpp
