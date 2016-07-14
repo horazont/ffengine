@@ -520,7 +520,8 @@ void CPUFluid::reconfigure()
         context.define("REFRACTIVE", "");
     }
 
-    if (m_detail_level >= DETAIL_REFRACTIVE_TILED_FLOW) {
+    if (m_detail_level == DETAIL_REFRACTIVE_TILED_FLOW ||
+            m_detail_level == DETAIL_REFLECTIVE_TILED_FLOW) {
         context.define("TILED_FLOW", "");
     }
 
@@ -573,7 +574,8 @@ void CPUFluid::reconfigure()
         pass.attach_texture("scene_depth", m_scene_depth);
     }
 
-    if (m_detail_level >= DETAIL_REFRACTIVE_TILED_FLOW) {
+    if (m_detail_level == DETAIL_REFRACTIVE_TILED_FLOW ||
+            m_detail_level == DETAIL_REFLECTIVE_TILED_FLOW) {
         pass.attach_texture("wave_normals", m_wave_normalmap);
     }
 
@@ -687,7 +689,8 @@ void CPUFluid::render(RenderContext &context,
                                            slice->m_layer);
                                glUniform2f(pass.shader().uniform_location("base"),
                                            slice->m_base_x, slice->m_base_y);
-                               if (m_detail_level >= DETAIL_REFRACTIVE_TILED_FLOW) {
+                               if (m_detail_level == DETAIL_REFRACTIVE_TILED_FLOW ||
+                                       m_detail_level == DETAIL_REFLECTIVE_TILED_FLOW) {
                                    glUniform1f(pass.shader().uniform_location("t"),
                                                m_t);
                                }

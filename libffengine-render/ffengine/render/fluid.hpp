@@ -78,6 +78,7 @@ class CPUFluid: public FullTerrainRenderer
 public:
     enum DetailLevel {
         DETAIL_MINIMAL = 0,
+        DETAIL_REFLECTIVE_TILED_FLOW = 1,
         DETAIL_REFRACTIVE = 2,
         DETAIL_REFRACTIVE_TILED_FLOW = 3
     };
