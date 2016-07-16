@@ -1,6 +1,7 @@
 find_package(SIGC++ REQUIRED)
 
 set(TEST_SRC
+    engine/common/pooled_vector.cpp
     engine/common/sequence_view.cpp
     engine/common/stable_index_vector.cpp
     engine/io/utils.cpp
@@ -10,6 +11,7 @@ set(TEST_SRC
     engine/math/intersect.cpp
     engine/math/line.cpp
     engine/math/matrix.cpp
+    engine/math/mesh.cpp
     engine/math/mixedcurve.cpp
     engine/math/octree.cpp
     engine/math/plane.cpp

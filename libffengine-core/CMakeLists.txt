@@ -1,6 +1,7 @@
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 set(ENGINE_HEADERS
+  ffengine/common/pooled_vector.hpp
   ffengine/common/qtutils.hpp
   ffengine/common/resource.hpp
   ffengine/common/sequence_view.hpp
@@ -23,6 +24,7 @@ set(ENGINE_HEADERS
   ffengine/math/intersect.hpp
   ffengine/math/line.hpp
   ffengine/math/matrix.hpp
+  ffengine/math/mesh.hpp
   ffengine/math/mixedcurve.hpp
   ffengine/math/octree.hpp
   ffengine/math/perlin.hpp
@@ -37,6 +39,7 @@ set(ENGINE_HEADERS
   )
 
 set(ENGINE_SRC
+  src/common/pooled_vector.cpp
   src/common/qtutils.cpp
   src/common/resource.cpp
   src/common/sequence_view.cpp
@@ -58,6 +61,7 @@ set(ENGINE_SRC
   src/math/intersect.cpp
   src/math/line.cpp
   src/math/matrix.cpp
+  src/math/mesh.cpp
   src/math/mixedcurve.cpp
   src/math/octree.cpp
   src/math/perlin.cpp
