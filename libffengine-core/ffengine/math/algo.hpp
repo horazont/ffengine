@@ -175,14 +175,14 @@ public:
         m_t_nextx(),
         m_t_nexty()
     {
-        if (isnan(m_dxdt)) {
+        if (std::isnan(m_dxdt)) {
             m_t_nextx = 1;
         } else if (x1 > x0) {
             m_t_nextx = m_dxdt * (1.0 - frac(x0));
         } else {
             m_t_nextx = m_dxdt * (frac(x0));
         }
-        if (isnan(m_dydt)) {
+        if (std::isnan(m_dydt)) {
             m_t_nexty = 1;
         } else if (y1 > y0) {
             m_t_nexty = m_dydt * (1.0 - frac(y0));
@@ -247,7 +247,7 @@ public:
      */
     operator bool() const
     {
-        return !isnan(m_x);
+        return !std::isnan(m_x);
     }
 
     /**

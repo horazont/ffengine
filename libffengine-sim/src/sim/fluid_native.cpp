@@ -262,7 +262,7 @@ static inline FluidFloat flow(
             height_flow * (FluidFloat(1.0) - IFluidSim::flow_damping));
 
     assert(std::abs(flow) < 1e10);
-    assert(!isnan(flow) && !isinf(flow));
+    assert(!std::isnan(flow) && !std::isinf(flow));
 
     FluidFloat applicable_flow =
             clamp(flow,
@@ -521,7 +521,7 @@ FluidFloat check_active_seams(FluidCell *local_seam_back,
             const FluidFloat local_difference =
                     std::abs(local_seam_back->fluid_height - local_seam_front->fluid_height)
                     / local_seam_front->fluid_height;
-            if (!isnan(local_difference)) {
+            if (!std::isnan(local_difference)) {
                 // nan can happen if nothing changed and cell is empty
                 difference_accum += local_difference;
             }

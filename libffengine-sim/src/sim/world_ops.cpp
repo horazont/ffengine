@@ -405,7 +405,7 @@ WorldOperationResult TerraformSmooth::execute(WorldState &state)
 
                 Terrain::height_t new_h = sample_parzen_rect(
                             *field, terrain_size, xterrain, yterrain, 3);
-                if (isnan(new_h)) {
+                if (std::isnan(new_h)) {
                     continue;
                 }
 

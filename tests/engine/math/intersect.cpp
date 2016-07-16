@@ -59,7 +59,7 @@ TEST_CASE("math/intersect/isect_ray_triangle/non_intersecting",
     std::tie(t, success) = isect_ray_triangle(r1, p0, p1, p2);
 
     CHECK(!success);
-    CHECK(isnan(t));
+    CHECK(std::isnan(t));
 }
 
 TEST_CASE("math/intersect/isect_ray_triangle/below",
