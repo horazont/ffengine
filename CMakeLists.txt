@@ -17,12 +17,9 @@ function(setup_scc_target NAME)
 endfunction(setup_scc_target)
 
 
-# add_subdirectory(surface_mesh)
 add_subdirectory(shader-preprocessor)
 add_subdirectory(sig11)
 add_subdirectory(libffengine-core)
 add_subdirectory(libffengine-sim)
 add_subdirectory(libffengine-render)
-# add_subdirectory(libscc)
-add_subdirectory(game)
 add_subdirectory(tests)
