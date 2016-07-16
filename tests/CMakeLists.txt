@@ -25,9 +25,9 @@ set(TEST_SRC
     main.cpp
     )
 
-add_executable(tests ${TEST_SRC})
-setup_scc_target(tests)
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch/include)
-target_link_libraries(tests ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(tests Qt5::Network Qt5::Core ffengine-render ffengine-sim ffengine-core)
-target_link_libraries(tests sigc++)
+add_executable(ffengine_tests ${TEST_SRC})
+setup_scc_target(ffengine_tests)
+target_include_directories(ffengine_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch/include)
+target_link_libraries(ffengine_tests ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(ffengine_tests Qt5::Network Qt5::Core ffengine-render ffengine-sim ffengine-core)
+target_link_libraries(ffengine_tests sigc++)
