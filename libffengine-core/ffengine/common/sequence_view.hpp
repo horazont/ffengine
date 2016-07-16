@@ -1,6 +1,8 @@
 #ifndef SCC_ENGINE_COMMON_SEQUENCE_VIEW_H
 #define SCC_ENGINE_COMMON_SEQUENCE_VIEW_H
 
+#include <type_traits>
+
 namespace ffe {
 
 
@@ -149,73 +151,73 @@ public:
 };
 
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator==(const SequenceView &v, const Container &c)
 {
     return v.container() == c;
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator==(const Container &c, const SequenceView &v)
 {
     return c == v.container();
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator!=(const SequenceView &v, const Container &c)
 {
     return v.container() != c;
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator!=(const Container &c, const SequenceView &v)
 {
     return c != v.container();
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator>=(const SequenceView &v, const Container &c)
 {
     return v.container() >= c;
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator>=(const Container &c, const SequenceView &v)
 {
     return c >= v.container();
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator<=(const SequenceView &v, const Container &c)
 {
     return v.container() <= c;
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator<=(const Container &c, const SequenceView &v)
 {
     return c <= v.container();
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator<(const SequenceView &v, const Container &c)
 {
     return v.container() < c;
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator<(const Container &c, const SequenceView &v)
 {
     return c < v.container();
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator>(const SequenceView &v, const Container &c)
 {
     return v.container() > c;
 }
 
-template <typename SequenceView, typename Container>
+template <typename SequenceView, typename Container, typename = typename std::enable_if<std::is_same<typename SequenceView::Container, Container>::value>::type>
 bool operator>(const Container &c, const SequenceView &v)
 {
     return c > v.container();

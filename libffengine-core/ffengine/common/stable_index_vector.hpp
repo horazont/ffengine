@@ -14,13 +14,69 @@ namespace ffe {
 
 class StableIndexVectorBase
 {
+public:
+    static constexpr std::size_t BLOCK_SIZE = 256;
+    using RawIndex = std::size_t;
+
 protected:
     struct NoData {
 
     };
 
+    struct Region
+    {
+        Region(RawIndex first, RawIndex count, bool items_valid):
+            m_items_valid(items_valid),
+            m_first(first),
+            m_count(count)
+        {
+
+        }
+
+        bool m_items_valid;
+        RawIndex m_first;
+        RawIndex m_count;
+
+        inline bool contains_index(const RawIndex index) const
+        {
+            return index >= m_first and index < m_first + m_count;
+        }
+    };
+
+};
+
+
+class IndexMapBase
+{
 public:
-    static constexpr std::size_t BLOCK_SIZE = 256;
+    using RawIndex = StableIndexVectorBase::RawIndex;
+    static constexpr RawIndex INVALID_INDEX = std::numeric_limits<RawIndex>::max();
+
+private:
+    struct Region
+    {
+        Region() = delete;
+        Region(const RawIndex src_first,
+               const RawIndex dest_first,
+               const RawIndex count);
+
+        const RawIndex m_src_first;
+        const RawIndex m_dest_first;
+        const RawIndex m_count;
+    };
+
+protected:
+    IndexMapBase() = default;
+    IndexMapBase(const IndexMapBase &ref) = default;
+    IndexMapBase &operator=(const IndexMapBase &ref) = default;
+    IndexMapBase(IndexMapBase &&src) = default;
+    IndexMapBase &operator=(IndexMapBase &&src) = default;
+
+protected:
+    std::vector<Region> m_regions;
+
+protected:
+    RawIndex map(RawIndex from) const;
 
 };
 
@@ -38,9 +94,8 @@ public:
  * Using these definitions, the StableIndexVector has the following
  * characteristics:
  *
- * * Iterators are stable: Iterators only invalidate on shrink_to_fit(),
- *   clear() or move from/to the container, or if the item they are pointing at
- *   gets erased.
+ * * Iterators are stable: Iterators only invalidate on defrag(),
+ *   shrink_to_fit(), clear() or if the item they are pointing at gets erased.
  * * Random access by index is O(1).
  * * Random access using iterator dereferenciation is O(1).
  * * Insertion is O(1), even if new memory needs to be allocated.
@@ -65,8 +120,6 @@ public:
 template <typename T>
 class StableIndexVector: public StableIndexVectorBase
 {
-public:
-    using RawIndex = std::size_t;
 
 private:
     struct Item
@@ -158,26 +211,6 @@ private:
         std::array<Item, BLOCK_SIZE> m_items;
     };
 
-    struct Region
-    {
-        Region(RawIndex first, RawIndex count, bool items_valid):
-            m_items_valid(items_valid),
-            m_first(first),
-            m_count(count)
-        {
-
-        }
-
-        bool m_items_valid;
-        RawIndex m_first;
-        RawIndex m_count;
-
-        inline bool contains_index(const RawIndex index) const
-        {
-            return index >= m_first and index < m_first + m_count;
-        }
-    };
-
 public:
     template <typename public_t, typename vec_t>
     class Iterator
@@ -190,11 +223,11 @@ public:
         using iterator_category = std::bidirectional_iterator_tag;
 
     protected:
-        explicit Iterator(vec_t &vec, RawIndex pos):
-            m_vec(&vec),
+        explicit Iterator(vec_t *const*vec, RawIndex pos):
+            m_vec(vec),
             m_pos(pos)
         {
-            if (m_pos == m_vec->capacity()) {
+            if (m_pos == (*m_vec)->capacity()) {
                 m_vec = nullptr;
                 m_pos = 0;
             }
@@ -222,24 +255,24 @@ public:
         }
 
     private:
-        vec_t *m_vec;
+        vec_t *const*m_vec;
         RawIndex m_pos;
 
     public:
         reference operator*() const
         {
-            return (*m_vec)[m_pos];
+            return (**m_vec)[m_pos];
         }
 
         pointer operator->() const
         {
-            return &(*m_vec)[m_pos];
+            return &(**m_vec)[m_pos];
         }
 
         Iterator &operator++()
         {
-            m_pos = m_vec->next(m_pos);
-            if (m_pos == m_vec->capacity()) {
+            m_pos = (*m_vec)->next(m_pos);
+            if (m_pos == (*m_vec)->capacity()) {
                 m_vec = nullptr;
                 m_pos = 0;
             }
@@ -255,7 +288,7 @@ public:
 
         Iterator &operator--()
         {
-            m_pos = m_vec->prev(m_pos);
+            m_pos = (*m_vec)->prev(m_pos);
             return *this;
         }
 
@@ -293,11 +326,51 @@ public:
     using iterator = Iterator<T, StableIndexVector>;
     using const_iterator = Iterator<const T, const StableIndexVector>;
 
+    struct CompRegionWithRawIndex
+    {
+        inline bool operator()(RawIndex index, const Region &region) const
+        {
+            return index < region.m_first;
+        }
+    };
+
+public:
+    struct IndexMap: public IndexMapBase
+    {
+    public:
+        using IndexMapBase::IndexMapBase;
+
+    protected:
+        void fill_with_defragmented(
+                const std::vector<StableIndexVector::Region> &regions)
+        {
+            m_regions.clear();
+            std::size_t dest_first = 0;
+            for (const auto &region: regions) {
+                if (!region.m_items_valid) {
+                    continue;
+                }
+                m_regions.emplace_back(region.m_first, dest_first, region.m_count);
+                dest_first += region.m_count;
+            }
+        }
+
+    public:
+        inline RawIndex map(RawIndex from) const
+        {
+            return IndexMapBase::map(from);
+        }
+
+        friend class StableIndexVector;
+
+    };
+
 public:
     /**
      * Construct an empty vector.
      */
-    StableIndexVector()
+    StableIndexVector():
+        m_self(std::make_unique<StableIndexVector*>(this))
     {
 
     }
@@ -311,6 +384,7 @@ public:
      * RawIndex values from \a ref when working with the newly created vector.
      */
     StableIndexVector(const StableIndexVector &ref):
+        m_self(std::make_unique<StableIndexVector*>(this)),
         m_blocks(),
         m_regions(ref.m_regions)
     {
@@ -348,15 +422,18 @@ public:
      * @param src A vector to move contents from. After this operation, \a src
      * is in the same state as a newly created vector.
      *
-     * @note This does not invoke shrink_to_fit(). This allows to re-use
-     * RawIndex values from \a src when working with the newly created vector.
+     * Iterators obtained from \a src now point to elements in the newly-created
+     * vector.
      */
     StableIndexVector(StableIndexVector &&src):
+        m_self(std::move(src.m_self)),
         m_blocks(std::move(src.m_blocks)),
         m_regions(std::move(src.m_regions))
     {
+        *m_self = this;
         src.m_blocks.clear();
         src.m_regions.clear();
+        src.m_self = std::make_unique<StableIndexVector*>(&src);
     }
 
     /**
@@ -365,19 +442,23 @@ public:
      * @param src A vector to move contents from. After this operation, \a src
      * is in the same state as a newly created vector.
      *
-     * @note This does not invoke shrink_to_fit(). This allows to re-use
-     * RawIndex values from \a src when working with the assigned-to vector.
+     * Iterators obtained from \a src now point to elements in the assigned-to
+     * vector.
      */
     StableIndexVector &operator=(StableIndexVector &&src)
     {
+        m_self = std::move(src.m_self);
+        *m_self = this;
         m_blocks = std::move(src.m_blocks);
         m_regions = std::move(src.m_regions);
         src.m_blocks.clear();
         src.m_regions.clear();
+        src.m_self = std::make_unique<StableIndexVector*>(&src);
         return *this;
     }
 
 private:
+    std::unique_ptr<StableIndexVector*> m_self;
     std::vector<std::unique_ptr<Block> > m_blocks;
     std::vector<Region> m_regions;
 
@@ -496,23 +577,10 @@ private:
             return m_regions.end();
         }
 
-        struct Foo
-        {
-            inline bool operator()(const Region &region, RawIndex index) const
-            {
-                return region.m_first < index;
-            }
-
-            inline bool operator()(RawIndex index, const Region &region) const
-            {
-                return index < region.m_first;
-            }
-        };
-
         auto iter = std::upper_bound(m_regions.begin(),
                                      m_regions.end(),
                                      index,
-                                     Foo());
+                                     CompRegionWithRawIndex());
         if (iter == m_regions.begin()) {
             return m_regions.end();
         }
@@ -537,23 +605,10 @@ private:
             return m_regions.end();
         }
 
-        struct Foo
-        {
-            inline bool operator()(const Region &region, RawIndex index) const
-            {
-                return region.m_first < index;
-            }
-
-            inline bool operator()(RawIndex index, const Region &region) const
-            {
-                return index < region.m_first;
-            }
-        };
-
         auto iter = std::upper_bound(m_regions.begin(),
                                      m_regions.end(),
                                      index,
-                                     Foo());
+                                     CompRegionWithRawIndex());
         if (iter == m_regions.begin()) {
             return m_regions.end();
         }
@@ -723,7 +778,7 @@ public:
         assert(!item.m_valid);
         item.activate(std::forward<arg_ts>(args)...);
 
-        return iterator(*this, new_index);
+        return iterator(m_self.get(), new_index);
     }
 
     /**
@@ -832,7 +887,7 @@ public:
             region_iter->m_count = raw_index - region_iter->m_first;
         }
 
-        return iterator(*this, result);
+        return iterator(m_self.get(), result);
     }
 
     /**
@@ -842,7 +897,7 @@ public:
      */
     iterator begin()
     {
-        return iterator(*this, first_index());
+        return iterator(m_self.get(), first_index());
     }
 
     /**
@@ -852,7 +907,7 @@ public:
      */
     const_iterator begin() const
     {
-        return const_iterator(*this, first_index());
+        return const_iterator(m_self.get(), first_index());
     }
 
     const_iterator cbegin() const
@@ -927,24 +982,14 @@ public:
     }
 
     /**
-     * Convert the given RawIndex to an \link iterator. If the \a index is
-     * out of bounds or points to an invalid location, end() is returned.
+     * Convert the given RawIndex to an \link iterator. No checking is done on
+     * the \a index.
      *
      * @param index The raw index to use.
-     * @return New iterator pointing to the element at the given raw index, or
-     * end().
      */
     iterator iterator_from_index(RawIndex index)
     {
-        typename std::vector<Region>::const_iterator region_iter;
-        std::tie(index, region_iter) = map_and_normalise(index);
-        if (region_iter == m_regions.end() or !region_iter->m_items_valid) {
-            return end();
-        }
-        if (!item_by_index(index).m_valid) {
-            return end();
-        }
-        return iterator(*this, index);
+        return iterator(m_self.get(), index);
     }
 
     /**
@@ -952,15 +997,7 @@ public:
      */
     const_iterator iterator_from_index(RawIndex index) const
     {
-        typename std::vector<Region>::const_iterator region_iter;
-        std::tie(index, region_iter) = map_and_normalise(index);
-        if (region_iter == m_regions.end() or !region_iter->m_items_valid) {
-            return end();
-        }
-        if (!item_by_index(index).m_valid) {
-            return end();
-        }
-        return const_iterator(*this, index);
+        return const_iterator(m_self.get(), index);
     }
 
     /**
@@ -974,11 +1011,15 @@ public:
      * This operation is O(N) in the worst case (if there is a hole at the
      * beginning).
      *
+     * @param map_to_fill may point to a valid IndexMap instance. If it is not
+     * nullptr, the IndexMap will be set up so that it maps RawIndex values from
+     * before the defrag() call to those after the defrag() call.
+     *
      * @note This does not release any memory and thus leaves the capacity()
-     * unchanged. To release the memory, either call shrink_utils_to_fit()
-     * afterwards or use shrink_to_fit() directly.
+     * unchanged. To release the memory, either call trim() afterwards or use
+     * shrink_to_fit() directly.
      */
-    void defrag()
+    void defrag(IndexMap *map_to_fill = nullptr)
     {
         if (empty()) {
             m_blocks.clear();
@@ -1007,6 +1048,10 @@ public:
                 assert(!dest_item.m_valid);
                 dest_item = std::move(src_item);
             }
+        }
+
+        if (map_to_fill) {
+            map_to_fill->fill_with_defragmented(m_regions);
         }
 
         m_regions.clear();
