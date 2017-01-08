@@ -179,6 +179,16 @@ Matrix4f &invert_proj_matrix(Matrix4f &matrix)
     //
     // we can invert A and B on their own
 
+    assert(matrix.coeff[2] == 0);
+    assert(matrix.coeff[3] == 0);
+    assert(matrix.coeff[6] == 0);
+    assert(matrix.coeff[7] == 0);
+
+    assert(matrix.coeff[8] == 0);
+    assert(matrix.coeff[9] == 0);
+    assert(matrix.coeff[12] == 0);
+    assert(matrix.coeff[13] == 0);
+
     Matrix2f A(matrix.coeff[0], matrix.coeff[1],
                matrix.coeff[4], matrix.coeff[5]);
     invert(A);
