@@ -162,20 +162,89 @@ void Camera::advance(TimeInterval)
 }
 
 
-/* OrthogonalCamera::OrthogonalCamera(
-        float viewport_width,
-        float viewport_height):
+
+OrthogonalCamera::OrthogonalCamera():
     Camera(),
     m_controller(),
-    m_viewport_width(viewport_width),
-    m_viewport_height(viewport_height),
-    m_znear(0),
-    m_zfar(100),
-    m_projection(proj_ortho(0, 0, m_viewport_width, m_viewport_height,
-                            m_znear, m_zfar))
+    m_znear(-10),
+    m_zfar(10)
 {
 
 }
+
+Matrix4f OrthogonalCamera::calc_view() const
+{
+    const Vector3f &pos = m_controller.pos();
+    const Vector2f &rot = m_controller.rot();
+    const float distance = m_controller.distance();
+
+    return scale4(Vector3f(1/distance, 1/distance, 1))
+                * rotation4(eX, rot[eX])
+                * rotation4(eZ, rot[eY])
+                * translation4(-pos);
+}
+
+Matrix4f OrthogonalCamera::calc_inv_view() const
+{
+    const Vector3f &pos = m_controller.pos();
+    const Vector2f &rot = m_controller.rot();
+    const float distance = m_controller.distance();
+
+    return translation4(pos)
+            * rotation4(eZ, -rot[eY])
+            * rotation4(eX, -rot[eX])
+            * scale4(Vector3f(1/distance, 1/distance, 1));
+}
+
+void OrthogonalCamera::set_znear(const float znear)
+{
+    m_znear = znear;
+}
+
+void OrthogonalCamera::set_zfar(const float zfar)
+{
+    m_zfar = zfar;
+}
+
+void OrthogonalCamera::advance(TimeInterval seconds)
+{
+    m_controller.advance(seconds);
+}
+
+std::tuple<Matrix4f, Matrix4f> OrthogonalCamera::render_projection(
+        GLsizei viewport_width,
+        GLsizei viewport_height) const
+{
+    const float scaling_factor = std::min(viewport_width, viewport_height);
+
+    const Matrix4f proj = proj_ortho_center(
+                0, 0,
+                viewport_width, viewport_height,
+                m_render_znear, m_render_zfar)
+            * scale4(Vector3f(scaling_factor, scaling_factor, 1));
+    Matrix4f inv_proj = proj;
+    invert_proj_matrix(inv_proj);
+    return std::make_tuple(proj, inv_proj);
+}
+
+void OrthogonalCamera::sync()
+{
+    camera_logger.log(io::LOG_DEBUG, "synchronizing camera");
+
+    m_render_zfar = m_zfar;
+    m_render_znear = m_znear;
+
+    /* m_render_view = translation4(Vector3f(pos[eX], pos[eY], 0.f))
+            * rotation4(eX, -rot[eX])
+            * rotation4(eZ, rot[eY])
+            * translation4(Vector3f(0, 0, -distance)); */
+
+    m_render_view = calc_view();
+    m_render_inv_view = calc_inv_view();
+}
+
+
+/*
 
 void OrthogonalCamera::update_projection()
 {

@@ -150,37 +150,22 @@ public:
 };
 
 
-/* class OrthogonalCamera: public Camera
+class OrthogonalCamera: public Camera
 {
 public:
-    OrthogonalCamera(
-            float viewport_width,
-            float viewport_height);
+    OrthogonalCamera();
 
 private:
     CameraController m_controller;
 
-    float m_viewport_width;
-    float m_viewport_height;
     float m_znear;
     float m_zfar;
 
-    Matrix4f m_projection;
-
 protected:
-    void update_projection();
+    Matrix4f calc_view() const;
+    Matrix4f calc_inv_view() const;
 
 public:
-    inline float viewport_height() const
-    {
-        return m_viewport_height;
-    }
-
-    inline float viewport_width() const
-    {
-        return m_viewport_width;
-    }
-
     inline float zfar() const
     {
         return m_zfar;
@@ -197,15 +182,17 @@ public:
     }
 
 public:
-    void set_viewport(const float width, const float height);
     void set_znear(const float znear);
     void set_zfar(const float zfar);
 
 public:
     void advance(TimeInterval seconds) override;
+    std::tuple<Matrix4f, Matrix4f> render_projection(
+            GLsizei viewport_width,
+            GLsizei viewport_height) const override;
     void sync() override;
 
-}; */
+};
 
 
 class PerspectivalCamera: public Camera
