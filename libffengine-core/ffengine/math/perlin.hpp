@@ -46,6 +46,7 @@ public:
 
 };
 
+
 VectorFloat perlin_rng(const int x, const int y);
 VectorFloat perlin_rng_interpolated(const Vector2 &pos);
 

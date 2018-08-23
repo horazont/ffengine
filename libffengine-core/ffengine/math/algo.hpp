@@ -25,6 +25,7 @@ the AUTHORS file.
 #define SCC_ENGINE_MATH_ALGO_H
 
 #include <cmath>
+#include <functional>
 #include <tuple>
 
 
@@ -43,8 +44,8 @@ static inline float_t frac(float_t v)
 /**
  * Return \a v0 if \a t is less than 0.5, otherwise return \a v1.
  */
-template <typename T>
-static inline T interp_nearest(T v0, T v1, T t)
+template <typename T, typename Tscalar>
+static inline T interp_nearest(T v0, T v1, Tscalar t)
 {
     return (t >= 0.5 ? v1 : v0);
 }
@@ -52,8 +53,8 @@ static inline T interp_nearest(T v0, T v1, T t)
 /**
  * Interpolate linearily from \a v0 (``t=0``) to \a v1 (``t=1``).
  */
-template <typename T>
-static inline T interp_linear(T v0, T v1, T t)
+template <typename T, typename Tscalar>
+static inline T interp_linear(T v0, T v1, Tscalar t)
 {
     return (1.0-t)*v0 + t*v1;
 }
@@ -61,8 +62,8 @@ static inline T interp_linear(T v0, T v1, T t)
 /**
  * Interpolate smoothly with cosine from \a v0 (``t=0``) to \a v1 (``t=1``).
  */
-template <typename T>
-static inline T interp_cos(T v0, T v1, T t)
+template <typename T, typename Tscalar>
+static inline T interp_cos(T v0, T v1, Tscalar t)
 {
     const T cos_factor = T(1) - sqr(std::cos(t*M_PI_2));
     return interp_linear(v0, v1, cos_factor);
@@ -272,5 +273,38 @@ public:
     }
 
 };
+
+
+template <typename float_t>
+float_t fmodpositive(float_t a, float_t b)
+{
+    float_t result = std::fmod(a, b);
+    if (result < 0) {
+        return result + b;
+    }
+    return result;
+}
+
+
+template <typename iterator_t, typename result_t>
+result_t map_accum(iterator_t begin,
+                   iterator_t end,
+                   std::function<void(result_t&, typename iterator_t::reference_type)> accumulator,
+                   result_t init = result_t())
+{
+    result_t buf = init;
+
+    for (typename std::remove_const<iterator_t>::type iter = begin;
+         iter != end;
+         ++iter)
+    {
+        accumulator(buf, *iter);
+    }
+
+    return buf;
+}
+
+
+
 
 #endif

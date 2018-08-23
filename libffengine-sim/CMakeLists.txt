@@ -3,6 +3,7 @@ set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 set(CMAKE_INCLUDE_CURRENT_DIRS ON)
 
 find_package(Protobuf REQUIRED)
+find_package(LibNoise REQUIRED)
 
 set(ENGINE_HEADERS
   ffengine/sim/fluid.hpp
@@ -51,6 +52,7 @@ setup_scc_target(ffengine-sim)
 target_link_libraries(ffengine-sim
   ffengine-core
   ${PROTOBUF_LIBRARIES}
+  ${LIBNOISE_LIBRARIES}
   sigc++
   sig11
   Qt5::Network
@@ -62,3 +64,7 @@ target_include_directories(
 target_include_directories(
   ffengine-sim
   PUBLIC ${INCLUDE_DIRS})
+target_include_directories(
+  ffengine-sim
+  SYSTEM PUBLIC ${LIBNOISE_INCLUDE_DIR})
+

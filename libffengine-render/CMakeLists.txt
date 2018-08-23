@@ -2,6 +2,7 @@ find_package(epoxy REQUIRED)
 
 set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/")
 
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 
 set(ENGINE_HEADERS
@@ -29,6 +30,7 @@ set(ENGINE_HEADERS
   ffengine/render/fancyterraindata.hpp
   ffengine/render/fluid.hpp
   ffengine/render/fluidsource.hpp
+  ffengine/render/fullscreenquad.hpp
   ffengine/render/fullterrain.hpp
   ffengine/render/grid.hpp
   ffengine/render/network_debug.hpp
@@ -61,6 +63,7 @@ set(ENGINE_SRC
   src/render/fancyterraindata.cpp
   src/render/fluid.cpp
   src/render/fluidsource.cpp
+  src/render/fullscreenquad.cpp
   src/render/fullterrain.cpp
   src/render/grid.cpp
   src/render/network_debug.cpp
@@ -82,6 +85,7 @@ target_link_libraries(
   sigc++
   spp
   epoxy
+  hosek-wilkie-skydome
   ${OPENGL_glu_LIBRARY})
 target_include_directories(
   ffengine-render

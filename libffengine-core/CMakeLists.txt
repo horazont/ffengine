@@ -32,6 +32,8 @@ set(ENGINE_HEADERS
   ffengine/math/quaternion.hpp
   ffengine/math/ray.hpp
   ffengine/math/rect.hpp
+  ffengine/math/shading.hpp
+  ffengine/math/sky.hpp
   ffengine/math/sphere.hpp
   ffengine/math/tikz.hpp
   ffengine/math/variadic_initializer.inc.hpp
@@ -69,6 +71,8 @@ set(ENGINE_SRC
   src/math/quaternion.cpp
   src/math/ray.cpp
   src/math/rect.cpp
+  src/math/shading.cpp
+  src/math/sky.cpp
   src/math/sphere.cpp
   src/math/tikz.cpp
   src/math/vector.cpp
@@ -80,7 +84,9 @@ setup_scc_target(ffengine-core)
 target_link_libraries(
   ffengine-core
   Qt5::Core
-  sigc++)
+  sigc++
+  hosek-wilkie-skydome
+  )
 target_link_libraries(ffengine-core "atomic")
 target_include_directories(
   ffengine-core

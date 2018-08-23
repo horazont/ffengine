@@ -33,6 +33,7 @@ the AUTHORS file.
 #include "ffengine/math/matrix.hpp"
 #include "ffengine/math/quaternion.hpp"
 #include "ffengine/math/octree.hpp"
+#include "ffengine/math/sky.hpp"
 
 #include "ffengine/gl/ibo.hpp"
 #include "ffengine/gl/vao.hpp"
@@ -938,7 +939,7 @@ public:
 private:
     Vector4f m_sun_colour;
     Vector3f m_sun_direction;
-    Vector4f m_sky_colour;
+    SHCoefficients m_sky_diffuse;
 
     scenegraph::Group m_root;
 
@@ -953,9 +954,9 @@ public:
         return m_root;
     }
 
-    inline void set_sky_colour(const Vector4f &colour)
+    inline void set_sky_diffuse(const SHCoefficients &coefficients)
     {
-        m_sky_colour = colour;
+        m_sky_diffuse = coefficients;
     }
 
     inline void set_sun_colour(const Vector4f &colour)
@@ -968,9 +969,9 @@ public:
         m_sun_direction = dir;
     }
 
-    inline const Vector4f &sky_colour() const
+    inline const SHCoefficients &sky_diffuse() const
     {
-        return m_sky_colour;
+        return m_sky_diffuse;
     }
 
     inline const Vector4f &sun_colour() const

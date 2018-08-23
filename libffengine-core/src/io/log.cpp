@@ -26,6 +26,7 @@ the AUTHORS file.
 #include <cstdarg>
 #include <iomanip>
 #include <iostream>
+#include <functional>
 
 namespace std {
 

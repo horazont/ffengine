@@ -113,6 +113,19 @@ struct typecheck_helper
 
         typedef ubo_wrap_type<typename std::tuple_element<N, typename ubo_t::local_types>::type> wrap_helper;
 
+        if (member.size != wrap_helper::nitems)
+        {
+            io::logging().get_logger("gl.shader").logf(
+                        io::LOG_EXCEPTION,
+                        "uniform typecheck: member %d:%d: OpenGL reports size "
+                        "%d, UBO member reports %zu",
+                        this_member,
+                        this_offset,
+                        member.size,
+                        wrap_helper::nitems);
+            throw std::runtime_error("inconsistent types at member "+std::to_string(this_member));
+        }
+
         if (member.type != wrap_helper::gl_type)
         {
             io::logging().get_logger("gl.shader").logf(
@@ -177,7 +190,7 @@ protected:
             total_members += member.size;
         }
 
-        if (total_members != ubo_t::storage_t::nelements) {
+        if (total_members != ubo_t::storage_t::nitems) {
             throw std::runtime_error("inconsistent number of members (" +
                                      std::to_string(total_members) + " on gpu, " +
                                      std::to_string(ubo_t::storage_t::nelements) +

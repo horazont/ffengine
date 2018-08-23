@@ -90,14 +90,84 @@ std::unique_lock<std::shared_timed_mutex> Terrain::writable_field(
     return std::unique_lock<std::shared_timed_mutex>(m_field_mutex);
 }
 
-void Terrain::from_perlin(const PerlinNoiseGenerator &gen)
+void sample_from_perlin(const PerlinNoiseGenerator &gen,
+                        const std::size_t size,
+                        const unsigned int x0, const unsigned int x1,
+                        const unsigned int y0, const unsigned int y1,
+                        Terrain::Field &buf)
 {
-    std::unique_lock<std::shared_timed_mutex> lock(m_field_mutex);
-    for (unsigned int y = 0; y < m_size; y++) {
-        for (unsigned int x = 0; x < m_size; x++) {
-            m_field[y*m_size+x][HEIGHT_ATTR] = gen.get(Vector2(x, y));
+    for (unsigned int y = y0; y < y1; ++y) {
+        auto *out = &buf[y * size];
+        for (unsigned int x = x0; x < x1; ++x) {
+            (*out++)[Terrain::HEIGHT_ATTR] = gen.get(Vector2(x, y));
         }
     }
+}
+
+void sample_from_noise(const noise::module::Module &gen,
+                       const std::size_t size,
+                       const unsigned int x0, const unsigned int x1,
+                       const unsigned int y0, const unsigned int y1,
+                       Terrain::Field &buf)
+{
+    for (unsigned int y = y0; y < y1; ++y) {
+        auto *out = &buf[y * size];
+        for (unsigned int x = x0; x < x1; ++x) {
+            (*out++)[Terrain::HEIGHT_ATTR] = gen.GetValue(x, y, 0.f);
+        }
+    }
+}
+
+void Terrain::from_perlin(const PerlinNoiseGenerator &gen)
+{
+    ffe::ThreadPool &pool = ffe::ThreadPool::global();
+
+    std::unique_lock<std::shared_timed_mutex> lock(m_field_mutex);
+
+    const unsigned int step = std::max(16U, pool.workers());
+    std::vector<std::future<void>> tasks;
+    tasks.reserve(pool.workers() + 1);
+    Terrain::Field &buffer = m_field;
+    const std::size_t size = m_size;
+    for (unsigned int y0 = 0; y0 < m_size; y0 += step) {
+        const unsigned int y1 = std::min(y0 + step, m_size);
+
+        tasks.emplace_back(pool.submit_task(std::packaged_task<void()>([=, &gen, &buffer](){
+            sample_from_perlin(gen, size, 0, size, y0, y1, buffer);
+        })));
+    }
+
+    for (auto &fut: tasks) {
+        fut.wait();
+    }
+
+    lock.unlock();
+    notify_heightmap_changed();
+}
+
+void Terrain::from_noise(const noise::module::Module &gen)
+{
+    ffe::ThreadPool &pool = ffe::ThreadPool::global();
+
+    std::unique_lock<std::shared_timed_mutex> lock(m_field_mutex);
+
+    const unsigned int step = std::max(16U, pool.workers());
+    std::vector<std::future<void>> tasks;
+    tasks.reserve(pool.workers() + 1);
+    Terrain::Field &buffer = m_field;
+    const std::size_t size = m_size;
+    for (unsigned int y0 = 0; y0 < m_size; y0 += step) {
+        const unsigned int y1 = std::min(y0 + step, m_size);
+
+        tasks.emplace_back(pool.submit_task(std::packaged_task<void()>([=, &gen, &buffer](){
+            sample_from_noise(gen, size, 0, size, y0, y1, buffer);
+        })));
+    }
+
+    for (auto &fut: tasks) {
+        fut.wait();
+    }
+
     lock.unlock();
     notify_heightmap_changed();
 }

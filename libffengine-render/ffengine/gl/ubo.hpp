@@ -49,6 +49,7 @@ struct wrapped_tuple<element_t, element_ts...>
 public:
     typedef wrapped_tuple<element_ts...> next_tuple;
     static constexpr std::size_t nelements = next_tuple::nelements + 1;
+    static constexpr std::size_t nitems = next_tuple::nitems + ubo_wrap_type<element_t>::nitems;
 
 public:
     wrapped_tuple():
@@ -76,6 +77,7 @@ struct wrapped_tuple<>
 {
 public:
     static constexpr std::size_t nelements = 0;
+    static constexpr std::size_t nitems = 0;
 
 public:
     wrapped_tuple()

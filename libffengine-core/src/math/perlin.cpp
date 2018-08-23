@@ -55,7 +55,7 @@ VectorFloat PerlinNoiseGenerator::get(const Vector2 &pos) const
 
     for (unsigned int level = 0; level < m_octaves; level++) {
         const Vector2 oct_pos(position * frequency);
-        result += perlin_rng(oct_pos[eX], oct_pos[eY]) * amplitude;
+        result += perlin_rng_interpolated(oct_pos) * amplitude;
         frequency *= 2.0;
         amplitude *= m_persistence;
     }
@@ -65,8 +65,8 @@ VectorFloat PerlinNoiseGenerator::get(const Vector2 &pos) const
 
 VectorFloat perlin_rng(const int x, const int y)
 {
-    const int n = x + y * 57;
-    const int m = (n << 13) ^ n;
+    const unsigned int n = x + y * 57;
+    const unsigned int m = (n << 13) ^ n;
     return (1.0 - double((m * (m * m * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0);
 }
 

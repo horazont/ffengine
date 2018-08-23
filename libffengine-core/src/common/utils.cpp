@@ -29,6 +29,7 @@ the AUTHORS file.
 namespace ffe {
 
 static io::Logger &nw_logger = io::logging().get_logger("common.utils.NotifiableWorker");
+static io::Logger &tp_logger = io::logging().get_logger("common.utils.ThreadPool");
 
 
 NotifiableWorker::NotifiableWorker():
@@ -119,9 +120,9 @@ void ThreadPool::abstract_packaged_task::operator ()()
 
 
 ThreadPool::ThreadPool():
-    m_terminated(false)
+    ThreadPool(std::thread::hardware_concurrency())
 {
-    initialize_workers(std::thread::hardware_concurrency());
+
 }
 
 ThreadPool::ThreadPool(unsigned int workers):
@@ -137,6 +138,8 @@ ThreadPool::~ThreadPool()
 
 void ThreadPool::initialize_workers(unsigned int workers)
 {
+    tp_logger.logf(io::LOG_INFO, "initialised thread pool (%p) with %u workers",
+                   this, workers);
     m_workers.reserve(workers);
     for (unsigned int i = 0; i < workers; i++)
     {
@@ -176,7 +179,11 @@ void ThreadPool::worker_impl()
     }
 }
 
-
+ThreadPool &ThreadPool::global()
+{
+    static ThreadPool instance;
+    return instance;
+}
 
 
 bool is_power_of_two(unsigned int n)

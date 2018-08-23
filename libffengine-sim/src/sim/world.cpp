@@ -30,7 +30,7 @@ namespace sim {
 /* sim::WorldState */
 
 WorldState::WorldState():
-    m_terrain(1921),
+    m_terrain(/* 1921 */961),
     m_fluid(m_terrain),
     m_graph(m_objects)
 {

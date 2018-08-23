@@ -34,6 +34,8 @@ the AUTHORS file.
 
 #include <sigc++/sigc++.h>
 
+#include "noise.h"
+
 #include "ffengine/common/utils.hpp"
 #include "ffengine/io/log.hpp"
 
@@ -102,6 +104,7 @@ public:
 
 public:
     void from_perlin(const PerlinNoiseGenerator &gen);
+    void from_noise(const noise::module::Module &gen);
     void from_sincos(const Vector3f scale);
 
 };

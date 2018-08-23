@@ -95,7 +95,7 @@ void Server::game_frame()
     m_sandifier.run_steps();
 
     m_op_buffer.clear();
-;
+
     m_state.fluid().start();
 }
 

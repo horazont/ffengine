@@ -120,7 +120,7 @@ private:
 private:
     GLint get_next_texture_unit();
 
-protected:
+public:
     bool link();
 
 public:
@@ -515,7 +515,7 @@ class RenderContext
 {
 public:
     static constexpr GLint MATRIX_BLOCK_UBO_SLOT = 0;
-    typedef UBO<Matrix4f, Matrix4f, Vector4f, Vector3f, Vector4f, Vector3f> MatrixUBO;
+    typedef UBO<Matrix4f, Matrix4f, Vector3f, Vector4f, Vector3f, Vector4f[9]> MatrixUBO;
     static constexpr GLint INV_MATRIX_BLOCK_UBO_SLOT = 1;
     typedef UBO<Matrix4f, Matrix4f, Vector2f> InvMatrixUBO;
 

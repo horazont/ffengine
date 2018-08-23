@@ -158,6 +158,12 @@ void FancyTerrainNode::configure_materials()
     if (m_fluid_data) {
         m_material.attach_texture("fluid_data", m_fluid_data);
     }
+    if (m_environment_map) {
+        m_material.attach_texture("environment", m_environment_map);
+    }
+    if (m_ibl_brdf_helper) {
+        m_material.attach_texture("ibl_brdf_helper", m_ibl_brdf_helper);
+    }
     {
         MaterialPass &mat = m_material.make_pass_material(m_solid_pass);
         mat.shader().bind();
@@ -375,6 +381,22 @@ void FancyTerrainNode::attach_sand_texture(Texture2D *tex)
         m_material.attach_texture("sand", tex);
     }
     m_sand = tex;
+}
+
+void FancyTerrainNode::attach_environment_map(TextureCubeMap *tex)
+{
+    if (m_configured) {
+        m_material.attach_texture("environment", tex);
+    }
+    m_environment_map = tex;
+}
+
+void FancyTerrainNode::attach_ibl_brdf_helper(Texture2D *tex)
+{
+    if (m_configured) {
+        m_material.attach_texture("ibl_brdf_helper", tex);
+    }
+    m_ibl_brdf_helper = tex;
 }
 
 void FancyTerrainNode::attach_fluid_data_texture(Texture2DArray *tex)

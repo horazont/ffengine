@@ -76,8 +76,10 @@ public:
 
 class ThreadPool
 {
-public:
+private:
     ThreadPool();
+
+public:
     explicit ThreadPool(unsigned int workers);
     ~ThreadPool();
 
@@ -122,6 +124,12 @@ protected:
     void worker_impl();
 
 public:
+    template <typename T, typename R = typename std::result_of<T()>::type>
+    std::future<R> submit_task(T &&obj)
+    {
+        return submit_task(std::packaged_task<R()>(obj));
+    }
+
     template <typename R>
     std::future<R> submit_task(std::packaged_task<R()> &&task)
     {
@@ -140,7 +148,7 @@ public:
         return m_workers.size();
     }
 
-
+    static ThreadPool &global();
 };
 
 template <typename internal_iterator, typename for_class,

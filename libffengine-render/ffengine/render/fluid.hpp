@@ -116,7 +116,8 @@ private:
     Texture2D *m_scene_colour;
     Texture2D *m_scene_depth;
     Texture2D *m_wave_normalmap;
-    TextureCubeMap *m_skycube;
+    TextureCubeMap *m_environment_map;
+    Texture2D *m_ibl_brdf_helper;
 
     std::vector<std::vector<std::pair<bool, std::unique_ptr<FluidSlice> > > > m_slice_cache;
     std::unordered_map<RenderContext*, std::vector<FluidSlice*> > m_render_slices;
@@ -165,8 +166,9 @@ private:
                               const NormalTTextureBuffer &normalt);
 
 public:
-    void attach_skycube(TextureCubeMap *tex);
+    void attach_environment_map(TextureCubeMap *tex);
     void attach_wave_normalmap(Texture2D *tex);
+    void attach_ibl_brdf_helper(Texture2D *tex);
 
     inline Texture2DArray *fluid_data()
     {

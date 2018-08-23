@@ -98,6 +98,8 @@ private:
     Texture2D m_heightmap;
     Texture2D m_normalt;
     Texture2D *m_grass, *m_blend, *m_rock, *m_sand;
+    TextureCubeMap *m_environment_map;
+    Texture2D *m_ibl_brdf_helper;
     Texture2DArray *m_fluid_data;
 
     VBO m_vbo;
@@ -134,6 +136,8 @@ public:
     void attach_grass_texture(Texture2D *tex);
     void attach_rock_texture(Texture2D *tex);
     void attach_sand_texture(Texture2D *tex);
+    void attach_environment_map(TextureCubeMap *tex);
+    void attach_ibl_brdf_helper(Texture2D *tex);
     void attach_fluid_data_texture(Texture2DArray *tex);
 
     Texture2D &heightmap()

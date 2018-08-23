@@ -154,10 +154,12 @@ int open_file_with_modes(const std::string &filename,
         case WriteMode::OVERWRITE:
         {
             flags |= O_TRUNC;
+            break;
         }
         case WriteMode::APPEND:
         {
             flags |= O_APPEND;
+            break;
         }
         }
 

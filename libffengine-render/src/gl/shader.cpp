@@ -381,6 +381,7 @@ bool ShaderProgram::attach(const spp::Program &program,
         std::ostringstream buf;
         program.evaluate(buf, context);
         source = buf.str();
+        /* shader_logger.logf(io::LOG_INFO, "attaching program %s", source.c_str()); */
     }
 
     return create_and_compile_and_attach(

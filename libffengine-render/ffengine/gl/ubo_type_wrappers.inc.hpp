@@ -58,6 +58,7 @@ struct ubo_wrap_type<float>
         float pad[3];
     };
 
+    static constexpr unsigned nitems = 1;
     static constexpr GLenum gl_type = GL_FLOAT;
 
     static inline type unpack(const wrapped_type &from)
@@ -82,6 +83,7 @@ struct ubo_wrap_type<Vector2f>
         Vector2f value;
         float pad[2];
     };
+    static constexpr unsigned nitems = 1;
 
     static constexpr GLenum gl_type = GL_FLOAT_VEC2;
 
@@ -108,6 +110,7 @@ struct ubo_wrap_type<Vector3f>
         float pad[1];
     };
 
+    static constexpr unsigned nitems = 1;
     static constexpr GLenum gl_type = GL_FLOAT_VEC3;
 
     static inline type unpack(const wrapped_type &from)
@@ -129,6 +132,7 @@ struct ubo_wrap_type<Vector4f>
     typedef Vector4f type;
     typedef type wrapped_type;
 
+    static constexpr unsigned nitems = 1;
     static constexpr GLenum gl_type = GL_FLOAT_VEC4;
 
     static inline type unpack(const wrapped_type &from)
@@ -150,6 +154,7 @@ struct ubo_wrap_type<Matrix4f>
     typedef Matrix4f type;
     typedef type wrapped_type;
 
+    static constexpr unsigned nitems = 1;
     static constexpr GLenum gl_type = GL_FLOAT_MAT4;
 
     static inline type unpack(const wrapped_type &from)
@@ -175,6 +180,7 @@ struct ubo_wrap_type<Matrix3f>
     typedef Matrix3f type;
     typedef Matrix4f wrapped_type;
 
+    static constexpr unsigned nitems = 1;
     static constexpr GLenum gl_type = GL_FLOAT_MAT3;
 
     static inline type unpack(const wrapped_type &from)
@@ -187,6 +193,36 @@ struct ubo_wrap_type<Matrix3f>
     {
         return wrapped_type::extend(ref);
     }
+
+};
+
+template<std::size_t N>
+struct ubo_wrap_type<Vector4f[N]>
+{
+    typedef std::array<Vector4f, N> type;
+    typedef type wrapped_type;
+
+    static constexpr unsigned nitems = N;
+    static constexpr GLenum gl_type = GL_FLOAT_VEC4;
+
+    static inline type unpack(const wrapped_type &from)
+    {
+        return from;
+    }
+
+    static inline type pack(const Vector4f src[N])
+    {
+        type result;
+        memcpy(&result[0], &src[0], sizeof(Vector4f) * N);
+        return result;
+    }
+
+    /* template <typename value_t,
+              typename _ = typename std::enable_if<!std::is_array<typename std::remove_cv<value_t>::type>::value>::type>
+    static inline type pack(value_t &&ref)
+    {
+        return ref;
+    } */
 
 };
 
