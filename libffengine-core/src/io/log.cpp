@@ -24,6 +24,7 @@ the AUTHORS file.
 #include "ffengine/io/log.hpp"
 
 #include <cstdarg>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <functional>

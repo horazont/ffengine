@@ -67,7 +67,7 @@ FullTerrainRenderer::~FullTerrainRenderer()
 
 }
 
-void FullTerrainRenderer::advance(TimeInterval seconds)
+void FullTerrainRenderer::advance(TimeInterval)
 {
 
 }

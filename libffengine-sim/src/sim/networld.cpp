@@ -258,7 +258,7 @@ void NetServerClient::fail()
     m_sig_disconnected.emit();
 }
 
-void NetServerClient::link_control_received(std::unique_ptr<messages::NetWorldControl> &&msg)
+void NetServerClient::link_control_received(std::unique_ptr<messages::NetWorldControl>&&)
 {
 
 }
